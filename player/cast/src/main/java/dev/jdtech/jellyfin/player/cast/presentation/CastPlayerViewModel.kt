@@ -240,6 +240,7 @@ constructor(
         clearActiveSegment()
         currentItemId = item.itemId
         savedStateHandle[KEY_CURRENT_ITEM_ID] = item.itemId.toString()
+        currentMediaItemSegments = emptyList()
         val isMovie = item.mediaType == PlayerMediaType.MOVIE
 
         val defaultRatio =
@@ -301,6 +302,7 @@ constructor(
                 currentSegment = null,
                 currentTrickplay = null,
                 currentChapters = item.chapters,
+                segments = emptyList(),
                 fileLoaded = true,
             )
         }

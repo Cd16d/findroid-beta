@@ -95,7 +95,7 @@ fun VideoPlayerSeekBar(
             animationSpec = tween(150),
             label = "trackHeight",
         )
-    val targetThumbHeight = if (isHighlight) 26.dp else 24.dp
+    val targetThumbHeight = 44.dp
     val animatedThumbHeight by
         animateDpAsState(
             targetValue = targetThumbHeight,
