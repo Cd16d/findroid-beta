@@ -23,12 +23,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -48,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,18 +53,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
-import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerSheetContainer
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.player.core.R as PlayerR
-import dev.jdtech.jellyfin.player.core.presentation.formatDuration
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
 import dev.jdtech.jellyfin.presentation.components.SpoilerMask
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
+import dev.jdtech.jellyfin.presentation.film.components.PlayedBadge
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
-private val EpisodeThumbShape = RoundedCornerShape(10.dp)
+private val EpisodeThumbShape = RoundedCornerShape(12.dp)
 
 /** Tab options for unified in-player navigation sheet. */
 enum class PlayerNavTab {
@@ -102,7 +98,7 @@ fun PlayerChaptersAndEpisodesSheet(
     var selectedTab by rememberSaveable { mutableStateOf(PlayerNavTab.CHAPTERS) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.weight(1f, fill = false).fillMaxWidth()) {
+        Box(modifier = Modifier.weight(1f, fill = true).fillMaxWidth()) {
             AnimatedContent(
                 targetState = selectedTab,
                 transitionSpec = { fadeIn().togetherWith(fadeOut()) },
@@ -318,18 +314,10 @@ fun PlayerEpisodeCard(
     val isEpisodeSpoiler = hideEpisodeSpoilers && !episode.played
 
     val thumbBorder = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
-    val formattedDuration =
-        remember(episode.runtimeTicks) {
-            if (episode.runtimeTicks > 0) {
-                formatDuration(episode.runtimeTicks / 10_000)
-            } else {
-                null
-            }
-        }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = CentralShapes.GroupSingle,
+        shape = RoundedCornerShape(16.dp),
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
             else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -361,21 +349,7 @@ fun PlayerEpisodeCard(
                 )
 
                 if (episode.played) {
-                    Box(
-                        modifier =
-                            Modifier.align(Alignment.TopEnd)
-                                .padding(4.dp)
-                                .size(18.dp)
-                                .background(Color.Black.copy(alpha = 0.65f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_check),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(12.dp),
-                        )
-                    }
+                    PlayedBadge(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp))
                 }
 
                 if (
@@ -392,65 +366,44 @@ fun PlayerEpisodeCard(
                         trackColor = Color.Black.copy(alpha = 0.5f),
                     )
                 }
-
-                if (formattedDuration != null) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.75f),
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
-                    ) {
-                        Text(
-                            text = formattedDuration,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        )
-                    }
-                }
             }
 
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text =
-                            stringResource(
-                                id = CoreR.string.episode_name,
-                                episode.indexNumber,
-                                episode.name,
-                            ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
+                Text(
+                    text =
+                        stringResource(
+                            id = CoreR.string.episode_name,
+                            episode.indexNumber,
+                            episode.name,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
-                    if (isCurrent) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                        ) {
-                            Text(
-                                text = stringResource(id = PlayerR.string.now_playing),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            )
-                        }
+                if (isCurrent) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                    ) {
+                        Text(
+                            text = stringResource(id = PlayerR.string.now_playing),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
                     }
                 }
 
                 if (episode.overview.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     SpoilerMask(
                         enabled = isEpisodeSpoiler,
                         isRevealed = isRevealed,

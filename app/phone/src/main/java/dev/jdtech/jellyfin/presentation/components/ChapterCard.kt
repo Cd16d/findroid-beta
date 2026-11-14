@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,13 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.presentation.formatDuration
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
-private val ChapterThumbShape = RoundedCornerShape(10.dp)
+private val ChapterThumbShape = RoundedCornerShape(12.dp)
 
 /**
  * Shared chapter item card with preview thumbnail, YouTube-style timestamp chip, title, and current
@@ -71,7 +69,7 @@ fun ChapterCard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = CentralShapes.GroupSingle,
+        shape = RoundedCornerShape(16.dp),
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
             else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -112,20 +110,6 @@ fun ChapterCard(
                         color = Color.White.copy(alpha = 0.6f),
                     )
                 }
-
-                Surface(
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.75f),
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
-                ) {
-                    Text(
-                        text = formattedTime,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
-                }
             }
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
@@ -137,6 +121,23 @@ fun ChapterCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color =
+                        if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                ) {
+                    Text(
+                        text = formattedTime,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color =
+                            if (isCurrent) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             }
         }
     }
