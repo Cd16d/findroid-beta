@@ -51,7 +51,6 @@ import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.presentation.formatDuration
 import dev.jdtech.jellyfin.player.core.presentation.getSectionTitle
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
-import dev.jdtech.jellyfin.presentation.theme.spacings
 import java.util.Date
 import kotlin.time.Duration
 
@@ -262,7 +261,7 @@ fun VideoPlayerSeeker(
             }
         }
 
-        Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
+        Spacer(modifier = Modifier.height(10.dp))
 
         VideoPlayerSeekBar(
             progress =

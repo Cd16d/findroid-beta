@@ -81,7 +81,8 @@ fun CastExpandedPlayerBottomSection(
             chapters = chapters,
             onScrubStart = onScrubStart,
             onScrubStop = onScrubStop,
-            segments = if (segment != null) listOf(segment) else emptyList(),
+            segments =
+                uiState.segments.ifEmpty { if (segment != null) listOf(segment) else emptyList() },
             onOpenChapters = onOpenChapters,
         )
 

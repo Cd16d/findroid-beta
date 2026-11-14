@@ -41,6 +41,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import dev.jdtech.jellyfin.models.FindroidSegment
@@ -78,31 +79,37 @@ fun VideoPlayerSeekBar(
     onDown: (() -> Unit)? = null,
     onUp: (() -> Unit)? = null,
     isBuffering: Boolean = false,
+    trackHeight: Dp = 16.dp,
+    highlightTrackHeight: Dp = 16.dp,
+    thumbWidth: Dp = 4.dp,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isSelected by remember { mutableStateOf(false) }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val color by rememberUpdatedState(newValue = MaterialTheme.colorScheme.primary)
     val isHighlight = isFocused || isSelected
+    val targetTrackHeight = if (isHighlight) highlightTrackHeight else trackHeight
     val animatedTrackHeight by
         animateDpAsState(
-            targetValue = 10.dp,
+            targetValue = targetTrackHeight,
             animationSpec = tween(150),
             label = "trackHeight",
         )
+    val targetThumbHeight = if (isHighlight) 26.dp else 24.dp
     val animatedThumbHeight by
         animateDpAsState(
-            targetValue = if (isHighlight) 22.dp else 16.dp,
+            targetValue = targetThumbHeight,
             animationSpec = tween(150),
             label = "thumbHeight",
         )
+    val targetThumbWidth = if (isHighlight) 2.dp else thumbWidth
     val animatedThumbWidth by
         animateDpAsState(
-            targetValue = if (isHighlight) 1.5.dp else 3.dp,
+            targetValue = targetThumbWidth,
             animationSpec = tween(150),
             label = "thumbWidth",
         )
-    val targetThumbGap = if (isBuffering) 0.dp else if (isHighlight) 5.dp else 3.5.dp
+    val targetThumbGap = if (isBuffering) 0.dp else if (isHighlight) 5.dp else 4.dp
     val animatedThumbGap by
         animateDpAsState(
             targetValue = targetThumbGap,
@@ -198,7 +205,7 @@ fun VideoPlayerSeekBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(28.dp)
+                .height(48.dp)
                 .padding(horizontal = 4.dp)
                 .onPreviewKeyEvent { keyEvent ->
                     when (keyEvent.key) {

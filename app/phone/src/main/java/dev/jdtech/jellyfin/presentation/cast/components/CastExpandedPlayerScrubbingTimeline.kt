@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -106,12 +107,7 @@ fun CastScrubbingTimeline(
 
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
         // Badges row: Chapter pill & Progress • Duration pill on left, Ends at pill on right
-        Box(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .padding(bottom = 6.dp)
-                    .alpha(if (safeDuration > 0f) 1f else 0f)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth().alpha(if (safeDuration > 0f) 1f else 0f)) {
             Column(
                 modifier =
                     Modifier.align(Alignment.CenterStart)
@@ -228,6 +224,8 @@ fun CastScrubbingTimeline(
             }
         }
 
+        Spacer(modifier = Modifier.height(10.dp))
+
         val isBuffering = playerStatus == CastPlaybackStatus.BUFFERING
         val progressFraction =
             if (durationMs > 0L) {
@@ -252,9 +250,9 @@ fun CastScrubbingTimeline(
                 }
             },
             isBuffering = isBuffering,
-            trackHeight = 10.dp,
-            highlightTrackHeight = 10.dp,
-            thumbWidth = 3.dp,
+            trackHeight = 16.dp,
+            highlightTrackHeight = 16.dp,
+            thumbWidth = 4.dp,
             modifier = Modifier.fillMaxWidth().height(48.dp),
         )
     }

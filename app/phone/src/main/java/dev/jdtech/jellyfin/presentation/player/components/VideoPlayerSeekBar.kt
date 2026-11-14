@@ -96,9 +96,9 @@ fun VideoPlayerSeekBar(
         { _, _, _ ->
         },
     isBuffering: Boolean = false,
-    trackHeight: Dp = 10.dp,
-    highlightTrackHeight: Dp = 10.dp,
-    thumbWidth: Dp = 3.dp,
+    trackHeight: Dp = 16.dp,
+    highlightTrackHeight: Dp = 16.dp,
+    thumbWidth: Dp = 4.dp,
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
@@ -117,21 +117,21 @@ fun VideoPlayerSeekBar(
             animationSpec = tween(150),
             label = "trackHeight",
         )
-    val targetThumbHeight = if (isHighlight) trackHeight + 12.dp else trackHeight + 6.dp
+    val targetThumbHeight = if (isHighlight) 26.dp else 24.dp
     val animatedThumbHeight by
         animateDpAsState(
             targetValue = targetThumbHeight,
             animationSpec = tween(150),
             label = "thumbHeight",
         )
-    val targetThumbWidth = if (isHighlight) 1.5.dp else thumbWidth
+    val targetThumbWidth = if (isHighlight) 2.dp else thumbWidth
     val animatedThumbWidth by
         animateDpAsState(
             targetValue = targetThumbWidth,
             animationSpec = tween(150),
             label = "thumbWidth",
         )
-    val targetThumbGap = if (isBuffering) 0.dp else if (isHighlight) 5.dp else 3.5.dp
+    val targetThumbGap = if (isBuffering) 0.dp else if (isHighlight) 5.dp else 4.dp
     val animatedThumbGap by
         animateDpAsState(
             targetValue = targetThumbGap,
@@ -206,7 +206,7 @@ fun VideoPlayerSeekBar(
 
     Canvas(
         modifier =
-            modifier.fillMaxWidth().height(36.dp).padding(horizontal = 4.dp).pointerInput(
+            modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp).pointerInput(
                 safeDurationMs
             ) {
                 val touchSlop = viewConfiguration.touchSlop
