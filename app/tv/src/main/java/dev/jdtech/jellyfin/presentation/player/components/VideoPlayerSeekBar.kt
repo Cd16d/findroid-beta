@@ -79,9 +79,13 @@ fun VideoPlayerSeekBar(
     onDown: (() -> Unit)? = null,
     onUp: (() -> Unit)? = null,
     isBuffering: Boolean = false,
-    trackHeight: Dp = 16.dp,
-    highlightTrackHeight: Dp = 16.dp,
-    thumbWidth: Dp = 4.dp,
+    trackHeight: Dp = 10.dp,
+    highlightTrackHeight: Dp = 10.dp,
+    thumbWidth: Dp = 3.dp,
+    highlightThumbWidth: Dp = 1.5.dp,
+    thumbHeight: Dp = 22.dp,
+    highlightThumbHeight: Dp = 22.dp,
+    canvasHeight: Dp = 36.dp,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     var isSelected by remember { mutableStateOf(false) }
@@ -95,14 +99,14 @@ fun VideoPlayerSeekBar(
             animationSpec = tween(150),
             label = "trackHeight",
         )
-    val targetThumbHeight = 44.dp
+    val targetThumbHeight = if (isHighlight) highlightThumbHeight else thumbHeight
     val animatedThumbHeight by
         animateDpAsState(
             targetValue = targetThumbHeight,
             animationSpec = tween(150),
             label = "thumbHeight",
         )
-    val targetThumbWidth = if (isHighlight) 2.dp else thumbWidth
+    val targetThumbWidth = if (isHighlight) highlightThumbWidth else thumbWidth
     val animatedThumbWidth by
         animateDpAsState(
             targetValue = targetThumbWidth,
@@ -205,7 +209,7 @@ fun VideoPlayerSeekBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(canvasHeight)
                 .padding(horizontal = 4.dp)
                 .onPreviewKeyEvent { keyEvent ->
                     when (keyEvent.key) {

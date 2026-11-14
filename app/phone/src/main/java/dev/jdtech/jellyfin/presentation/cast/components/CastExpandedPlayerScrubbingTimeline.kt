@@ -253,7 +253,11 @@ fun CastScrubbingTimeline(
             trackHeight = 16.dp,
             highlightTrackHeight = 16.dp,
             thumbWidth = 4.dp,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+            highlightThumbWidth = 2.dp,
+            thumbHeight = 44.dp,
+            highlightThumbHeight = 44.dp,
+            canvasHeight = 48.dp,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
