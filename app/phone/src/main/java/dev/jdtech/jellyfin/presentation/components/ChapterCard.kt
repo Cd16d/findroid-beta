@@ -87,7 +87,6 @@ fun ChapterCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Chapter Thumbnail with YouTube-style timestamp capsule pill
             val hasServerImage = !chapter.imageUri.isNullOrBlank() && !isImageError
             Box(
                 modifier =

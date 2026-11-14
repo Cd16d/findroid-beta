@@ -1590,6 +1590,8 @@ constructor(
         )
     }
 
+    private var selectSeasonJob: Job? = null
+
     fun selectSeason(seasonId: UUID) {
         val series = _uiState.value.seriesId ?: return
         if (
@@ -1597,14 +1599,23 @@ constructor(
                 _uiState.value.seasonEpisodes.isNotEmpty()
         )
             return
-        viewModelScope.launch {
+        selectSeasonJob?.cancel()
+        selectSeasonJob = viewModelScope.launch {
             _uiState.update { it.copy(selectedSeasonId = seasonId, isLoadingEpisodes = true) }
             try {
                 val episodes = repository.getEpisodes(seriesId = series, seasonId = seasonId)
-                _uiState.update { it.copy(seasonEpisodes = episodes, isLoadingEpisodes = false) }
+                if (_uiState.value.selectedSeasonId == seasonId) {
+                    _uiState.update {
+                        it.copy(seasonEpisodes = episodes, isLoadingEpisodes = false)
+                    }
+                }
             } catch (e: Exception) {
-                Timber.e(e, "Error loading episodes for season $seasonId")
-                _uiState.update { it.copy(isLoadingEpisodes = false) }
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Timber.e(e, "Error loading episodes for season $seasonId")
+                    if (_uiState.value.selectedSeasonId == seasonId) {
+                        _uiState.update { it.copy(isLoadingEpisodes = false) }
+                    }
+                }
             }
         }
     }

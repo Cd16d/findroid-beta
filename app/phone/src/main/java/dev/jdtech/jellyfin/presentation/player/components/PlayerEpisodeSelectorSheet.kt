@@ -63,7 +63,6 @@ import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.presentation.formatDuration
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
 import dev.jdtech.jellyfin.presentation.components.SpoilerMask
-import dev.jdtech.jellyfin.presentation.components.rememberSpoilerState
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -126,7 +125,6 @@ fun PlayerChaptersAndEpisodesSheet(
             }
         }
 
-        // Fixed Dual-Tab / Segmented Selector at Bottom
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = PlayerSheetContainer,
@@ -210,6 +208,12 @@ fun PlayerEpisodeSelectorContent(
     LaunchedEffect(currentEpisodeIndex) {
         if (currentEpisodeIndex >= 0) {
             episodeListState.animateScrollToItem(currentEpisodeIndex)
+        }
+    }
+
+    LaunchedEffect(selectedSeasonId, episodes.size) {
+        if (selectedSeasonId != null && episodes.isEmpty() && !uiState.isLoadingEpisodes) {
+            viewModel.selectSeason(selectedSeasonId)
         }
     }
 
@@ -313,13 +317,6 @@ fun PlayerEpisodeCard(
     var isRevealed by rememberSaveable(episode.id) { mutableStateOf(false) }
     val isEpisodeSpoiler = hideEpisodeSpoilers && !episode.played
 
-    val spoilerState =
-        rememberSpoilerState(
-            enabled = isEpisodeSpoiler,
-            isRevealed = isRevealed,
-            onRevealChange = { isRevealed = it },
-        )
-
     val thumbBorder = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
     val formattedDuration =
         remember(episode.runtimeTicks) {
@@ -348,7 +345,6 @@ fun PlayerEpisodeCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Thumbnail with YouTube-style runtime chip and spoiler protection
             Box(
                 modifier =
                     Modifier.height(64.dp)
@@ -364,7 +360,6 @@ fun PlayerEpisodeCard(
                     blurOnly = isEpisodeSpoiler && !isRevealed,
                 )
 
-                // Watched checkmark badge on top-end
                 if (episode.played) {
                     Box(
                         modifier =
@@ -383,7 +378,6 @@ fun PlayerEpisodeCard(
                     }
                 }
 
-                // In-card watch progress indicator along bottom edge
                 if (
                     episode.playbackPositionTicks > 0 && episode.runtimeTicks > 0 && !episode.played
                 ) {
@@ -399,7 +393,6 @@ fun PlayerEpisodeCard(
                     )
                 }
 
-                // YouTube-style duration capsule pill
                 if (formattedDuration != null) {
                     Surface(
                         shape = CircleShape,
@@ -417,7 +410,6 @@ fun PlayerEpisodeCard(
                 }
             }
 
-            // Episode Info Column
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,
@@ -460,7 +452,9 @@ fun PlayerEpisodeCard(
                 if (episode.overview.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     SpoilerMask(
-                        state = spoilerState,
+                        enabled = isEpisodeSpoiler,
+                        isRevealed = isRevealed,
+                        onRevealChange = { isRevealed = it },
                         shape = MaterialTheme.shapes.small,
                     ) {
                         Text(

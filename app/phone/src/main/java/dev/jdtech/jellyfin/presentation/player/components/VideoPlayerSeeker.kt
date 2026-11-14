@@ -80,6 +80,7 @@ fun VideoPlayerSeeker(
         { _, _, _ ->
         },
     onOpenChapters: (() -> Unit)? = null,
+    isSeries: Boolean = false,
     isPortrait: Boolean = false,
     isCompactWidth: Boolean = isPortrait,
 ) {
@@ -97,6 +98,17 @@ fun VideoPlayerSeeker(
         remember(displayedProgressMs, chapters, segments) {
             getSectionTitle(displayedProgressMs, chapters, segments, context)
         }
+
+    val episodesLabel = stringResource(id = PlayerR.string.episodes)
+    val chaptersLabel = stringResource(id = PlayerR.string.chapters)
+    val displayedSectionTitle =
+        when {
+            !sectionTitle.isNullOrBlank() -> sectionTitle
+            isSeries -> episodesLabel
+            chapters.isNotEmpty() -> chaptersLabel
+            else -> null
+        }
+    val canOpenChapters = onOpenChapters != null && (chapters.isNotEmpty() || isSeries)
 
     val remainingMs =
         if (durationMs > 0L) (durationMs - displayedProgressMs).coerceAtLeast(0L) else 0L
@@ -133,9 +145,10 @@ fun VideoPlayerSeeker(
                             .padding(end = if (endsAtText != null) 90.dp else 0.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    // Pill 1: Chapter Title (clickable if chapters are available)
-                    if (!sectionTitle.isNullOrBlank()) {
-                        if (chapters.isNotEmpty() && onOpenChapters != null) {
+                    // Pill 1: Chapter or Episode Title (clickable if chapters or series are
+                    // available)
+                    if (displayedSectionTitle != null) {
+                        if (canOpenChapters) {
                             Box(
                                 modifier =
                                     Modifier.clip(CircleShape)
@@ -153,7 +166,7 @@ fun VideoPlayerSeeker(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     Text(
-                                        text = sectionTitle,
+                                        text = displayedSectionTitle,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -179,7 +192,7 @@ fun VideoPlayerSeeker(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = sectionTitle,
+                                    text = displayedSectionTitle,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color.White.copy(alpha = 0.85f),
@@ -273,9 +286,10 @@ fun VideoPlayerSeeker(
                         }
                     }
 
-                    // Pill 2: Chapter Title (clickable if chapters are available)
-                    if (!sectionTitle.isNullOrBlank()) {
-                        if (chapters.isNotEmpty() && onOpenChapters != null) {
+                    // Pill 2: Chapter or Episode Title (clickable if chapters or series are
+                    // available)
+                    if (displayedSectionTitle != null) {
+                        if (canOpenChapters) {
                             Box(
                                 modifier =
                                     Modifier.weight(1f, fill = false)
@@ -294,7 +308,7 @@ fun VideoPlayerSeeker(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     Text(
-                                        text = sectionTitle,
+                                        text = displayedSectionTitle,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -321,7 +335,7 @@ fun VideoPlayerSeeker(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = sectionTitle,
+                                    text = displayedSectionTitle,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color.White.copy(alpha = 0.85f),
