@@ -460,7 +460,7 @@ fun VideoPlayerSeekBar(
                                     else innerCornerRadius
 
                                 drawCustomRoundRect(
-                                    color = segColor.copy(alpha = 0.35f),
+                                    color = segColor.copy(alpha = 0.20f),
                                     topLeft = Offset(segStartX, yOffset - trackHeightPx / 2f),
                                     size = Size(segEndX - segStartX, trackHeightPx),
                                     topLeftRadius = segLeftRad,
@@ -494,7 +494,7 @@ fun VideoPlayerSeekBar(
                     } else {
                         // --- NORMAL PLAYBACK / SCRUBBING ---
 
-                        // 1. Base unplayed chapter track (inactive portion right of thumb gap)
+                        // Inactive portion right of thumb gap
                         val inactiveStart = maxOf(sliceStartX, inactiveLimit)
                         if (sliceEndX > inactiveStart) {
                             val inactLeftRad =
@@ -502,6 +502,7 @@ fun VideoPlayerSeekBar(
                                     fullCornerRadius
                                 else innerCornerRadius
 
+                            // 1. Base unplayed chapter track (runs continuously under buffer)
                             drawCustomRoundRect(
                                 color = Color.White.copy(alpha = 0.20f),
                                 topLeft = Offset(inactiveStart, yOffset - trackHeightPx / 2f),
@@ -548,7 +549,7 @@ fun VideoPlayerSeekBar(
                                             else innerCornerRadius
 
                                         drawCustomRoundRect(
-                                            color = segColor.copy(alpha = 0.35f),
+                                            color = segColor.copy(alpha = 0.20f),
                                             topLeft =
                                                 Offset(inactSegStart, yOffset - trackHeightPx / 2f),
                                             size = Size(segEndX - inactSegStart, trackHeightPx),
@@ -576,7 +577,7 @@ fun VideoPlayerSeekBar(
                                         else innerCornerRadius
 
                                     drawCustomRoundRect(
-                                        color = Color.White.copy(alpha = 0.35f),
+                                        color = Color.White.copy(alpha = 0.15f),
                                         topLeft =
                                             Offset(inactiveStart, yOffset - trackHeightPx / 2f),
                                         size = Size(bufEnd - inactiveStart, trackHeightPx),
@@ -626,7 +627,7 @@ fun VideoPlayerSeekBar(
                                                     else innerCornerRadius
 
                                                 drawCustomRoundRect(
-                                                    color = segColor.copy(alpha = 0.55f),
+                                                    color = segColor.copy(alpha = 0.15f),
                                                     topLeft =
                                                         Offset(
                                                             inactSegBufStart,
@@ -783,14 +784,16 @@ fun VideoPlayerSeekBar(
                             (bufferedProgress.coerceIn(0f, 1f) * size.width).coerceAtMost(
                                 size.width
                             )
-                        if (bufferedX > inactiveLimit) {
+                        val bufEnd = maxOf(inactiveLimit, bufferedX)
+
+                        if (bufEnd > inactiveLimit) {
                             val bufRightRadius =
-                                if (bufferedX < size.width - 1f) innerCornerRadius
-                                else fullCornerRadius
+                                if (bufEnd >= size.width - 1f) fullCornerRadius
+                                else innerCornerRadius
                             drawCustomRoundRect(
-                                color = Color.White.copy(alpha = 0.40f),
+                                color = Color.White.copy(alpha = 0.15f),
                                 topLeft = Offset(inactiveLimit, yOffset - trackHeightPx / 2f),
-                                size = Size(bufferedX - inactiveLimit, trackHeightPx),
+                                size = Size(bufEnd - inactiveLimit, trackHeightPx),
                                 topLeftRadius = innerCornerRadius,
                                 bottomLeftRadius = innerCornerRadius,
                                 topRightRadius = bufRightRadius,

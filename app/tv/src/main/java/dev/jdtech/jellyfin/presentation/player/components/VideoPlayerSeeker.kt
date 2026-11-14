@@ -261,7 +261,7 @@ fun VideoPlayerSeeker(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         VideoPlayerSeekBar(
             progress =
