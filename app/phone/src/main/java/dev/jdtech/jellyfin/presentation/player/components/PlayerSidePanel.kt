@@ -23,10 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +83,18 @@ fun PlayerSidePanel(
     val uiState by viewModel.uiState.collectAsState()
     var tracks by remember { mutableStateOf(viewModel.player.currentTracks) }
     var isPlaying by remember { mutableStateOf(viewModel.player.isPlaying) }
+    val isSeries = uiState.seriesId != null
+    var selectedNavTab by rememberSaveable { mutableStateOf(PlayerNavTab.CHAPTERS) }
+
+    LaunchedEffect(panelType, uiState.currentChapters.size, isSeries) {
+        if (
+            panelType == PlayerSidePanelType.CHAPTERS &&
+                isSeries &&
+                uiState.currentChapters.isEmpty()
+        ) {
+            selectedNavTab = PlayerNavTab.EPISODES
+        }
+    }
 
     DisposableEffect(viewModel.player) {
         val listener =
@@ -108,7 +122,9 @@ fun PlayerSidePanel(
             SidePanelHeader(
                 panelType = panelType,
                 openedDirectly = openedDirectly,
-                isSeries = uiState.seriesId != null,
+                isSeries = isSeries,
+                selectedNavTab = selectedNavTab,
+                onTabSelected = { selectedNavTab = it },
                 onBack = { onPanelTypeChange(PlayerSidePanelType.SETTINGS) },
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -171,7 +187,11 @@ fun PlayerSidePanel(
                 }
 
                 PlayerSidePanelType.CHAPTERS -> {
-                    PlayerChaptersAndEpisodesSheet(viewModel = viewModel, onDismiss = onClose)
+                    PlayerChaptersAndEpisodesSheet(
+                        viewModel = viewModel,
+                        selectedTab = selectedNavTab,
+                        onDismiss = onClose,
+                    )
                 }
 
                 PlayerSidePanelType.SLEEP_TIMER -> {
@@ -193,6 +213,8 @@ private fun SidePanelHeader(
     panelType: PlayerSidePanelType,
     openedDirectly: Boolean,
     isSeries: Boolean = false,
+    selectedNavTab: PlayerNavTab = PlayerNavTab.CHAPTERS,
+    onTabSelected: (PlayerNavTab) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -228,35 +250,39 @@ private fun SidePanelHeader(
             }
         }
 
-        Text(
-            text =
-                stringResource(
-                    id =
-                        when (panelType) {
-                            PlayerSidePanelType.AUDIO -> PlayerR.string.select_audio_track
-                            PlayerSidePanelType.SUBTITLES -> PlayerR.string.select_subtitle_track
-
-                            PlayerSidePanelType.SPEED -> PlayerR.string.select_playback_speed
-
-                            PlayerSidePanelType.ASPECT_RATIO -> PlayerR.string.aspect_ratio
-                            PlayerSidePanelType.CHAPTERS ->
-                                if (isSeries) PlayerR.string.season_episodes
-                                else PlayerR.string.chapters
-                            PlayerSidePanelType.SLEEP_TIMER -> PlayerR.string.sleep_timer
-                            PlayerSidePanelType.QUALITY -> PlayerR.string.video_quality
-                            PlayerSidePanelType.PLAYBACK_INFO -> PlayerR.string.playback_info
-
-                            PlayerSidePanelType.SETTINGS,
-                            PlayerSidePanelType.NONE -> CoreR.string.title_settings
-                        }
-                ),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (panelType == PlayerSidePanelType.CHAPTERS && isSeries) {
+            PlayerNavigationHeaderSelector(
+                selectedTab = selectedNavTab,
+                onTabSelected = onTabSelected,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Text(
+                text =
+                    stringResource(
+                        id =
+                            when (panelType) {
+                                PlayerSidePanelType.AUDIO -> PlayerR.string.select_audio_track
+                                PlayerSidePanelType.SUBTITLES ->
+                                    PlayerR.string.select_subtitle_track
+                                PlayerSidePanelType.SPEED -> PlayerR.string.select_playback_speed
+                                PlayerSidePanelType.ASPECT_RATIO -> PlayerR.string.aspect_ratio
+                                PlayerSidePanelType.CHAPTERS -> PlayerR.string.chapters
+                                PlayerSidePanelType.SLEEP_TIMER -> PlayerR.string.sleep_timer
+                                PlayerSidePanelType.QUALITY -> PlayerR.string.video_quality
+                                PlayerSidePanelType.PLAYBACK_INFO -> PlayerR.string.playback_info
+                                PlayerSidePanelType.SETTINGS,
+                                PlayerSidePanelType.NONE -> CoreR.string.title_settings
+                            }
+                    ),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

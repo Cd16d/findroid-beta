@@ -1,9 +1,5 @@
 package dev.jdtech.jellyfin.presentation.player.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -53,7 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerSheetContainer
+import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
@@ -63,7 +60,7 @@ import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.PlayedBadge
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
-private val EpisodeThumbShape = RoundedCornerShape(12.dp)
+private val EpisodeThumbShape = RoundedCornerShape(16.dp)
 
 /** Tab options for unified in-player navigation sheet. */
 enum class PlayerNavTab {
@@ -71,110 +68,86 @@ enum class PlayerNavTab {
     EPISODES,
 }
 
+/** Top header segmented button selector for switching between Chapters and Episodes. */
+@Composable
+fun PlayerNavigationHeaderSelector(
+    selectedTab: PlayerNavTab,
+    onTabSelected: (PlayerNavTab) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        SegmentedButton(
+            selected = selectedTab == PlayerNavTab.CHAPTERS,
+            onClick = { onTabSelected(PlayerNavTab.CHAPTERS) },
+            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            colors =
+                SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            icon = {},
+        ) {
+            Text(
+                text = stringResource(id = PlayerR.string.chapters),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+        SegmentedButton(
+            selected = selectedTab == PlayerNavTab.EPISODES,
+            onClick = { onTabSelected(PlayerNavTab.EPISODES) },
+            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            colors =
+                SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            icon = {},
+        ) {
+            Text(
+                text = stringResource(id = PlayerR.string.episodes),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
 /**
- * Unified in-player navigation sheet hosting dual tabs (`Capitoli` and `Episodi`) with a
- * bottom-anchored segmented button selector, horizontal season chips rail, and episode cards with
- * spoiler protection and instant playback switching.
+ * Unified in-player navigation sheet hosting chapters or episodes based on [selectedTab].
  *
  * @param viewModel Active [PlayerViewModel].
  * @param onDismiss Callback to dismiss the player sheet.
  * @param modifier Optional modifier applied to root container.
+ * @param selectedTab Current active tab ([PlayerNavTab.CHAPTERS] or [PlayerNavTab.EPISODES]).
  */
 @Composable
 fun PlayerChaptersAndEpisodesSheet(
     viewModel: PlayerViewModel,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedTab: PlayerNavTab = PlayerNavTab.CHAPTERS,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isSeries = uiState.seriesId != null
 
-    if (!isSeries) {
-        // Standalone media (e.g. Movie) - direct chapters view without episode tab
+    if (!isSeries || selectedTab == PlayerNavTab.CHAPTERS) {
         PhoneChaptersList(viewModel = viewModel)
-        return
-    }
-
-    var selectedTab by rememberSaveable { mutableStateOf(PlayerNavTab.CHAPTERS) }
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        Box(modifier = Modifier.weight(1f, fill = true).fillMaxWidth()) {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = { fadeIn().togetherWith(fadeOut()) },
-                label = "PlayerNavigationTabTransition",
-            ) { targetTab ->
-                when (targetTab) {
-                    PlayerNavTab.CHAPTERS -> {
-                        PhoneChaptersList(viewModel = viewModel)
-                    }
-                    PlayerNavTab.EPISODES -> {
-                        PlayerEpisodeSelectorContent(
-                            viewModel = viewModel,
-                            onEpisodeSelected = { episode ->
-                                viewModel.playEpisode(episode)
-                                onDismiss()
-                            },
-                        )
-                    }
-                }
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = PlayerSheetContainer,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            tonalElevation = 6.dp,
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = selectedTab == PlayerNavTab.CHAPTERS,
-                        onClick = { selectedTab = PlayerNavTab.CHAPTERS },
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                        colors =
-                            SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary,
-                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                inactiveContainerColor =
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                            ),
-                        icon = {},
-                    ) {
-                        Text(
-                            text = stringResource(id = PlayerR.string.chapters),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                    SegmentedButton(
-                        selected = selectedTab == PlayerNavTab.EPISODES,
-                        onClick = { selectedTab = PlayerNavTab.EPISODES },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        colors =
-                            SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary,
-                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                inactiveContainerColor =
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                            ),
-                        icon = {},
-                    ) {
-                        Text(
-                            text = stringResource(id = PlayerR.string.episodes),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-            }
-        }
+    } else {
+        PlayerEpisodeSelectorContent(
+            viewModel = viewModel,
+            onEpisodeSelected = { episode ->
+                viewModel.playEpisode(episode)
+                onDismiss()
+            },
+            modifier = modifier,
+        )
     }
 }
 
@@ -317,7 +290,7 @@ fun PlayerEpisodeCard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = CentralShapes.GroupSingle,
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
             else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -389,7 +362,7 @@ fun PlayerEpisodeCard(
                 if (isCurrent) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = CircleShape,
                         color = MaterialTheme.colorScheme.primary,
                     ) {
                         Text(
@@ -397,7 +370,7 @@ fun PlayerEpisodeCard(
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
                 }

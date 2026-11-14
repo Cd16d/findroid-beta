@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,12 +33,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.presentation.formatDuration
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
-private val ChapterThumbShape = RoundedCornerShape(12.dp)
+private val ChapterThumbShape = RoundedCornerShape(16.dp)
 
 /**
  * Shared chapter item card with preview thumbnail, YouTube-style timestamp chip, title, and current
@@ -70,7 +73,7 @@ fun ChapterCard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = CentralShapes.GroupSingle,
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
             else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -97,7 +100,7 @@ fun ChapterCard(
                 contentAlignment = Alignment.Center,
             ) {
                 if (hasServerImage) {
-                    coil3.compose.AsyncImage(
+                    AsyncImage(
                         model = chapter.imageUri,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
@@ -123,21 +126,43 @@ fun ChapterCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color =
-                        if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f),
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = formattedTime,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
                         color =
-                            if (isCurrent) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
+                            if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else
+                                MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+                                    alpha = 0.7f
+                                ),
+                    ) {
+                        Text(
+                            text = formattedTime,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color =
+                                if (isCurrent) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                    if (isCurrent) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) {
+                            Text(
+                                text = stringResource(id = PlayerR.string.now_playing),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
