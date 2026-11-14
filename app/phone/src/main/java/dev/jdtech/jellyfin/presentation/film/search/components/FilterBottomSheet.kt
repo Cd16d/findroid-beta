@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.film.presentation.search.FeatureFlag
 import dev.jdtech.jellyfin.film.presentation.search.FilterCategory
@@ -85,6 +86,7 @@ fun FilterBottomSheet(
         Column(
             modifier =
                 Modifier.fillMaxWidth()
+                    .stabilizeBottomSheetOverscroll()
                     .padding(horizontal = MaterialTheme.spacings.default)
                     .padding(bottom = MaterialTheme.spacings.large)
         ) {

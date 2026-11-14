@@ -45,6 +45,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
 import androidx.window.core.layout.WindowSizeClass
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.models.FindroidSegment
@@ -153,6 +154,7 @@ fun CastExpandedPlayer(
                     isExpandedScreen = false,
                     uiState = uiState,
                     actions = actions,
+                    modifier = Modifier.stabilizeBottomSheetOverscroll(),
                 )
             }
         }

@@ -48,15 +48,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -66,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.models.DownloadQualityPreset
 import dev.jdtech.jellyfin.models.DownloadQualityPresets
@@ -320,7 +317,13 @@ fun DownloadPresetBottomSheetLayout(
     val currentLocale = configuration.locales[0]
     var audioExpanded by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 16.dp)) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .stabilizeBottomSheetOverscroll()
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
+    ) {
         // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -365,17 +368,6 @@ fun DownloadPresetBottomSheetLayout(
         Spacer(modifier = Modifier.height(16.dp))
 
         val scrollState = rememberScrollState()
-        val stopScrollPropagation = remember {
-            object : NestedScrollConnection {
-                override fun onPostScroll(
-                    consumed: Offset,
-                    available: Offset,
-                    source: NestedScrollSource,
-                ): Offset {
-                    return available
-                }
-            }
-        }
 
         Column(
             modifier =
@@ -410,7 +402,6 @@ fun DownloadPresetBottomSheetLayout(
                             )
                         }
                     }
-                    .nestedScroll(stopScrollPropagation)
                     .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

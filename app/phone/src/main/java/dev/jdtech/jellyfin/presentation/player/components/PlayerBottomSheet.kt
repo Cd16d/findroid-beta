@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerSheetBackground
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerSheetContainer
 import dev.jdtech.jellyfin.player.core.R as PlayerR
@@ -189,6 +190,7 @@ fun PlayerBottomSheet(
         Column(
             modifier =
                 Modifier.fillMaxWidth()
+                    .stabilizeBottomSheetOverscroll()
                     .widthIn(max = 540.dp)
                     .align(Alignment.CenterHorizontally)
                     .padding(horizontal = 20.dp)

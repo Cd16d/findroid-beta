@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServer
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServerAddress
 import dev.jdtech.jellyfin.models.ServerWithAddresses
@@ -77,6 +78,7 @@ private fun ServerSelectionBottomSheetLayout(
 ) {
     ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState) {
         LazyColumn(
+            modifier = Modifier.fillMaxWidth().stabilizeBottomSheetOverscroll(),
             contentPadding =
                 PaddingValues(
                     start = MaterialTheme.spacings.medium,

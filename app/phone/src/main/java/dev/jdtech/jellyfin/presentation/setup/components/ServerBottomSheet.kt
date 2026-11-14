@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.setup.R as SetupR
@@ -39,7 +40,10 @@ fun ServerBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState) {
-        Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium)) {
+        Column(
+            modifier = Modifier.stabilizeBottomSheetOverscroll(),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+        ) {
             ServerItem(
                 name = name,
                 address = address,

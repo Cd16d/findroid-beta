@@ -49,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.stabilizeBottomSheetOverscroll
 import dev.jdtech.jellyfin.core.presentation.theme.PaletteGreen
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -74,6 +75,7 @@ fun QuickConnectBottomSheet(
         dragHandle = {},
     ) {
         QuickConnectCodeInput(
+            modifier = Modifier.stabilizeBottomSheetOverscroll(),
             code = code,
             onCodeChange = {
                 code = it

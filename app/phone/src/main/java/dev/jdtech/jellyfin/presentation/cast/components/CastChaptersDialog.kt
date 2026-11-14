@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -210,7 +209,7 @@ fun CastChaptersDialog(
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             val screenMaxHeight =
                 if (isLandscape) {
-                    containerHeightDp
+                    (containerHeightDp - 32.dp).coerceAtLeast(150.dp)
                 } else {
                     containerHeightDp * 0.6f
                 }
@@ -220,10 +219,7 @@ fun CastChaptersDialog(
                     modifier
                         .padding(MaterialTheme.spacings.small)
                         .widthIn(max = 500.dp)
-                        .then(
-                            if (isLandscape) Modifier.fillMaxHeight()
-                            else Modifier.heightIn(max = screenMaxHeight)
-                        )
+                        .heightIn(max = screenMaxHeight)
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .offset { IntOffset(0, animatedOffset.roundToInt()) }
@@ -240,7 +236,6 @@ fun CastChaptersDialog(
                     modifier =
                         Modifier.nestedScroll(nestedScrollConnection)
                             .padding(MaterialTheme.spacings.medium)
-                            .then(if (isLandscape) Modifier.fillMaxHeight() else Modifier)
                 ) {
                     Box(
                         modifier =
@@ -261,7 +256,7 @@ fun CastChaptersDialog(
                         modifier = Modifier.padding(8.dp),
                     )
 
-                    Box(modifier = Modifier.weight(1f, fill = false)) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
                         LazyColumn(
                             state = listState,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
