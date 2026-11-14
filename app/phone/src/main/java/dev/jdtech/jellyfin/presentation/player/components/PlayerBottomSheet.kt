@@ -238,7 +238,9 @@ fun PlayerBottomSheet(
                                     PlayerSidePanelType.SPEED ->
                                         PlayerR.string.select_playback_speed
                                     PlayerSidePanelType.ASPECT_RATIO -> PlayerR.string.aspect_ratio
-                                    PlayerSidePanelType.CHAPTERS -> PlayerR.string.chapters
+                                    PlayerSidePanelType.CHAPTERS ->
+                                        if (uiState.seriesId != null) PlayerR.string.season_episodes
+                                        else PlayerR.string.chapters
                                     PlayerSidePanelType.SLEEP_TIMER -> PlayerR.string.sleep_timer
                                     PlayerSidePanelType.QUALITY -> PlayerR.string.video_quality
                                     PlayerSidePanelType.PLAYBACK_INFO ->
@@ -328,7 +330,10 @@ fun PlayerBottomSheet(
                         )
                     }
                     PlayerSidePanelType.CHAPTERS -> {
-                        PhoneChaptersList(viewModel = viewModel)
+                        PlayerChaptersAndEpisodesSheet(
+                            viewModel = viewModel,
+                            onDismiss = onDismiss,
+                        )
                     }
                     PlayerSidePanelType.SLEEP_TIMER -> {
                         SleepTimerPicker(

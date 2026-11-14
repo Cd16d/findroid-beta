@@ -108,6 +108,7 @@ fun PlayerSidePanel(
             SidePanelHeader(
                 panelType = panelType,
                 openedDirectly = openedDirectly,
+                isSeries = uiState.seriesId != null,
                 onBack = { onPanelTypeChange(PlayerSidePanelType.SETTINGS) },
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -170,7 +171,7 @@ fun PlayerSidePanel(
                 }
 
                 PlayerSidePanelType.CHAPTERS -> {
-                    PhoneChaptersList(viewModel = viewModel)
+                    PlayerChaptersAndEpisodesSheet(viewModel = viewModel, onDismiss = onClose)
                 }
 
                 PlayerSidePanelType.SLEEP_TIMER -> {
@@ -191,6 +192,7 @@ fun PlayerSidePanel(
 private fun SidePanelHeader(
     panelType: PlayerSidePanelType,
     openedDirectly: Boolean,
+    isSeries: Boolean = false,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -237,7 +239,9 @@ private fun SidePanelHeader(
                             PlayerSidePanelType.SPEED -> PlayerR.string.select_playback_speed
 
                             PlayerSidePanelType.ASPECT_RATIO -> PlayerR.string.aspect_ratio
-                            PlayerSidePanelType.CHAPTERS -> PlayerR.string.chapters
+                            PlayerSidePanelType.CHAPTERS ->
+                                if (isSeries) PlayerR.string.season_episodes
+                                else PlayerR.string.chapters
                             PlayerSidePanelType.SLEEP_TIMER -> PlayerR.string.sleep_timer
                             PlayerSidePanelType.QUALITY -> PlayerR.string.video_quality
                             PlayerSidePanelType.PLAYBACK_INFO -> PlayerR.string.playback_info

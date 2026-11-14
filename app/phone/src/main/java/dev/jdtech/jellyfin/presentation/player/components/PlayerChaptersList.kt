@@ -3,6 +3,7 @@ package dev.jdtech.jellyfin.presentation.player.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -71,22 +72,38 @@ internal fun PhoneChaptersList(viewModel: PlayerViewModel) {
         }
     }
 
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        itemsIndexed(chapters) { index, chapter ->
-            val isCurrent = index == currentChapterIndex
-            ChapterCard(
-                chapter = chapter,
-                index = index,
-                isCurrent = isCurrent,
-                onClick = {
-                    currentPosition = chapter.startPosition
-                    viewModel.player.seekTo(chapter.startPosition)
-                },
+    if (chapters.isEmpty()) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier.fillMaxWidth().padding(32.dp),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            androidx.compose.material3.Text(
+                text =
+                    androidx.compose.ui.res.stringResource(
+                        id = dev.jdtech.jellyfin.player.core.R.string.no_chapters
+                    ),
+                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            itemsIndexed(chapters) { index, chapter ->
+                val isCurrent = index == currentChapterIndex
+                ChapterCard(
+                    chapter = chapter,
+                    index = index,
+                    isCurrent = isCurrent,
+                    onClick = {
+                        currentPosition = chapter.startPosition
+                        viewModel.player.seekTo(chapter.startPosition)
+                    },
+                )
+            }
         }
     }
 }

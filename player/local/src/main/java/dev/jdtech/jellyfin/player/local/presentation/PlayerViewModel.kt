@@ -132,7 +132,10 @@ constructor(
         val currentChapters: List<PlayerChapter>,
         val fileLoaded: Boolean,
         val isFavorite: Boolean = false,
+        val seasons: List<FindroidSeason> = emptyList(),
+        val selectedSeasonId: UUID? = null,
         val seasonEpisodes: List<FindroidEpisode> = emptyList(),
+        val isLoadingEpisodes: Boolean = false,
         val currentEpisodeId: UUID? = null,
         val seriesId: UUID? = null,
         val segments: List<FindroidSegment> = emptyList(),
@@ -653,6 +656,17 @@ constructor(
                 val item = repository.getItem(itemId)
                 if (item != null) {
                     val isFav = item.favorite
+                    val seasons: List<FindroidSeason> =
+                        if (item is FindroidEpisode) {
+                            try {
+                                repository.getSeasons(seriesId = item.seriesId)
+                            } catch (e: Exception) {
+                                Timber.e(e, "Error loading seasons for series ${item.seriesId}")
+                                emptyList()
+                            }
+                        } else {
+                            emptyList()
+                        }
                     val episodes: List<FindroidEpisode> =
                         if (item is FindroidEpisode) {
                             repository.getEpisodes(
@@ -738,6 +752,8 @@ constructor(
                     _uiState.update {
                         it.copy(
                             isFavorite = isFav,
+                            seasons = seasons,
+                            selectedSeasonId = (item as? FindroidEpisode)?.seasonId,
                             seasonEpisodes = episodes,
                             currentEpisodeId = (item as? FindroidEpisode)?.id,
                             seriesId = (item as? FindroidEpisode)?.seriesId,
@@ -1572,6 +1588,25 @@ constructor(
             itemKind = BaseItemKind.EPISODE.serialName,
             startFromBeginning = false,
         )
+    }
+
+    fun selectSeason(seasonId: UUID) {
+        val series = _uiState.value.seriesId ?: return
+        if (
+            _uiState.value.selectedSeasonId == seasonId &&
+                _uiState.value.seasonEpisodes.isNotEmpty()
+        )
+            return
+        viewModelScope.launch {
+            _uiState.update { it.copy(selectedSeasonId = seasonId, isLoadingEpisodes = true) }
+            try {
+                val episodes = repository.getEpisodes(seriesId = series, seasonId = seasonId)
+                _uiState.update { it.copy(seasonEpisodes = episodes, isLoadingEpisodes = false) }
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading episodes for season $seasonId")
+                _uiState.update { it.copy(isLoadingEpisodes = false) }
+            }
+        }
     }
 
     private fun PlayerItem.toMediaItem(): MediaItem {
