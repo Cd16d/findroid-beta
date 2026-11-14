@@ -157,10 +157,6 @@ internal fun PlayerSettingsMenu(
     val navigateToSpeed = remember(onNavigate) { { onNavigate(PlayerSidePanelType.SPEED) } }
     val navigateToAspectRatio =
         remember(onNavigate) { { onNavigate(PlayerSidePanelType.ASPECT_RATIO) } }
-    val isSeries = uiState.seriesId != null
-    val hasChapters = uiState.currentChapters.isNotEmpty()
-    val navigateToChaptersOrEpisodes =
-        remember(onNavigate) { { onNavigate(PlayerSidePanelType.CHAPTERS) } }
     val toggleAmbient =
         remember(onAmbientModeToggle, isAmbientModeEnabled) {
             { onAmbientModeToggle(!isAmbientModeEnabled) }
@@ -214,24 +210,6 @@ internal fun PlayerSettingsMenu(
                 iconRes = PlayerR.drawable.ic_aspect_ratio,
                 onClick = navigateToAspectRatio,
             )
-        }
-        if (isSeries || hasChapters) {
-            item {
-                PlayerNavigationItem(
-                    title =
-                        stringResource(
-                            id = if (isSeries) PlayerR.string.episodes else PlayerR.string.chapters
-                        ),
-                    subtitle =
-                        if (isSeries) {
-                            stringResource(id = PlayerR.string.episodes)
-                        } else {
-                            stringResource(id = PlayerR.string.chapters)
-                        },
-                    iconRes = if (isSeries) PlayerR.drawable.ic_tv else CoreR.drawable.ic_film,
-                    onClick = navigateToChaptersOrEpisodes,
-                )
-            }
         }
         item {
             PlayerNavigationItem(
