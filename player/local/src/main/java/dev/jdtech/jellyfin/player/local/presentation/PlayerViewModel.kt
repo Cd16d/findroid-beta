@@ -65,6 +65,7 @@ import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -162,12 +163,16 @@ constructor(
         val selectedPerson: FindroidPerson? = null,
         val selectedPersonItems: List<FindroidItem> = emptyList(),
         val isLoadingPerson: Boolean = false,
+        val isSeasonLoadError: Boolean = false,
+        val isSeasonEpisodesError: Boolean = false,
         val maxTranscodeBitrateBps: Int = 120_000_000,
     )
 
     private var items: MutableList<PlayerItem> = mutableListOf()
     private var sleepTimerJob: Job? = null
     private var playbackProgressJob: Job? = null
+    private var initializePlayerJob: Job? = null
+    private var loadMetadataJob: Job? = null
     var selectedAudioStreamIndex: Int? = null
         private set
 
@@ -441,7 +446,8 @@ constructor(
             }
         _uiState.update { it.copy(selectedQuality = rememberedQuality) }
 
-        viewModelScope.launch {
+        initializePlayerJob?.cancel()
+        initializePlayerJob = viewModelScope.launch {
             val startItem =
                 try {
                     val resolvedKind =
@@ -468,8 +474,10 @@ constructor(
                         startFromBeginning = startFromBeginning,
                     )
                 } catch (e: Exception) {
-                    Timber.e(e)
-                    Toast.makeText(application, e.localizedMessage, Toast.LENGTH_LONG).show()
+                    if (e !is CancellationException) {
+                        Timber.e(e)
+                        Toast.makeText(application, e.localizedMessage, Toast.LENGTH_LONG).show()
+                    }
                     null
                 }
 
@@ -656,7 +664,8 @@ constructor(
     }
 
     fun loadItemMetadata(itemId: UUID) {
-        viewModelScope.launch {
+        loadMetadataJob?.cancel()
+        loadMetadataJob = viewModelScope.launch {
             if (_uiState.value.selectedQuality.isAuto) {
                 _uiState.update { it.copy(isSpeedTesting = true) }
             }
@@ -664,23 +673,39 @@ constructor(
                 val item = repository.getItem(itemId)
                 if (item != null) {
                     val isFav = item.favorite
+                    var isSeasonsError = false
                     val seasons: List<FindroidSeason> =
                         if (item is FindroidEpisode) {
                             try {
                                 repository.getSeasons(seriesId = item.seriesId)
                             } catch (e: Exception) {
-                                Timber.e(e, "Error loading seasons for series ${item.seriesId}")
+                                if (e !is CancellationException) {
+                                    Timber.e(e, "Error loading seasons for series ${item.seriesId}")
+                                    isSeasonsError = true
+                                }
                                 emptyList()
                             }
                         } else {
                             emptyList()
                         }
+                    var isEpisodesError = false
                     val episodes: List<FindroidEpisode> =
                         if (item is FindroidEpisode) {
-                            repository.getEpisodes(
-                                seriesId = item.seriesId,
-                                seasonId = item.seasonId,
-                            )
+                            try {
+                                repository.getEpisodes(
+                                    seriesId = item.seriesId,
+                                    seasonId = item.seasonId,
+                                )
+                            } catch (e: Exception) {
+                                if (e !is CancellationException) {
+                                    Timber.e(
+                                        e,
+                                        "Error loading episodes for season ${item.seasonId}",
+                                    )
+                                    isEpisodesError = true
+                                }
+                                emptyList()
+                            }
                         } else {
                             emptyList()
                         }
@@ -785,6 +810,9 @@ constructor(
                             seasons = seasons,
                             selectedSeasonId = (item as? FindroidEpisode)?.seasonId,
                             seasonEpisodes = episodes,
+                            isLoadingEpisodes = false,
+                            isSeasonLoadError = isSeasonsError,
+                            isSeasonEpisodesError = isEpisodesError,
                             currentEpisodeId = (item as? FindroidEpisode)?.id,
                             seriesId = (item as? FindroidEpisode)?.seriesId,
                             mediaStreams = streams,
@@ -801,7 +829,38 @@ constructor(
                     updateAvailableAudioTracks()
                 }
             } catch (e: Exception) {
-                Timber.e(e, "Error loading item metadata for player")
+                if (e !is CancellationException) {
+                    Timber.e(e, "Error loading item metadata for player")
+                }
+            }
+        }
+    }
+
+    /** Retries loading seasons and initial episodes for the current TV series. */
+    fun retryLoadSeasons() {
+        val series = _uiState.value.seriesId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingEpisodes = true, isSeasonLoadError = false) }
+            try {
+                val seasons = repository.getSeasons(seriesId = series)
+                val activeSeasonId = _uiState.value.selectedSeasonId ?: seasons.firstOrNull()?.id
+                _uiState.update {
+                    it.copy(
+                        seasons = seasons,
+                        selectedSeasonId = activeSeasonId,
+                        isSeasonLoadError = false,
+                    )
+                }
+                if (activeSeasonId != null) {
+                    selectSeason(activeSeasonId)
+                } else {
+                    _uiState.update { it.copy(isLoadingEpisodes = false) }
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    Timber.e(e, "Error retrying seasons load for series $series")
+                    _uiState.update { it.copy(isLoadingEpisodes = false, isSeasonLoadError = true) }
+                }
             }
         }
     }
@@ -1660,6 +1719,7 @@ constructor(
     }
 
     fun playEpisode(episode: FindroidEpisode) {
+        if (episode.missing || !episode.canPlay) return
         initializePlayer(
             itemId = episode.id,
             itemKind = BaseItemKind.EPISODE.serialName,
@@ -1673,24 +1733,43 @@ constructor(
         val series = _uiState.value.seriesId ?: return
         if (
             _uiState.value.selectedSeasonId == seasonId &&
-                _uiState.value.seasonEpisodes.isNotEmpty()
-        )
+                _uiState.value.seasonEpisodes.isNotEmpty() &&
+                !_uiState.value.isSeasonEpisodesError
+        ) {
             return
+        }
         selectSeasonJob?.cancel()
         selectSeasonJob = viewModelScope.launch {
-            _uiState.update { it.copy(selectedSeasonId = seasonId, isLoadingEpisodes = true) }
+            _uiState.update {
+                it.copy(
+                    selectedSeasonId = seasonId,
+                    isLoadingEpisodes = true,
+                    isSeasonEpisodesError = false,
+                    seasonEpisodes =
+                        if (it.selectedSeasonId != seasonId) emptyList() else it.seasonEpisodes,
+                )
+            }
             try {
                 val episodes = repository.getEpisodes(seriesId = series, seasonId = seasonId)
                 if (_uiState.value.selectedSeasonId == seasonId) {
                     _uiState.update {
-                        it.copy(seasonEpisodes = episodes, isLoadingEpisodes = false)
+                        it.copy(
+                            seasonEpisodes = episodes,
+                            isLoadingEpisodes = false,
+                            isSeasonEpisodesError = false,
+                        )
                     }
                 }
             } catch (e: Exception) {
-                if (e !is kotlinx.coroutines.CancellationException) {
+                if (e !is CancellationException) {
                     Timber.e(e, "Error loading episodes for season $seasonId")
                     if (_uiState.value.selectedSeasonId == seasonId) {
-                        _uiState.update { it.copy(isLoadingEpisodes = false) }
+                        _uiState.update {
+                            it.copy(
+                                isLoadingEpisodes = false,
+                                isSeasonEpisodesError = true,
+                            )
+                        }
                     }
                 }
             }

@@ -9,6 +9,7 @@ data class FindroidPerson(
     val name: String,
     val overview: String,
     val images: FindroidImages,
+    val providerIds: Map<String, String> = emptyMap(),
 )
 
 fun BaseItemDto.toFindroidPerson(repository: JellyfinRepository): FindroidPerson {
@@ -17,5 +18,8 @@ fun BaseItemDto.toFindroidPerson(repository: JellyfinRepository): FindroidPerson
         name = name.orEmpty(),
         overview = overview.orEmpty(),
         images = toFindroidImages(repository),
+        providerIds =
+            providerIds?.filterValues { !it.isNullOrBlank() }?.mapValues { it.value!! }
+                ?: emptyMap(),
     )
 }

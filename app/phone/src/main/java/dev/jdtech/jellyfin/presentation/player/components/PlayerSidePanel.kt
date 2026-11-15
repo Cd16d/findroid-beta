@@ -86,21 +86,9 @@ fun PlayerSidePanel(
     val isSeries = uiState.seriesId != null
     var selectedNavTab by rememberSaveable { mutableStateOf(PlayerNavTab.CHAPTERS) }
 
-    LaunchedEffect(panelType, uiState.currentChapters.size, isSeries) {
-        if (
-            panelType == PlayerSidePanelType.CHAPTERS &&
-                isSeries &&
-                uiState.currentChapters.isEmpty() &&
-                selectedNavTab == PlayerNavTab.CHAPTERS
-        ) {
-            selectedNavTab = PlayerNavTab.EPISODES
-        } else if (
-            panelType == PlayerSidePanelType.CHAPTERS &&
-                !isSeries &&
-                uiState.currentChapters.isEmpty() &&
-                selectedNavTab == PlayerNavTab.CHAPTERS
-        ) {
-            selectedNavTab = PlayerNavTab.INFO
+    LaunchedEffect(panelType, isSeries) {
+        if (!isSeries && selectedNavTab == PlayerNavTab.EPISODES) {
+            selectedNavTab = PlayerNavTab.CHAPTERS
         }
     }
 
@@ -131,6 +119,7 @@ fun PlayerSidePanel(
                 panelType = panelType,
                 openedDirectly = openedDirectly,
                 isSeries = isSeries,
+                hasChapters = uiState.currentChapters.isNotEmpty(),
                 selectedNavTab = selectedNavTab,
                 onTabSelected = { selectedNavTab = it },
                 onBack = { onPanelTypeChange(PlayerSidePanelType.SETTINGS) },
@@ -221,6 +210,7 @@ private fun SidePanelHeader(
     panelType: PlayerSidePanelType,
     openedDirectly: Boolean,
     isSeries: Boolean = false,
+    hasChapters: Boolean = false,
     selectedNavTab: PlayerNavTab = PlayerNavTab.CHAPTERS,
     onTabSelected: (PlayerNavTab) -> Unit = {},
     onBack: () -> Unit,

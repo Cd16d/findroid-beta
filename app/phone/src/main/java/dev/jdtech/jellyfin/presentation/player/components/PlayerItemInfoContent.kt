@@ -5,6 +5,10 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,7 +22,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -100,12 +103,18 @@ fun PlayerItemInfoContent(
             items = uiState.selectedPersonItems,
             isLoading = uiState.isLoadingPerson,
             onBack = { viewModel.clearSelectedPerson() },
+            onOpenUrl = { url ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+            },
             modifier = modifier,
         )
         return
     }
 
-    if (uiState.isLoadingPerson && uiState.selectedPerson == null) {
+    if (uiState.isLoadingPerson) {
         Box(
             modifier = modifier.fillMaxSize().padding(32.dp),
             contentAlignment = Alignment.Center,
@@ -257,196 +266,210 @@ private fun PlayerItemInfoLayout(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // 1. Artwork Poster Header
+        // Top Info Card (Poster, Title, Ratings, Providers, Synopsis)
         Surface(
-            modifier =
-                Modifier.fillMaxWidth(if (isSeries) 1f else 0.65f)
-                    .aspectRatio(artworkAspectRatio)
-                    .heightIn(max = 260.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = CentralShapes.GroupSingle,
+            color = PlayerCardBackground,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-            shadowElevation = 4.dp,
-        ) {
-            val optimizedUri =
-                artworkUri.toOptimizedImageUri(
-                    widthDp = if (isSeries) 400.dp else 240.dp,
-                    heightDp = 260.dp,
-                )
-            AsyncImage(
-                model = optimizedUri,
-                contentDescription = title,
-                placeholder = blurHashPainter,
-                error = blurHashPainter,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
-        }
-
-        // 2. Title & Subtitle
-        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        // 3. Ratings (Community Stars & Critic Scores)
-        val hasCommunityScore = communityRating != null
-        val hasCriticScore = criticRating != null
-
-        if (hasCommunityScore || hasCriticScore) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // Community Score (Neutral yellow star representation)
-                if (communityRating != null) {
-                    PlayerRatingPill(
-                        iconRes = CoreR.drawable.ic_star,
-                        iconTint = Yellow,
-                        label = String.format(Locale.ROOT, "%.1f", communityRating),
-                        onClick = null,
-                    )
-                }
-
-                // Critic Score
-                if (criticRating != null) {
-                    val iconRes =
-                        when {
-                            criticRating >= 60f -> CoreR.drawable.ic_rotten_tomatoes_fresh
-                            else -> CoreR.drawable.ic_rotten_tomatoes_rotten
-                        }
-                    val rtId = providerIds["RottenTomatoes"]
-                    val rtUrl =
-                        if (!rtId.isNullOrBlank()) {
-                            if (rtId.startsWith("http")) rtId
-                            else "https://www.rottentomatoes.com/$rtId"
-                        } else {
-                            null
-                        }
-
-                    PlayerRatingPill(
-                        iconRes = iconRes,
-                        label = "${criticRating.toInt()}%",
-                        onClick = rtUrl?.let { { onOpenUrl(it) } },
-                    )
-                }
-            }
-        }
-
-        // 4. External Data Provider Links
-        val hasImdb = !providerIds["Imdb"].isNullOrBlank()
-        val hasTmdb = !providerIds["Tmdb"].isNullOrBlank()
-        val hasTvdb = !providerIds["Tvdb"].isNullOrBlank()
-        val hasRtWithoutCritic =
-            !providerIds["RottenTomatoes"].isNullOrBlank() && criticRating == null
-
-        if (hasImdb || hasTmdb || hasTvdb || hasRtWithoutCritic) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // IMDb
-                val imdbId = providerIds["Imdb"]
-                if (!imdbId.isNullOrBlank()) {
-                    PlayerRatingPill(
-                        iconRes = CoreR.drawable.ic_imdb,
-                        label = "IMDb",
-                        onClick = { onOpenUrl("https://www.imdb.com/title/$imdbId/") },
-                    )
-                }
-
-                // TheMovieDb (TMDb)
-                val tmdbId = providerIds["Tmdb"]
-                if (!tmdbId.isNullOrBlank()) {
-                    val type = if (isSeries) "tv" else "movie"
-                    PlayerRatingPill(
-                        iconRes = CoreR.drawable.ic_tmdb,
-                        label = "TMDb",
-                        onClick = { onOpenUrl("https://www.themoviedb.org/$type/$tmdbId") },
-                    )
-                }
-
-                // TheTVDB
-                val tvdbId = providerIds["Tvdb"]
-                if (!tvdbId.isNullOrBlank()) {
-                    val type = if (isSeries) "series" else "movie"
-                    PlayerRatingPill(
-                        iconRes = CoreR.drawable.ic_tvdb,
-                        label = "TheTVDB",
-                        onClick = { onOpenUrl("https://thetvdb.com/dereferrer/$type/$tvdbId") },
-                    )
-                }
-
-                // Rotten Tomatoes link (if no critic score was present above)
-                val rtId = providerIds["RottenTomatoes"]
-                if (!rtId.isNullOrBlank() && criticRating == null) {
-                    val url =
-                        if (rtId.startsWith("http")) rtId
-                        else "https://www.rottentomatoes.com/$rtId"
-                    PlayerRatingPill(
-                        iconRes = CoreR.drawable.ic_rotten_tomatoes_neutral,
-                        label = "Rotten Tomatoes",
-                        onClick = { onOpenUrl(url) },
-                    )
-                }
-            }
-        }
-
-        // 5. Expandable Description / Overview
-        if (overview.isNotBlank()) {
-            var isExpanded by remember { mutableStateOf(false) }
-            var canExpand by remember { mutableStateOf(false) }
-
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text(
-                    text = overview,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                    maxLines = if (isExpanded) Int.MAX_VALUE else 3,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { textLayoutResult ->
-                        if (!canExpand && textLayoutResult.hasVisualOverflow) {
-                            canExpand = true
-                        }
-                    },
-                )
-                if (canExpand || isExpanded) {
-                    Text(
-                        text =
-                            stringResource(
-                                if (isExpanded) PlayerR.string.show_less
-                                else PlayerR.string.show_more
-                            ),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier =
-                            Modifier.clip(RoundedCornerShape(4.dp))
-                                .clickable { isExpanded = !isExpanded }
-                                .padding(vertical = 4.dp),
+                // 1. Artwork Poster Header
+                val artworkMaxHeight = if (isSeries) 135.dp else 170.dp
+                Surface(
+                    modifier = Modifier.height(artworkMaxHeight).aspectRatio(artworkAspectRatio),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                    shadowElevation = 2.dp,
+                ) {
+                    val optimizedUri =
+                        artworkUri.toOptimizedImageUri(
+                            widthDp = if (isSeries) 240.dp else 120.dp,
+                            heightDp = artworkMaxHeight,
+                        )
+                    AsyncImage(
+                        model = optimizedUri,
+                        contentDescription = title,
+                        placeholder = blurHashPainter,
+                        error = blurHashPainter,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
                     )
+                }
+
+                // 2. Title & Subtitle
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                // 3. Ratings (Community Stars & Critic Scores)
+                val hasCommunityScore = communityRating != null
+                val hasCriticScore = criticRating != null
+
+                if (hasCommunityScore || hasCriticScore) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        // Community Score (Neutral yellow star representation)
+                        if (communityRating != null) {
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_star,
+                                iconTint = Yellow,
+                                label = String.format(Locale.ROOT, "%.1f", communityRating),
+                                onClick = null,
+                            )
+                        }
+
+                        // Critic Score
+                        if (criticRating != null) {
+                            val iconRes =
+                                when {
+                                    criticRating >= 60f -> CoreR.drawable.ic_rotten_tomatoes_fresh
+                                    else -> CoreR.drawable.ic_rotten_tomatoes_rotten
+                                }
+                            val rtId = providerIds["RottenTomatoes"]
+                            val rtUrl =
+                                if (!rtId.isNullOrBlank()) {
+                                    if (rtId.startsWith("http")) rtId
+                                    else "https://www.rottentomatoes.com/$rtId"
+                                } else {
+                                    null
+                                }
+
+                            PlayerRatingPill(
+                                iconRes = iconRes,
+                                label = "${criticRating.toInt()}%",
+                                onClick = rtUrl?.let { { onOpenUrl(it) } },
+                            )
+                        }
+                    }
+                }
+
+                // 4. External Data Provider Links
+                val hasImdb = !providerIds["Imdb"].isNullOrBlank()
+                val hasTmdb = !providerIds["Tmdb"].isNullOrBlank()
+                val hasTvdb = !providerIds["Tvdb"].isNullOrBlank()
+                val hasRtWithoutCritic =
+                    !providerIds["RottenTomatoes"].isNullOrBlank() && criticRating == null
+
+                if (hasImdb || hasTmdb || hasTvdb || hasRtWithoutCritic) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        // IMDb
+                        val imdbId = providerIds["Imdb"]
+                        if (!imdbId.isNullOrBlank()) {
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_imdb,
+                                label = "IMDb",
+                                onClick = { onOpenUrl("https://www.imdb.com/title/$imdbId/") },
+                            )
+                        }
+
+                        // TheMovieDb (TMDb)
+                        val tmdbId = providerIds["Tmdb"]
+                        if (!tmdbId.isNullOrBlank()) {
+                            val type = if (isSeries) "tv" else "movie"
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_tmdb,
+                                label = "TMDb",
+                                onClick = { onOpenUrl("https://www.themoviedb.org/$type/$tmdbId") },
+                            )
+                        }
+
+                        // TheTVDB
+                        val tvdbId = providerIds["Tvdb"]
+                        if (!tvdbId.isNullOrBlank()) {
+                            val type = if (isSeries) "series" else "movie"
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_tvdb,
+                                label = "TheTVDB",
+                                onClick = {
+                                    onOpenUrl("https://thetvdb.com/dereferrer/$type/$tvdbId")
+                                },
+                            )
+                        }
+
+                        // Rotten Tomatoes link (if no critic score was present above)
+                        val rtId = providerIds["RottenTomatoes"]
+                        if (!rtId.isNullOrBlank() && criticRating == null) {
+                            val url =
+                                if (rtId.startsWith("http")) rtId
+                                else "https://www.rottentomatoes.com/$rtId"
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_rotten_tomatoes_neutral,
+                                label = "Rotten Tomatoes",
+                                onClick = { onOpenUrl(url) },
+                            )
+                        }
+                    }
+                }
+
+                // 5. Expandable Description / Overview
+                if (overview.isNotBlank()) {
+                    var isExpanded by remember { mutableStateOf(false) }
+                    var canExpand by remember { mutableStateOf(false) }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = overview,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { textLayoutResult ->
+                                if (!canExpand && textLayoutResult.hasVisualOverflow) {
+                                    canExpand = true
+                                }
+                            },
+                        )
+                        if (canExpand || isExpanded) {
+                            Text(
+                                text =
+                                    stringResource(
+                                        if (isExpanded) PlayerR.string.show_less
+                                        else PlayerR.string.show_more
+                                    ),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier =
+                                    Modifier.clip(RoundedCornerShape(4.dp))
+                                        .clickable { isExpanded = !isExpanded }
+                                        .padding(vertical = 4.dp),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -672,9 +695,7 @@ private fun PlayerPersonRow(
                 overflow = TextOverflow.Ellipsis,
             )
             val roleText =
-                if (person.role.isNotBlank()) {
-                    person.role
-                } else {
+                person.role.ifBlank {
                     when (person.type) {
                         PersonKind.DIRECTOR -> stringResource(id = PlayerR.string.director)
                         PersonKind.WRITER -> stringResource(id = PlayerR.string.writer)
@@ -715,6 +736,7 @@ private fun PlayerPersonDetailContent(
     items: List<FindroidItem>,
     isLoading: Boolean,
     onBack: () -> Unit,
+    onOpenUrl: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -722,28 +744,31 @@ private fun PlayerPersonDetailContent(
             modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // 1. Back button header
-        Row(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onBack)
-                    .padding(vertical = 6.dp, horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        // 1. Back button pill
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+            onClick = onBack,
         ) {
-            Icon(
-                painter = painterResource(id = CoreR.drawable.ic_arrow_left),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = stringResource(id = PlayerR.string.player_tab_info),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(
+                    painter = painterResource(id = CoreR.drawable.ic_arrow_left),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(id = CoreR.string.back),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
 
         // 2. Profile Card
@@ -794,6 +819,54 @@ private fun PlayerPersonDetailContent(
                     textAlign = TextAlign.Center,
                 )
 
+                // External Data Provider Links for Person
+                val hasImdb = !person.providerIds["Imdb"].isNullOrBlank()
+                val hasTmdb = !person.providerIds["Tmdb"].isNullOrBlank()
+                val hasTvdb = !person.providerIds["Tvdb"].isNullOrBlank()
+
+                if (hasImdb || hasTmdb || hasTvdb) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val imdbId = person.providerIds["Imdb"]
+                        if (!imdbId.isNullOrBlank()) {
+                            val url =
+                                if (imdbId.startsWith("http")) imdbId
+                                else "https://www.imdb.com/name/$imdbId/"
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_imdb,
+                                label = "IMDb",
+                                onClick = { onOpenUrl(url) },
+                            )
+                        }
+
+                        val tmdbId = person.providerIds["Tmdb"]
+                        if (!tmdbId.isNullOrBlank()) {
+                            val url =
+                                if (tmdbId.startsWith("http")) tmdbId
+                                else "https://www.themoviedb.org/person/$tmdbId"
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_tmdb,
+                                label = "TMDb",
+                                onClick = { onOpenUrl(url) },
+                            )
+                        }
+
+                        val tvdbId = person.providerIds["Tvdb"]
+                        if (!tvdbId.isNullOrBlank()) {
+                            val url =
+                                if (tvdbId.startsWith("http")) tvdbId
+                                else "https://thetvdb.com/people/$tvdbId"
+                            PlayerRatingPill(
+                                iconRes = CoreR.drawable.ic_tvdb,
+                                label = "TheTVDB",
+                                onClick = { onOpenUrl(url) },
+                            )
+                        }
+                    }
+                }
+
                 // Overview / Biography
                 if (person.overview.isNotBlank()) {
                     var isExpanded by remember { mutableStateOf(false) }
@@ -837,6 +910,14 @@ private fun PlayerPersonDetailContent(
         }
 
         // 3. Server Items ("Also on this server")
+        var isItemsExpanded by rememberSaveable(person.id.toString()) { mutableStateOf(true) }
+        val itemsChevronRotation by
+            animateFloatAsState(
+                targetValue = if (isItemsExpanded) 180f else 0f,
+                animationSpec = tween(durationMillis = 200),
+                label = "personItemsChevronRotation",
+            )
+
         Surface(
             shape = CentralShapes.GroupSingle,
             color = PlayerCardBackground,
@@ -845,53 +926,77 @@ private fun PlayerPersonDetailContent(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { isItemsExpanded = !isItemsExpanded }
+                            .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = stringResource(id = PlayerR.string.appeared_in),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    if (items.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
-                            text = "(${items.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = stringResource(id = PlayerR.string.appeared_in),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
                         )
+                        if (items.isNotEmpty()) {
+                            Text(
+                                text = "(${items.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
+
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_chevron_down),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp).rotate(itemsChevronRotation),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                AnimatedVisibility(
+                    visible = isItemsExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                if (isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 3.dp,
-                        )
-                    }
-                } else if (items.isEmpty()) {
-                    Text(
-                        text = stringResource(id = PlayerR.string.no_other_items_found),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items.forEachIndexed { index, item ->
-                            PlayerPersonMediaItemRow(item = item)
-                            if (index < items.lastIndex) {
-                                HorizontalDivider(
-                                    color = Color.White.copy(alpha = 0.05f),
-                                    modifier = Modifier.padding(start = 54.dp),
+                        if (isLoading) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 3.dp,
                                 )
+                            }
+                        } else if (items.isEmpty()) {
+                            Text(
+                                text = stringResource(id = PlayerR.string.no_other_items_found),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items.forEachIndexed { index, item ->
+                                    PlayerPersonMediaItemRow(item = item)
+                                    if (index < items.lastIndex) {
+                                        HorizontalDivider(
+                                            color = Color.White.copy(alpha = 0.05f),
+                                            modifier = Modifier.padding(start = 54.dp),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1088,10 +1193,19 @@ private fun PlayerPersonDetailContentPreview() {
         Surface(color = PlayerCardBackground) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerPersonDetailContent(
-                    person = dummyPersonDetail,
+                    person =
+                        dummyPersonDetail.copy(
+                            providerIds =
+                                mapOf(
+                                    "Imdb" to "nm4043618",
+                                    "Tmdb" to "1195886",
+                                    "Tvdb" to "321",
+                                )
+                        ),
                     items = listOf(dummyMovie),
                     isLoading = false,
                     onBack = {},
+                    onOpenUrl = {},
                 )
             }
         }

@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -83,7 +85,7 @@ fun PlayerNavigationHeaderSelector(
     val n = tabs.size
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tabs.forEachIndexed { index, tab ->
@@ -227,7 +229,6 @@ fun PlayerEpisodeSelectorContent(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Top Season Rail
         if (seasons.size > 1) {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
@@ -272,6 +273,29 @@ fun PlayerEpisodeSelectorContent(
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 3.dp,
                 )
+            }
+        } else if (uiState.isSeasonLoadError || uiState.isSeasonEpisodesError) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(id = CoreR.string.error_loading_data),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Button(
+                    onClick = {
+                        if (uiState.isSeasonLoadError) {
+                            viewModel.retryLoadSeasons()
+                        } else if (selectedSeasonId != null) {
+                            viewModel.selectSeason(selectedSeasonId)
+                        }
+                    }
+                ) {
+                    Text(text = stringResource(id = CoreR.string.retry))
+                }
             }
         } else if (episodes.isEmpty()) {
             Box(
@@ -324,11 +348,12 @@ fun PlayerEpisodeCard(
     modifier: Modifier = Modifier,
 ) {
     val isEpisodeSpoiler = hideEpisodeSpoilers && !episode.played
+    val isUnavailable = episode.missing || !episode.canPlay
 
     val thumbBorder = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().alpha(if (isUnavailable) 0.6f else 1f),
         shape = CentralShapes.GroupSingle,
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
@@ -337,6 +362,7 @@ fun PlayerEpisodeCard(
             if (isCurrent) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
             else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
         onClick = onClick,
+        enabled = !isUnavailable,
     ) {
         Row(
             modifier =
@@ -445,7 +471,20 @@ fun PlayerEpisodeCard(
                         }
                     }
 
-                    if (isCurrent) {
+                    if (isUnavailable) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.errorContainer,
+                        ) {
+                            Text(
+                                text = stringResource(id = PlayerR.string.unavailable),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                    } else if (isCurrent) {
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primary,
@@ -474,6 +513,23 @@ private fun PlayerEpisodeCardPreview() {
                 PlayerEpisodeCard(
                     episode = dummyEpisode,
                     isCurrent = true,
+                    hideEpisodeSpoilers = false,
+                    onClick = {},
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Episode Card - Unavailable", showBackground = true, backgroundColor = 0xFF141416)
+@Composable
+private fun PlayerEpisodeCardUnavailablePreview() {
+    FindroidTheme(darkTheme = true) {
+        Surface(color = PlayerCardBackground) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                PlayerEpisodeCard(
+                    episode = dummyEpisode.copy(missing = true, canPlay = false),
+                    isCurrent = false,
                     hideEpisodeSpoilers = false,
                     onClick = {},
                 )

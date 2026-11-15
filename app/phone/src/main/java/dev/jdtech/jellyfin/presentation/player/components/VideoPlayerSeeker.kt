@@ -105,10 +105,9 @@ fun VideoPlayerSeeker(
         when {
             !sectionTitle.isNullOrBlank() -> sectionTitle
             isSeries -> episodesLabel
-            chapters.isNotEmpty() -> chaptersLabel
-            else -> null
+            else -> chaptersLabel
         }
-    val canOpenChapters = onOpenChapters != null && (chapters.isNotEmpty() || isSeries)
+    val canOpenChapters = onOpenChapters != null
 
     val remainingMs =
         if (durationMs > 0L) (durationMs - displayedProgressMs).coerceAtLeast(0L) else 0L
@@ -145,61 +144,56 @@ fun VideoPlayerSeeker(
                             .padding(end = if (endsAtText != null) 90.dp else 0.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    // Pill 1: Chapter or Episode Title (clickable if chapters or series are
-                    // available)
-                    if (displayedSectionTitle != null) {
-                        if (canOpenChapters) {
-                            Box(
-                                modifier =
-                                    Modifier.clip(CircleShape)
-                                        .background(pillBackground)
-                                        .border(pillBorder, CircleShape)
-                                        .clickable {
-                                            state.resetTimeout()
-                                            onOpenChapters()
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    Text(
-                                        text = displayedSectionTitle,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Icon(
-                                        painter =
-                                            painterResource(id = CoreR.drawable.ic_arrow_right),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp),
-                                        tint = Color.White.copy(alpha = 0.85f),
-                                    )
-                                }
-                            }
-                        } else {
-                            Box(
-                                modifier =
-                                    Modifier.clip(CircleShape)
-                                        .background(pillBackground)
-                                        .border(pillBorder, CircleShape)
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center,
+                    if (canOpenChapters) {
+                        Box(
+                            modifier =
+                                Modifier.clip(CircleShape)
+                                    .background(pillBackground)
+                                    .border(pillBorder, CircleShape)
+                                    .clickable {
+                                        state.resetTimeout()
+                                        onOpenChapters()
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(
                                     text = displayedSectionTitle,
                                     style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_arrow_right),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                )
                             }
+                        }
+                    } else {
+                        Box(
+                            modifier =
+                                Modifier.clip(CircleShape)
+                                    .background(pillBackground)
+                                    .border(pillBorder, CircleShape)
+                                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = displayedSectionTitle,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
 
@@ -286,63 +280,58 @@ fun VideoPlayerSeeker(
                         }
                     }
 
-                    // Pill 2: Chapter or Episode Title (clickable if chapters or series are
-                    // available)
-                    if (displayedSectionTitle != null) {
-                        if (canOpenChapters) {
-                            Box(
-                                modifier =
-                                    Modifier.weight(1f, fill = false)
-                                        .clip(CircleShape)
-                                        .background(pillBackground)
-                                        .border(pillBorder, CircleShape)
-                                        .clickable {
-                                            state.resetTimeout()
-                                            onOpenChapters()
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    Text(
-                                        text = displayedSectionTitle,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Icon(
-                                        painter =
-                                            painterResource(id = CoreR.drawable.ic_arrow_right),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp),
-                                        tint = Color.White.copy(alpha = 0.85f),
-                                    )
-                                }
-                            }
-                        } else {
-                            Box(
-                                modifier =
-                                    Modifier.weight(1f, fill = false)
-                                        .clip(CircleShape)
-                                        .background(pillBackground)
-                                        .border(pillBorder, CircleShape)
-                                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center,
+                    if (canOpenChapters) {
+                        Box(
+                            modifier =
+                                Modifier.weight(1f, fill = false)
+                                    .clip(CircleShape)
+                                    .background(pillBackground)
+                                    .border(pillBorder, CircleShape)
+                                    .clickable {
+                                        state.resetTimeout()
+                                        onOpenChapters()
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(
                                     text = displayedSectionTitle,
                                     style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_arrow_right),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = Color.White.copy(alpha = 0.85f),
+                                )
                             }
+                        }
+                    } else {
+                        Box(
+                            modifier =
+                                Modifier.weight(1f, fill = false)
+                                    .clip(CircleShape)
+                                    .background(pillBackground)
+                                    .border(pillBorder, CircleShape)
+                                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = displayedSectionTitle,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
