@@ -33,7 +33,7 @@ okhttp = "5.5.1"
 timber = "5.0.1"
 slf4j = "2.0.20"
 slf4j-android = "2.0.20-0"
-play-services-cast = "22.3.1"
+play-services-cast = "23.0.0"
 
 [libraries]
 aboutlibraries-core = { group = "com.mikepenz", name = "aboutlibraries-core", version.ref = "aboutlibraries" }
