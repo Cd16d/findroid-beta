@@ -2,19 +2,27 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.utils.toBlurHashPainter
 import dev.jdtech.jellyfin.utils.toOptimizedImageUri
@@ -75,13 +83,35 @@ fun ItemPoster(
                 image?.blurHash.toBlurHashPainter(width = w, height = h, punch = 1.25f)
             }
 
-        if (blurOnly && blurPlaceholder != null) {
-            Image(
-                painter = blurPlaceholder,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+        if (blurOnly) {
+            if (blurPlaceholder != null) {
+                Image(
+                    painter = blurPlaceholder,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val fallbackIcon =
+                        if (item is FindroidEpisode || item is FindroidShow) {
+                            CoreR.drawable.ic_monitor
+                        } else {
+                            CoreR.drawable.ic_film
+                        }
+                    Icon(
+                        painter = painterResource(id = fallbackIcon),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
+                }
+            }
         } else {
             AsyncImage(
                 model = imageUri,
@@ -113,6 +143,19 @@ private fun ItemPosterHorizontalPreview() {
         ItemPoster(
             item = dummyMovie,
             direction = Direction.HORIZONTAL,
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun ItemPosterSpoilerFallbackPreview() {
+    FindroidTheme {
+        ItemPoster(
+            item =
+                dummyMovie.copy(images = dummyMovie.images.copy(primary = null, backdrop = null)),
+            direction = Direction.HORIZONTAL,
+            blurOnly = true,
         )
     }
 }

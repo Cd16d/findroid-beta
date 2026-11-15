@@ -46,6 +46,10 @@
     <string name="chapter_title">Chapter %1$d</string>
     <string name="chapters">Chapters</string>
     <string name="no_chapters">No chapters available</string>
+    <string name="episodes">Episodes</string>
+    <string name="no_episodes">No episodes available</string>
+    <string name="episode_short">E%1$d</string>
+    <string name="episode_short_with_end">E%1$d-%2$d</string>
     <string name="ends_at">Ends at %1$s</string>
     <string name="video_quality">Video Quality</string>
     <string name="quality_original">Original</string>
@@ -143,4 +147,19 @@
     <string name="sleep_timer_remaining">%1$d min remaining</string>
     <string name="player_ambient_mode">Ambient mode</string>
     <string name="track_original">Original</string>
+    <string name="player_tab_info">Info</string>
+    <string name="cast">Cast</string>
+    <string name="crew">Crew</string>
+    <string name="show_more">Show more</string>
+    <string name="show_less">Show less</string>
+    <string name="no_cast_info">No cast information available</string>
+    <string name="no_crew_info">No crew information available</string>
+    <string name="appeared_in">Also on this server</string>
+    <string name="no_other_items_found">No other media found on this server</string>
+    <string name="provider_links">External links</string>
+    <string name="director">Director</string>
+    <string name="writer">Writer</string>
+    <string name="producer">Producer</string>
+    <string name="unavailable">Unavailable</string>
+    <string name="more_info">More info</string>
 </resources>

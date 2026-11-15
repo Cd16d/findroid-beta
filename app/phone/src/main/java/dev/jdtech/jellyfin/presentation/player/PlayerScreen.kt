@@ -956,6 +956,9 @@ fun PlayerScreen(
                             openedPanelDirectly = true
                             videoPlayerState.sidePanelType = PlayerSidePanelType.CHAPTERS
                         },
+                        isSeries =
+                            itemKind.equals("Episode", ignoreCase = true) ||
+                                uiState.seriesId != null,
                         isPortrait = false,
                         isCompactWidth = false,
                         modifier = Modifier.fillMaxWidth(),
@@ -1851,6 +1854,7 @@ fun PlayerScreen(
                                     openedPanelDirectly = true
                                     videoPlayerState.sidePanelType = PlayerSidePanelType.CHAPTERS
                                 },
+                                isSeries = isEpisode || uiState.seriesId != null,
                                 isPortrait = false,
                                 isCompactWidth = isCompactWidth,
                                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -1892,6 +1896,7 @@ fun PlayerScreen(
                                         videoPlayerState.sidePanelType =
                                             PlayerSidePanelType.CHAPTERS
                                     },
+                                    isSeries = isEpisode || uiState.seriesId != null,
                                     isPortrait = true,
                                     isCompactWidth = true,
                                     modifier = Modifier.fillMaxWidth(),

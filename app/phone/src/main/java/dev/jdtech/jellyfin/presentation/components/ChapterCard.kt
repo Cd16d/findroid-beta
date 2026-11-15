@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,19 +33,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardCurrent
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.presentation.formatDuration
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
-private val ChapterThumbShape = CentralShapes.SmallCard
+private val ChapterThumbShape = RoundedCornerShape(16.dp)
 
 /**
- * Shared chapter item card with preview thumbnail, title, timestamp, and current playback selection
- * indicator.
+ * Shared chapter item card with preview thumbnail, YouTube-style timestamp chip, title, and current
+ * playback selection indicator aligned with Material 3 surface styling.
  *
  * @param chapter Chapter model containing name and start position.
  * @param index Chapter index in media track.
@@ -68,15 +69,17 @@ fun ChapterCard(
 
     var isImageError by remember(chapter.imageUri) { mutableStateOf(false) }
 
-    val thumbBorder = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+    val thumbBorder = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
 
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = CentralShapes.GroupSingle,
-        color = if (isCurrent) PlayerCardCurrent else PlayerCardBackground,
+        color =
+            if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            else MaterialTheme.colorScheme.surfaceContainerLow,
         border =
             if (isCurrent) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-            else BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+            else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
         onClick = onClick,
     ) {
         Row(
@@ -86,11 +89,10 @@ fun ChapterCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Chapter Thumbnail
             val hasServerImage = !chapter.imageUri.isNullOrBlank() && !isImageError
             Box(
                 modifier =
-                    Modifier.height(42.dp)
+                    Modifier.height(64.dp)
                         .aspectRatio(16f / 9f)
                         .clip(ChapterThumbShape)
                         .border(thumbBorder, ChapterThumbShape)
@@ -98,7 +100,7 @@ fun ChapterCard(
                 contentAlignment = Alignment.Center,
             ) {
                 if (hasServerImage) {
-                    coil3.compose.AsyncImage(
+                    AsyncImage(
                         model = chapter.imageUri,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
@@ -119,16 +121,49 @@ fun ChapterCard(
                     text = chapterTitle,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                    color = Color.White,
-                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formattedTime,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.65f),
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color =
+                            if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else
+                                MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+                                    alpha = 0.7f
+                                ),
+                    ) {
+                        Text(
+                            text = formattedTime,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color =
+                                if (isCurrent) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                    if (isCurrent) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) {
+                            Text(
+                                text = stringResource(id = PlayerR.string.now_playing),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                }
             }
         }
     }

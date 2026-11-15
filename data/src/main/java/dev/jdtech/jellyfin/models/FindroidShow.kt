@@ -24,6 +24,8 @@ data class FindroidShow(
     val people: List<FindroidItemPerson>,
     override val runtimeTicks: Long,
     val communityRating: Float?,
+    val criticRating: Float? = null,
+    val providerIds: Map<String, String> = emptyMap(),
     val officialRating: String?,
     val status: String,
     val productionYear: Int?,
@@ -51,6 +53,10 @@ fun BaseItemDto.toFindroidShow(jellyfinRepository: JellyfinRepository): Findroid
         people = people?.map { it.toFindroidPerson(jellyfinRepository) } ?: emptyList(),
         runtimeTicks = runTimeTicks ?: 0,
         communityRating = communityRating,
+        criticRating = criticRating,
+        providerIds =
+            providerIds?.filterValues { !it.isNullOrBlank() }?.mapValues { it.value!! }
+                ?: emptyMap(),
         officialRating = officialRating,
         status = status ?: "Ended",
         productionYear = productionYear,
@@ -81,6 +87,8 @@ suspend fun FindroidShowDto.toFindroidShow(
         people = emptyList(),
         runtimeTicks = runtimeTicks,
         communityRating = communityRating,
+        criticRating = null,
+        providerIds = emptyMap(),
         officialRating = officialRating,
         status = status,
         productionYear = productionYear,

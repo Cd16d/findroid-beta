@@ -23,6 +23,8 @@ data class FindroidMovie(
     val people: List<FindroidItemPerson>,
     val genres: List<String>,
     val communityRating: Float?,
+    val criticRating: Float? = null,
+    val providerIds: Map<String, String> = emptyMap(),
     val officialRating: String?,
     val status: String,
     val productionYear: Int?,
@@ -68,6 +70,10 @@ suspend fun BaseItemDto.toFindroidMovie(
         playbackPositionTicks = userData?.playbackPositionTicks ?: 0,
         premiereDate = premiereDate,
         communityRating = communityRating,
+        criticRating = criticRating,
+        providerIds =
+            providerIds?.filterValues { !it.isNullOrBlank() }?.mapValues { it.value!! }
+                ?: emptyMap(),
         genres = genres ?: emptyList(),
         people = people?.map { it.toFindroidPerson(jellyfinRepository) } ?: emptyList(),
         officialRating = officialRating,
@@ -135,6 +141,8 @@ suspend fun FindroidMovieDto.toFindroidMovie(
         genres = emptyList(),
         people = emptyList(),
         communityRating = communityRating,
+        criticRating = null,
+        providerIds = emptyMap(),
         officialRating = officialRating,
         status = status,
         productionYear = productionYear,

@@ -42,6 +42,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -155,6 +156,15 @@ fun PlayerBottomSheet(
     val windowInfo = LocalWindowInfo.current
     val maxContentHeight = (windowInfo.containerDpSize.height - 48.dp).coerceAtLeast(200.dp)
 
+    val isSeries = uiState.seriesId != null
+    var selectedNavTab by rememberSaveable { mutableStateOf(PlayerNavTab.CHAPTERS) }
+
+    LaunchedEffect(panelType, isSeries) {
+        if (!isSeries && selectedNavTab == PlayerNavTab.EPISODES) {
+            selectedNavTab = PlayerNavTab.CHAPTERS
+        }
+    }
+
     val handleLock =
         remember(onDismiss, onLock) {
             {
@@ -227,33 +237,60 @@ fun PlayerBottomSheet(
                     }
                 }
 
-                Text(
-                    text =
-                        stringResource(
-                            id =
-                                when (panelType) {
-                                    PlayerSidePanelType.AUDIO -> PlayerR.string.select_audio_track
-                                    PlayerSidePanelType.SUBTITLES ->
-                                        PlayerR.string.select_subtitle_track
-                                    PlayerSidePanelType.SPEED ->
-                                        PlayerR.string.select_playback_speed
-                                    PlayerSidePanelType.ASPECT_RATIO -> PlayerR.string.aspect_ratio
-                                    PlayerSidePanelType.CHAPTERS -> PlayerR.string.chapters
-                                    PlayerSidePanelType.SLEEP_TIMER -> PlayerR.string.sleep_timer
-                                    PlayerSidePanelType.QUALITY -> PlayerR.string.video_quality
-                                    PlayerSidePanelType.PLAYBACK_INFO ->
-                                        PlayerR.string.playback_info
-                                    PlayerSidePanelType.SETTINGS,
-                                    PlayerSidePanelType.NONE -> CoreR.string.title_settings
-                                }
-                        ),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (panelType == PlayerSidePanelType.CHAPTERS) {
+                    val tabs =
+                        remember(isSeries) {
+                            if (isSeries) {
+                                listOf(
+                                    PlayerNavTab.CHAPTERS,
+                                    PlayerNavTab.EPISODES,
+                                    PlayerNavTab.INFO,
+                                )
+                            } else {
+                                listOf(PlayerNavTab.CHAPTERS, PlayerNavTab.INFO)
+                            }
+                        }
+                    PlayerNavigationHeaderSelector(
+                        tabs = tabs,
+                        selectedTab = selectedNavTab,
+                        onTabSelected = { selectedNavTab = it },
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (showBackButton) {
+                        Spacer(modifier = Modifier.size(36.dp))
+                    }
+                } else {
+                    Text(
+                        text =
+                            stringResource(
+                                id =
+                                    when (panelType) {
+                                        PlayerSidePanelType.AUDIO ->
+                                            PlayerR.string.select_audio_track
+                                        PlayerSidePanelType.SUBTITLES ->
+                                            PlayerR.string.select_subtitle_track
+                                        PlayerSidePanelType.SPEED ->
+                                            PlayerR.string.select_playback_speed
+                                        PlayerSidePanelType.ASPECT_RATIO ->
+                                            PlayerR.string.aspect_ratio
+                                        PlayerSidePanelType.CHAPTERS -> PlayerR.string.chapters
+                                        PlayerSidePanelType.SLEEP_TIMER ->
+                                            PlayerR.string.sleep_timer
+                                        PlayerSidePanelType.QUALITY -> PlayerR.string.video_quality
+                                        PlayerSidePanelType.PLAYBACK_INFO ->
+                                            PlayerR.string.playback_info
+                                        PlayerSidePanelType.SETTINGS,
+                                        PlayerSidePanelType.NONE -> CoreR.string.title_settings
+                                    }
+                            ),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             AnimatedContent(
@@ -328,7 +365,11 @@ fun PlayerBottomSheet(
                         )
                     }
                     PlayerSidePanelType.CHAPTERS -> {
-                        PhoneChaptersList(viewModel = viewModel)
+                        PlayerChaptersAndEpisodesSheet(
+                            viewModel = viewModel,
+                            selectedTab = selectedNavTab,
+                            onDismiss = onDismiss,
+                        )
                     }
                     PlayerSidePanelType.SLEEP_TIMER -> {
                         SleepTimerPicker(
