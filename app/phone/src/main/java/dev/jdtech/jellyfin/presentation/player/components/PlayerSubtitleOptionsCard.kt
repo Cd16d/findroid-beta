@@ -306,26 +306,14 @@ fun PlayerSubtitleOptionsCard(
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (isExternalSubtitleLoaded) {
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                id = PlayerR.string.external_subtitle_loaded
-                                            ),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                } else {
-                                    Text(
-                                        text =
-                                            stringResource(
-                                                id = PlayerR.string.load_external_subtitle_summary
-                                            ),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                Text(
+                                    text =
+                                        stringResource(
+                                            id = PlayerR.string.load_external_subtitle_summary
+                                        ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }

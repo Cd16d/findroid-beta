@@ -43,6 +43,7 @@ import dev.jdtech.mpv.MPVLib.MpvEvent
 import dev.jdtech.mpv.MPVLib.MpvFormat
 import java.io.File
 import java.io.IOException
+import java.util.Collections
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.Executors.newSingleThreadExecutor
 import org.json.JSONArray
@@ -329,6 +330,7 @@ class MPVPlayer(
     private var currentCacheTimeMs: Long? = null
     private var currentDemuxerCacheDurationMs: Long? = null
     private var initialCommands = mutableListOf<Array<String>>()
+    private val loadedSubtitlePaths = Collections.synchronizedSet(mutableSetOf<String>())
     private var initialIndex: Int = 0
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
@@ -584,7 +586,8 @@ class MPVPlayer(
      * @return true if the track is or was already selected
      */
     private fun selectTrack(trackType: MPVTrackType, id: String) {
-        mpvLib.setPropertyString(trackType.type, id)
+        val cleanId = if (id.startsWith("external_")) id.removePrefix("external_") else id
+        mpvLib.setPropertyString(trackType.type, cleanId)
     }
 
     // Timeline wrapper
@@ -879,6 +882,7 @@ class MPVPlayer(
         currentCacheTimeMs = null
         currentDemuxerCacheDurationMs = null
         initialCommands.clear()
+        loadedSubtitlePaths.clear()
         mpvLib.setPropertyDouble("sub-delay", 0.0)
     }
 
@@ -1074,15 +1078,18 @@ class MPVPlayer(
         internalMediaItems.getOrNull(index)?.let { mediaItem ->
             resetInternalState()
             mediaItem.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
-                initialCommands.add(
-                    arrayOf(
-                        /* command= */ "sub-add",
-                        /* url= */ "${subtitle.uri}",
-                        /* flags= */ "auto",
-                        /* title= */ "${subtitle.label}",
-                        /* lang= */ "${subtitle.language}",
+                val uriStr = "${subtitle.uri}"
+                if (loadedSubtitlePaths.add(uriStr)) {
+                    initialCommands.add(
+                        arrayOf(
+                            /* command= */ "sub-add",
+                            /* url= */ uriStr,
+                            /* flags= */ "auto",
+                            /* title= */ "${subtitle.label}",
+                            /* lang= */ "${subtitle.language}",
+                        )
                     )
-                )
+                }
             }
             if (isDialogueBoostActive) {
                 initialCommands.add(
@@ -1690,6 +1697,10 @@ class MPVPlayer(
         language: String? = null,
         select: Boolean = true,
     ) {
+        if (!loadedSubtitlePaths.add(uri)) {
+            Timber.d("Subtitle already added in MPV: $uri")
+            return
+        }
         commandExecutor.execute {
             mpvLib.command(
                 arrayOf(
@@ -1740,10 +1751,13 @@ class MPVPlayer(
         private fun createTracksGroupfromMpvJson(json: JSONObject): Tracks.Group {
             val trackType = MPVTrackType.entries.first { it.type == json.optString("type") }
 
+            val isExternal = json.optBoolean("external") || json.has("external-filename")
+            val formatId = if (isExternal) "external_${json.optInt("id")}" else json.optString("id")
+
             // Base format shared between video, audio and subtitles
             val baseFormat =
                 Format.Builder()
-                    .setId(json.optInt("id"))
+                    .setId(formatId)
                     .setLabel(json.optNullableString("title"))
                     .setLanguage(json.optNullableString("lang"))
                     .setSelectionFlags(
