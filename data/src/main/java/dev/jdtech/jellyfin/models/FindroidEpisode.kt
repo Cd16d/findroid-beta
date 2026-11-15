@@ -29,6 +29,8 @@ data class FindroidEpisode(
     val seasonId: UUID,
     val seasonName: String?,
     val communityRating: Float?,
+    val criticRating: Float? = null,
+    val providerIds: Map<String, String> = emptyMap(),
     val people: List<FindroidItemPerson>,
     override val unplayedItemCount: Int? = null,
     val missing: Boolean = false,
@@ -77,6 +79,10 @@ suspend fun BaseItemDto.toFindroidEpisode(
             seasonId = seasonId!!,
             seasonName = seasonName,
             communityRating = communityRating,
+            criticRating = criticRating,
+            providerIds =
+                providerIds?.filterValues { !it.isNullOrBlank() }?.mapValues { it.value!! }
+                    ?: emptyMap(),
             people = people?.map { it.toFindroidPerson(jellyfinRepository) } ?: emptyList(),
             missing = locationType == LocationType.VIRTUAL,
             images = toFindroidImages(jellyfinRepository),
@@ -158,6 +164,8 @@ suspend fun FindroidEpisodeDto.toFindroidEpisode(
         seasonId = seasonId,
         seasonName = null,
         communityRating = communityRating,
+        criticRating = null,
+        providerIds = emptyMap(),
         people = emptyList(),
         images = toLocalFindroidImages(itemId = id),
         chapters = chapters ?: emptyList(),

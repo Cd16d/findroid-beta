@@ -30,6 +30,7 @@ Findroid is organized as a modular Android project:
    - Follow Jetpack Compose and Material 3 design guidelines.
    - Adhere to the code formatting configured for the project (`ktfmt` with Kotlin standard style).
    - Ensure coroutines, Flow, and Hilt dependency injection patterns are followed correctly.
+   - **Mandatory Compose Previews**: Always provide `@Preview` functions whenever creating or refactoring UI components, sheets, cards, dialogs, or screens to ensure visual testability, design fidelity, and rapid inspection in Android Studio.
 5. DO NOT EDIT THE APP'S DATABASE SCHEMA UNLESS ABSOLUTELY NECESSARY (`ServerDatabase.kt` in `:data`). If a schema change is required, you must properly configure Room migrations or auto-migrations.
 
 ## AI-only guidelines
@@ -49,6 +50,9 @@ Findroid is organized as a modular Android project:
    - Prior to performing any `commit` or `push`, verify that:
      - All added comments, KDoc, and commit messages are strictly in **English**.
      - No UI strings are hardcoded in code/layouts; all UI strings are defined in the module's default `res/values/strings.xml` in English.
+10. **Compose Previews Mandatory**:
+    - Whenever creating a new UI element, card, sheet, dialog, or screen using Jetpack Compose, AI agents MUST always implement corresponding `@Preview` composables.
+    - Previews must demonstrate realistic mock/dummy data, primary UI states (expanded/collapsed, selected/unselected, variants), and proper theme wrappers (`FindroidTheme(darkTheme = true)` where appropriate).
 
 ## Automated AI Workflows
 

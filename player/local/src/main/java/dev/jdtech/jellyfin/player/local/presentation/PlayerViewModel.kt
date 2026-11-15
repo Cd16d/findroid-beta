@@ -24,8 +24,10 @@ import dev.jdtech.jellyfin.api.JellyfinApi
 import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.FindroidItemPerson
 import dev.jdtech.jellyfin.models.FindroidMediaStream
 import dev.jdtech.jellyfin.models.FindroidMovie
+import dev.jdtech.jellyfin.models.FindroidPerson
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.models.FindroidShow
@@ -154,6 +156,12 @@ constructor(
         val selectedExternalAudioStreamIndex: Int? = null,
         val availableAudioTracks: List<Track> = emptyList(),
         val playbackInfoData: PlaybackInfoData = PlaybackInfoData(),
+        val currentItem: FindroidItem? = null,
+        val currentItemPeople: List<FindroidItemPerson> = emptyList(),
+        val currentShow: FindroidShow? = null,
+        val selectedPerson: FindroidPerson? = null,
+        val selectedPersonItems: List<FindroidItem> = emptyList(),
+        val isLoadingPerson: Boolean = false,
         val maxTranscodeBitrateBps: Int = 120_000_000,
     )
 
@@ -745,6 +753,28 @@ constructor(
                         } catch (_: Exception) {
                             emptyList()
                         }
+                    val show: FindroidShow? =
+                        if (item is FindroidEpisode) {
+                            try {
+                                repository.getShow(item.seriesId)
+                            } catch (_: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    val people: List<FindroidItemPerson> =
+                        when (item) {
+                            is FindroidMovie -> item.people
+                            is FindroidEpisode -> {
+                                if (item.people.isNotEmpty()) {
+                                    item.people
+                                } else {
+                                    show?.people ?: emptyList()
+                                }
+                            }
+                            else -> emptyList()
+                        }
                     val streams = activeSource?.mediaStreams ?: emptyList()
                     val infoData =
                         activeSource?.let { buildPlaybackInfoData(it, streams) }
@@ -760,6 +790,12 @@ constructor(
                             mediaStreams = streams,
                             playbackInfoData = infoData,
                             suggestions = suggestions,
+                            currentItem = item,
+                            currentItemPeople = people,
+                            currentShow = show,
+                            selectedPerson = null,
+                            selectedPersonItems = emptyList(),
+                            isLoadingPerson = false,
                         )
                     }
                     updateAvailableAudioTracks()
@@ -767,6 +803,47 @@ constructor(
             } catch (e: Exception) {
                 Timber.e(e, "Error loading item metadata for player")
             }
+        }
+    }
+
+    /**
+     * Loads the details and server-available media items for a selected cast or crew member.
+     *
+     * @param personId Unique [UUID] of the person to inspect.
+     */
+    fun selectPerson(personId: UUID) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPerson = true) }
+            try {
+                val person = repository.getPerson(personId)
+                val items =
+                    repository.getPersonItems(
+                        personIds = listOf(personId),
+                        includeTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+                        recursive = true,
+                    )
+                _uiState.update {
+                    it.copy(
+                        selectedPerson = person,
+                        selectedPersonItems = items,
+                        isLoadingPerson = false,
+                    )
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error loading person $personId")
+                _uiState.update { it.copy(isLoadingPerson = false) }
+            }
+        }
+    }
+
+    /** Clears the currently selected person, returning the player info sheet to item details. */
+    fun clearSelectedPerson() {
+        _uiState.update {
+            it.copy(
+                selectedPerson = null,
+                selectedPersonItems = emptyList(),
+                isLoadingPerson = false,
+            )
         }
     }
 

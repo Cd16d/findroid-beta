@@ -1,5 +1,7 @@
 package dev.jdtech.jellyfin.presentation.player.components
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,19 +28,13 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,10 +47,10 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
+import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
-import dev.jdtech.jellyfin.presentation.components.SpoilerMask
 import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ItemPoster
 import dev.jdtech.jellyfin.presentation.film.components.PlayedBadge
@@ -66,66 +62,97 @@ private val EpisodeThumbShape = RoundedCornerShape(16.dp)
 enum class PlayerNavTab {
     CHAPTERS,
     EPISODES,
+    INFO,
 }
 
-/** Top header segmented button selector for switching between Chapters and Episodes. */
+/**
+ * Top header horizontal connected button selector for switching between Chapters, Episodes, and
+ * Info.
+ *
+ * Outer buttons have fully rounded outer corners and dynamic inner corners. Middle buttons have
+ * dynamic inner corners on both sides. When selected, the active button transitions into a full
+ * pill shape.
+ */
 @Composable
 fun PlayerNavigationHeaderSelector(
+    tabs: List<PlayerNavTab>,
     selectedTab: PlayerNavTab,
     onTabSelected: (PlayerNavTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SingleChoiceSegmentedButtonRow(modifier = modifier) {
-        SegmentedButton(
-            selected = selectedTab == PlayerNavTab.CHAPTERS,
-            onClick = { onTabSelected(PlayerNavTab.CHAPTERS) },
-            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            colors =
-                SegmentedButtonDefaults.colors(
-                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            icon = {},
-        ) {
-            Text(
-                text = stringResource(id = PlayerR.string.chapters),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
-        }
-        SegmentedButton(
-            selected = selectedTab == PlayerNavTab.EPISODES,
-            onClick = { onTabSelected(PlayerNavTab.EPISODES) },
-            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            colors =
-                SegmentedButtonDefaults.colors(
-                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            icon = {},
-        ) {
-            Text(
-                text = stringResource(id = PlayerR.string.episodes),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
+    val n = tabs.size
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            val isSelected = tab == selectedTab
+            val startRadius by
+                animateDpAsState(
+                    targetValue = if (isSelected || index == 0) 50.dp else 6.dp,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "tabStartRadius_$index",
+                )
+            val endRadius by
+                animateDpAsState(
+                    targetValue = if (isSelected || index == n - 1) 50.dp else 6.dp,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "tabEndRadius_$index",
+                )
+            val shape =
+                RoundedCornerShape(
+                    topStart = startRadius,
+                    bottomStart = startRadius,
+                    topEnd = endRadius,
+                    bottomEnd = endRadius,
+                )
+
+            Surface(
+                modifier = Modifier.weight(1f).height(44.dp),
+                shape = shape,
+                color =
+                    if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor =
+                    if (isSelected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = { onTabSelected(tab) },
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text =
+                            stringResource(
+                                id =
+                                    when (tab) {
+                                        PlayerNavTab.CHAPTERS -> PlayerR.string.chapters
+                                        PlayerNavTab.EPISODES -> PlayerR.string.episodes
+                                        PlayerNavTab.INFO -> PlayerR.string.player_tab_info
+                                    }
+                            ),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }
 
 /**
- * Unified in-player navigation sheet hosting chapters or episodes based on [selectedTab].
+ * Unified in-player navigation sheet hosting chapters, episodes, or media details based on
+ * [selectedTab].
  *
  * @param viewModel Active [PlayerViewModel].
  * @param onDismiss Callback to dismiss the player sheet.
  * @param modifier Optional modifier applied to root container.
- * @param selectedTab Current active tab ([PlayerNavTab.CHAPTERS] or [PlayerNavTab.EPISODES]).
+ * @param selectedTab Current active tab ([PlayerNavTab.CHAPTERS], [PlayerNavTab.EPISODES], or
+ *   [PlayerNavTab.INFO]).
  */
 @Composable
 fun PlayerChaptersAndEpisodesSheet(
@@ -137,17 +164,30 @@ fun PlayerChaptersAndEpisodesSheet(
     val uiState by viewModel.uiState.collectAsState()
     val isSeries = uiState.seriesId != null
 
-    if (!isSeries || selectedTab == PlayerNavTab.CHAPTERS) {
-        PhoneChaptersList(viewModel = viewModel)
-    } else {
-        PlayerEpisodeSelectorContent(
-            viewModel = viewModel,
-            onEpisodeSelected = { episode ->
-                viewModel.playEpisode(episode)
-                onDismiss()
-            },
-            modifier = modifier,
-        )
+    val resolvedTab =
+        if (!isSeries && selectedTab == PlayerNavTab.EPISODES) PlayerNavTab.CHAPTERS
+        else selectedTab
+
+    when (resolvedTab) {
+        PlayerNavTab.CHAPTERS -> {
+            PhoneChaptersList(viewModel = viewModel)
+        }
+        PlayerNavTab.EPISODES -> {
+            PlayerEpisodeSelectorContent(
+                viewModel = viewModel,
+                onEpisodeSelected = { episode ->
+                    viewModel.playEpisode(episode)
+                    onDismiss()
+                },
+                modifier = modifier,
+            )
+        }
+        PlayerNavTab.INFO -> {
+            PlayerItemInfoContent(
+                viewModel = viewModel,
+                modifier = modifier,
+            )
+        }
     }
 }
 
@@ -283,7 +323,6 @@ fun PlayerEpisodeCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isRevealed by rememberSaveable(episode.id) { mutableStateOf(false) }
     val isEpisodeSpoiler = hideEpisodeSpoilers && !episode.played
 
     val thumbBorder = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
@@ -318,7 +357,7 @@ fun PlayerEpisodeCard(
                     item = episode,
                     direction = Direction.HORIZONTAL,
                     modifier = Modifier.fillMaxSize(),
-                    blurOnly = isEpisodeSpoiler && !isRevealed,
+                    blurOnly = isEpisodeSpoiler,
                 )
 
                 if (episode.played) {
@@ -334,9 +373,13 @@ fun PlayerEpisodeCard(
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier =
-                            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp),
+                            Modifier.align(Alignment.BottomCenter)
+                                .padding(horizontal = 6.dp, vertical = 6.dp)
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(CircleShape),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = Color.Black.copy(alpha = 0.5f),
+                        trackColor = Color.Black.copy(alpha = 0.6f),
                     )
                 }
             }
@@ -345,51 +388,76 @@ fun PlayerEpisodeCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center,
             ) {
+                val episodeTitle =
+                    episode.name.ifBlank {
+                        stringResource(id = CoreR.string.episode_number, episode.indexNumber)
+                    }
+
                 Text(
-                    text =
-                        stringResource(
-                            id = CoreR.string.episode_name,
-                            episode.indexNumber,
-                            episode.name,
-                        ),
+                    text = episodeTitle,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                if (isCurrent) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                    ) {
-                        Text(
-                            text = stringResource(id = PlayerR.string.now_playing),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.height(6.dp))
 
-                if (episode.overview.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    SpoilerMask(
-                        enabled = isEpisodeSpoiler,
-                        isRevealed = isRevealed,
-                        onRevealChange = { isRevealed = it },
-                        shape = MaterialTheme.shapes.small,
-                    ) {
-                        Text(
-                            text = episode.overview,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (episode.indexNumber > 0) {
+                        val indexEnd = episode.indexNumberEnd
+                        val episodeCode =
+                            if (indexEnd != null && indexEnd > episode.indexNumber) {
+                                stringResource(
+                                    id = PlayerR.string.episode_short_with_end,
+                                    episode.indexNumber,
+                                    indexEnd,
+                                )
+                            } else {
+                                stringResource(
+                                    id = PlayerR.string.episode_short,
+                                    episode.indexNumber,
+                                )
+                            }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color =
+                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+                                        alpha = 0.7f
+                                    ),
+                        ) {
+                            Text(
+                                text = episodeCode,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color =
+                                    if (isCurrent) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+
+                    if (isCurrent) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                        ) {
+                            Text(
+                                text = stringResource(id = PlayerR.string.now_playing),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -397,15 +465,103 @@ fun PlayerEpisodeCard(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Episode Card", showBackground = true, backgroundColor = 0xFF141416)
 @Composable
 private fun PlayerEpisodeCardPreview() {
-    FindroidTheme {
-        PlayerEpisodeCard(
-            episode = dummyEpisode,
-            isCurrent = true,
-            hideEpisodeSpoilers = false,
-            onClick = {},
-        )
+    FindroidTheme(darkTheme = true) {
+        Surface(color = PlayerCardBackground) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                PlayerEpisodeCard(
+                    episode = dummyEpisode,
+                    isCurrent = true,
+                    hideEpisodeSpoilers = false,
+                    onClick = {},
+                )
+            }
+        }
+    }
+}
+
+@Preview(
+    name = "Series Navigation Header (3 Tabs)",
+    showBackground = true,
+    backgroundColor = 0xFF141416,
+)
+@Composable
+private fun PlayerNavigationHeaderSelectorSeriesPreview() {
+    FindroidTheme(darkTheme = true) {
+        Surface(color = PlayerCardBackground) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                PlayerNavigationHeaderSelector(
+                    selectedTab = PlayerNavTab.EPISODES,
+                    onTabSelected = {},
+                    tabs = listOf(PlayerNavTab.CHAPTERS, PlayerNavTab.EPISODES, PlayerNavTab.INFO),
+                )
+            }
+        }
+    }
+}
+
+@Preview(
+    name = "Movie Navigation Header (2 Tabs)",
+    showBackground = true,
+    backgroundColor = 0xFF141416,
+)
+@Composable
+private fun PlayerNavigationHeaderSelectorMoviePreview() {
+    FindroidTheme(darkTheme = true) {
+        Surface(color = PlayerCardBackground) {
+            Box(modifier = Modifier.padding(16.dp)) {
+                PlayerNavigationHeaderSelector(
+                    selectedTab = PlayerNavTab.INFO,
+                    onTabSelected = {},
+                    tabs = listOf(PlayerNavTab.CHAPTERS, PlayerNavTab.INFO),
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Season Chips Rail", showBackground = true, backgroundColor = 0xFF141416)
+@Composable
+private fun PlayerSeasonChipsRailPreview() {
+    FindroidTheme(darkTheme = true) {
+        Surface(color = PlayerCardBackground) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = true,
+                    onClick = {},
+                    label = { Text("Season 1") },
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                )
+                FilterChip(
+                    selected = false,
+                    onClick = {},
+                    label = { Text("Season 2") },
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                )
+                FilterChip(
+                    selected = false,
+                    onClick = {},
+                    label = { Text("Specials") },
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                )
+            }
+        }
     }
 }

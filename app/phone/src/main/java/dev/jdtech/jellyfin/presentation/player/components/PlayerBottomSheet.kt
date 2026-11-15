@@ -163,9 +163,17 @@ fun PlayerBottomSheet(
         if (
             panelType == PlayerSidePanelType.CHAPTERS &&
                 isSeries &&
-                uiState.currentChapters.isEmpty()
+                uiState.currentChapters.isEmpty() &&
+                selectedNavTab == PlayerNavTab.CHAPTERS
         ) {
             selectedNavTab = PlayerNavTab.EPISODES
+        } else if (
+            panelType == PlayerSidePanelType.CHAPTERS &&
+                !isSeries &&
+                uiState.currentChapters.isEmpty() &&
+                selectedNavTab == PlayerNavTab.CHAPTERS
+        ) {
+            selectedNavTab = PlayerNavTab.INFO
         }
     }
 
@@ -241,12 +249,28 @@ fun PlayerBottomSheet(
                     }
                 }
 
-                if (panelType == PlayerSidePanelType.CHAPTERS && isSeries) {
+                if (panelType == PlayerSidePanelType.CHAPTERS) {
+                    val tabs =
+                        remember(isSeries) {
+                            if (isSeries) {
+                                listOf(
+                                    PlayerNavTab.CHAPTERS,
+                                    PlayerNavTab.EPISODES,
+                                    PlayerNavTab.INFO,
+                                )
+                            } else {
+                                listOf(PlayerNavTab.CHAPTERS, PlayerNavTab.INFO)
+                            }
+                        }
                     PlayerNavigationHeaderSelector(
+                        tabs = tabs,
                         selectedTab = selectedNavTab,
                         onTabSelected = { selectedNavTab = it },
                         modifier = Modifier.weight(1f),
                     )
+                    if (showBackButton) {
+                        Spacer(modifier = Modifier.size(36.dp))
+                    }
                 } else {
                     Text(
                         text =
