@@ -57,6 +57,15 @@ internal fun PhoneSubtitleTrackList(viewModel: PlayerViewModel, tracks: Tracks) 
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
+            PlayerSubtitleOptionsCard(
+                subtitleDelayMs = uiState.subtitleDelayMs,
+                isExternalSubtitleLoaded = uiState.isExternalSubtitleLoaded,
+                onDelayChange = { viewModel.setSubtitleDelay(it) },
+                onLoadExternalSubtitle = { uri -> viewModel.loadExternalSubtitle(uri, context) },
+            )
+        }
+
+        item {
             SelectableTrackItem(
                 title = stringResource(id = PlayerR.string.none),
                 chips = emptyList(),
@@ -124,6 +133,13 @@ private fun PhoneSubtitleTrackListPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            PlayerSubtitleOptionsCard(
+                subtitleDelayMs = 0L,
+                isExternalSubtitleLoaded = false,
+                onDelayChange = {},
+                onLoadExternalSubtitle = {},
+                initialExpanded = false,
+            )
             SelectableTrackItem(
                 title = stringResource(id = PlayerR.string.none),
                 chips = emptyList(),
@@ -153,6 +169,13 @@ private fun TabletSubtitleTrackListPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            PlayerSubtitleOptionsCard(
+                subtitleDelayMs = 250L,
+                isExternalSubtitleLoaded = false,
+                onDelayChange = {},
+                onLoadExternalSubtitle = {},
+                initialExpanded = true,
+            )
             SelectableTrackItem(
                 title = stringResource(id = PlayerR.string.none),
                 chips = emptyList(),

@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.media3.common.Tracks
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.utils.TrackFormatter
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
@@ -48,22 +49,34 @@ internal fun PhoneAudioTrackList(viewModel: PlayerViewModel, tracks: Tracks) {
     var optimisticSelectedId by
         remember(audioTracks) { mutableStateOf(audioTracks.firstOrNull { it.selected }?.id) }
 
-    if (audioTracks.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(id = PlayerR.string.none),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    LazyColumn(
+        contentPadding = PaddingValues(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            PlayerNavigationItem(
+                title = stringResource(id = PlayerR.string.dialogue_boost),
+                iconRes = CoreR.drawable.ic_waveform,
+                showChevron = false,
+                trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
+                onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
             )
         }
-    } else {
-        LazyColumn(
-            contentPadding = PaddingValues(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+
+        if (audioTracks.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(id = PlayerR.string.none),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
             itemsIndexed(items = audioTracks, key = { _, track -> track.id }) { index, track ->
                 val isSelected = optimisticSelectedId == track.id
                 val displayInfo =
@@ -110,6 +123,15 @@ internal fun TabletAudioTrackList(viewModel: PlayerViewModel, tracks: Tracks) {
             contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            item {
+                PlayerNavigationItem(
+                    title = stringResource(id = PlayerR.string.dialogue_boost),
+                    iconRes = CoreR.drawable.ic_waveform,
+                    showChevron = false,
+                    trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
+                    onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
+                )
+            }
             itemsIndexed(items = availableTracks) { _, track ->
                 val displayInfo =
                     remember(track, currentLocale, displayExtraInfo) {
@@ -144,6 +166,15 @@ internal fun TabletAudioTrackList(viewModel: PlayerViewModel, tracks: Tracks) {
             contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            item {
+                PlayerNavigationItem(
+                    title = stringResource(id = PlayerR.string.dialogue_boost),
+                    iconRes = CoreR.drawable.ic_waveform,
+                    showChevron = false,
+                    trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
+                    onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
+                )
+            }
             itemsIndexed(items = audioGroups) { index, group ->
                 val isSelected = optimisticSelectedIndex == index
                 val displayInfo =
@@ -184,6 +215,13 @@ private fun PhoneAudioTrackListPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            PlayerNavigationItem(
+                title = stringResource(id = PlayerR.string.dialogue_boost),
+                iconRes = CoreR.drawable.ic_waveform,
+                showChevron = false,
+                trailingContent = { PlayerSwitch(checked = true) },
+                onClick = {},
+            )
             SelectableTrackItem(
                 title = "English - AAC Stereo",
                 chips = listOf("Default"),
@@ -213,6 +251,13 @@ private fun TabletAudioTrackListPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            PlayerNavigationItem(
+                title = stringResource(id = PlayerR.string.dialogue_boost),
+                iconRes = CoreR.drawable.ic_waveform,
+                showChevron = false,
+                trailingContent = { PlayerSwitch(checked = false) },
+                onClick = {},
+            )
             SelectableTrackItem(
                 title = "English - TrueHD 7.1",
                 chips = listOf("Default", "7.1"),

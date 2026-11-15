@@ -390,6 +390,14 @@ constructor(
                                                     backendPreference =
                                                         appPreferences.playerPlaybackSpeedRemember,
                                                 ),
+                                                PreferenceSwitch(
+                                                    nameStringResource =
+                                                        R.string.pref_player_dialogue_boost,
+                                                    descriptionStringRes =
+                                                        R.string.pref_player_dialogue_boost_summary,
+                                                    backendPreference =
+                                                        appPreferences.playerDialogueClarityDefault,
+                                                ),
                                                 PreferenceLongInput(
                                                     nameStringResource =
                                                         R.string.pref_player_controls_timeout,

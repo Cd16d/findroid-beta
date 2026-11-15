@@ -67,6 +67,8 @@ class MPVPlayer(
     private val audioManager: AudioManager by lazy { context.getSystemService()!! }
     private lateinit var audioFocusRequest: AudioFocusRequestCompat
     private val handler: Handler = Handler(context.mainLooper)
+    var mpvAudioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
+        private set
 
     private constructor(
         builder: Builder
@@ -226,10 +228,11 @@ class MPVPlayer(
             )
             .forEach { (name, format) -> mpvLib.observeProperty(name, format) }
 
-        val audioSessionId = audioManager.generateAudioSessionId()
-        if (audioSessionId != AudioManager.ERROR) {
-            mpvLib.setPropertyInt("audiotrack-session-id", audioSessionId)
-            mpvLib.setPropertyInt("aaudio-session-id", audioSessionId)
+        val sessionId = audioManager.generateAudioSessionId()
+        if (sessionId != AudioManager.ERROR) {
+            mpvAudioSessionId = sessionId
+            mpvLib.setPropertyInt("audiotrack-session-id", sessionId)
+            mpvLib.setPropertyInt("aaudio-session-id", sessionId)
         }
 
         if (handleAudioFocus) {
@@ -876,6 +879,7 @@ class MPVPlayer(
         currentCacheTimeMs = null
         currentDemuxerCacheDurationMs = null
         initialCommands.clear()
+        mpvLib.setPropertyDouble("sub-delay", 0.0)
     }
 
     /** Prepares the player. */
@@ -1078,6 +1082,11 @@ class MPVPlayer(
                         /* title= */ "${subtitle.label}",
                         /* lang= */ "${subtitle.language}",
                     )
+                )
+            }
+            if (isDialogueBoostActive) {
+                initialCommands.add(
+                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95")
                 )
             }
             // Only set the playlist index when the index is not the currently playing item.
@@ -1651,6 +1660,48 @@ class MPVPlayer(
                 attachedSurfaceHolder = null
             }
         }
+
+    /** Shifts subtitles by [delayMs] (positive = later, negative = earlier). */
+    fun setSubtitleDelayMs(delayMs: Int) {
+        mpvLib.setPropertyDouble("sub-delay", delayMs / 1000.0)
+    }
+
+    private var isDialogueBoostActive = false
+
+    /** Enables or disables dialogue enhancement via MPV audio filters. */
+    fun setDialogueBoost(enabled: Boolean) {
+        Timber.i("MPV setDialogueBoost: $enabled (audioSessionId: $mpvAudioSessionId)")
+        isDialogueBoostActive = enabled
+        commandExecutor.execute {
+            if (enabled) {
+                mpvLib.command(
+                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95")
+                )
+            } else {
+                mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
+            }
+        }
+    }
+
+    /** Adds and optionally selects an external subtitle track file. */
+    fun addSubtitle(
+        uri: String,
+        title: String? = null,
+        language: String? = null,
+        select: Boolean = true,
+    ) {
+        commandExecutor.execute {
+            mpvLib.command(
+                arrayOf(
+                    "sub-add",
+                    uri,
+                    if (select) "select" else "auto",
+                    title ?: "External",
+                    language ?: "und",
+                )
+            )
+        }
+    }
 
     companion object {
         /** Fraction to which audio volume is ducked on loss of audio focus */
