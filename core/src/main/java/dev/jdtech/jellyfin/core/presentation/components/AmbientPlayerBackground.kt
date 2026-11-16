@@ -331,8 +331,8 @@ fun AmbientPlayerBackground(
                                 Modifier.blur(64.dp)
                             } else {
                                 Modifier
-                            }
-                        )
+                            },
+                        ),
             ) {
                 // Read revision state to trigger redraw when pixel buffer updates
                 val rev = frameRevision

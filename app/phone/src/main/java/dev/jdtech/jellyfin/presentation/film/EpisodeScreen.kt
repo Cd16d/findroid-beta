@@ -192,7 +192,7 @@ private fun EpisodeScreenLayout(
                         Column(
                             modifier =
                                 Modifier.align(Alignment.BottomStart)
-                                    .padding(start = paddingStart, end = paddingEnd)
+                                    .padding(start = paddingStart, end = paddingEnd),
                         ) {
                             val seasonName =
                                 episode.seasonName
@@ -312,7 +312,7 @@ private fun EpisodeScreenLayout(
                                     presetId = presetId,
                                     downloadExternalAudio = downloadExternalAudio,
                                     audioStreamIndex = audioStreamIndex,
-                                )
+                                ),
                             )
                         },
                         onDownloadCancelClick = {
@@ -386,7 +386,7 @@ private fun EpisodeScreenLayout(
                                 stringResource(
                                     CoreR.string.season_number,
                                     episode.parentIndexNumber,
-                                )
+                                ),
                             )
                         }
                 }

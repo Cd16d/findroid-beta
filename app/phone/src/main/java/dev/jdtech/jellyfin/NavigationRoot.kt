@@ -291,11 +291,11 @@ private fun MainNavigation(
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val isExpandedScreen =
         windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
         )
     val isMediumScreen =
         windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
         )
     val customNavSuiteType =
         with(windowAdaptiveInfo.windowSizeClass) {
@@ -610,7 +610,7 @@ private fun EntryProviderScope<NavKey>.mainEntries(
                             libraryId = library.id.toString(),
                             libraryName = library.name,
                             libraryType = library.type,
-                        )
+                        ),
                     )
                 },
             onUserClick = dropUnlessResumed { onUserClick() },
@@ -640,7 +640,7 @@ private fun EntryProviderScope<NavKey>.mainEntries(
                         ShowDownloadsRoute(
                             showId = show.id.toString(),
                             showTitle = show.name,
-                        )
+                        ),
                     )
                 },
             onStorageClick =
@@ -819,7 +819,7 @@ private fun navigateToItem(navigator: Navigator, item: FindroidItem) {
     when (item) {
         is FindroidBoxSet ->
             navigator.navigate(
-                CollectionRoute(collectionId = item.id.toString(), collectionName = item.name)
+                CollectionRoute(collectionId = item.id.toString(), collectionName = item.name),
             )
 
         is FindroidMovie -> navigator.navigate(MovieRoute(movieId = item.id.toString()))
@@ -832,7 +832,7 @@ private fun navigateToItem(navigator: Navigator, item: FindroidItem) {
                     libraryId = item.id.toString(),
                     libraryName = item.name,
                     libraryType = item.type,
-                )
+                ),
             )
 
         is FindroidFolder ->
@@ -841,7 +841,7 @@ private fun navigateToItem(navigator: Navigator, item: FindroidItem) {
                     libraryId = item.id.toString(),
                     libraryName = item.name,
                     libraryType = CollectionType.Folders,
-                )
+                ),
             )
 
         else -> Unit

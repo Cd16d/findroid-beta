@@ -87,7 +87,7 @@ internal fun SleepTimerList(
                                     stringResource(
                                         id = PlayerR.string.sleep_timer_remaining,
                                         remainingMins.toInt(),
-                                    )
+                                    ),
                                 )
                             } else emptyList()
                         Triple(text, selected, chipList)

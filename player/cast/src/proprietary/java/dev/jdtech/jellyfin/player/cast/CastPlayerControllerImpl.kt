@@ -284,7 +284,7 @@ constructor(
                                 castSession?.removeCastListener(castSessionListener)
                                 remoteMediaClient?.unregisterCallback(remoteMediaClientCallback)
                                 remoteMediaClient?.removeProgressListener(
-                                    remoteMediaClientProgressListener
+                                    remoteMediaClientProgressListener,
                                 )
                                 remoteMediaClient?.removeProgressListener(playbackReportingCallback)
                             } catch (e: Exception) {
@@ -809,8 +809,8 @@ constructor(
                                 it.toCastOptimizeImageUri(
                                     item.mediaType,
                                     isBackdrop = true,
-                                )
-                            )
+                                ),
+                            ),
                         )
                     }
                 }
@@ -865,7 +865,7 @@ constructor(
         }
 
     private fun getTracks(
-        mediaSource: MediaSourceInfo
+        mediaSource: MediaSourceInfo,
     ): Triple<List<MediaTrack>, List<Track>, List<Track>> {
         val baseUrl = jellyfinApi.api.baseUrl?.removeSuffix("/").orEmpty()
 

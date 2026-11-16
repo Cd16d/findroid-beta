@@ -135,7 +135,7 @@ fun DownloadEpisodeTile(
                 CardDefaults.cardColors(
                     containerColor =
                         if (state.isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainer
+                        else MaterialTheme.colorScheme.surfaceContainer,
                 ),
             modifier =
                 Modifier.fillMaxWidth()
@@ -148,7 +148,7 @@ fun DownloadEpisodeTile(
                                 MaterialTheme.colorScheme.primary,
                                 cardShape,
                             )
-                        else Modifier
+                        else Modifier,
                     )
                     .then(
                         if (isEpisodeSpoiler && !isRevealed && !state.isSelectionMode) {
@@ -161,7 +161,7 @@ fun DownloadEpisodeTile(
                                 onClick = actions.onClick,
                                 onLongClick = actions.onLongClick,
                             )
-                        }
+                        },
                     ),
         ) {
             Row(
@@ -181,7 +181,9 @@ fun DownloadEpisodeTile(
                 // Poster thumbnail (height 56 dp, width adapts to poster aspect ratio 16:9)
                 Box(
                     modifier =
-                        Modifier.height(56.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))
+                        Modifier.height(56.dp)
+                            .aspectRatio(16f / 9f)
+                            .clip(RoundedCornerShape(10.dp)),
                 ) {
                     val hasBlurHash =
                         episode.images.backdrop?.blurHash != null ||
@@ -238,7 +240,7 @@ fun DownloadEpisodeTile(
                                     append(" • ")
                                     append(
                                         if (state.isPaused) stringResource(CoreR.string.paused)
-                                        else stringResource(CoreR.string.pending_in_queue)
+                                        else stringResource(CoreR.string.pending_in_queue),
                                     )
                                     if (sizeFormatted.isNotEmpty()) {
                                         append(" • ")
@@ -253,7 +255,7 @@ fun DownloadEpisodeTile(
                                     append(" • ")
                                     append(
                                         if (state.isPaused) stringResource(CoreR.string.paused)
-                                        else stringResource(CoreR.string.converting)
+                                        else stringResource(CoreR.string.converting),
                                     )
                                     if (sizeFormatted.isNotEmpty()) {
                                         append(" • ")
@@ -319,7 +321,7 @@ fun DownloadEpisodeTile(
                         text = metaRow,
                         style =
                             MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
                             ),
                         color = metaColor,
                         maxLines = 1,
@@ -332,7 +334,7 @@ fun DownloadEpisodeTile(
                         text = episode.name.ifEmpty { "Episode $epNumber" },
                         style =
                             MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
                             ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -460,12 +462,12 @@ fun DownloadEpisodeTile(
                                         painter =
                                             painterResource(
                                                 if (state.isPaused) CoreR.drawable.ic_play
-                                                else CoreR.drawable.ic_pause
+                                                else CoreR.drawable.ic_pause,
                                             ),
                                         contentDescription =
                                             stringResource(
                                                 if (state.isPaused) CoreR.string.resume
-                                                else CoreR.string.pause
+                                                else CoreR.string.pause,
                                             ),
                                         tint = tintColor,
                                         modifier = Modifier.size(20.dp),
@@ -489,12 +491,12 @@ fun DownloadEpisodeTile(
                                         painter =
                                             painterResource(
                                                 if (state.isPaused) CoreR.drawable.ic_play
-                                                else CoreR.drawable.ic_hourglass
+                                                else CoreR.drawable.ic_hourglass,
                                             ),
                                         contentDescription =
                                             stringResource(
                                                 if (state.isPaused) CoreR.string.resume
-                                                else CoreR.string.pending_in_queue
+                                                else CoreR.string.pending_in_queue,
                                             ),
                                         tint = MaterialTheme.colorScheme.tertiary,
                                         modifier = Modifier.size(20.dp),

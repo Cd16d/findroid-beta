@@ -91,7 +91,7 @@ fun StorageSummaryCard(
                             text = stringResource(CoreR.string.smart_downloads_active),
                             style =
                                 MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
                                 ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

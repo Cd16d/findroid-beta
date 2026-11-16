@@ -73,7 +73,7 @@ fun PlaybackInfoView(
         // 1. Playback Info
         item {
             PlaybackInfoSectionCard(
-                title = stringResource(id = PlayerR.string.playback_info_playback_section)
+                title = stringResource(id = PlayerR.string.playback_info_playback_section),
             ) {
                 PlaybackInfoRow(
                     label = stringResource(id = PlayerR.string.playback_info_player),
@@ -96,13 +96,13 @@ fun PlaybackInfoView(
         if (infoData.isTranscoding) {
             item {
                 PlaybackInfoSectionCard(
-                    title = stringResource(id = PlayerR.string.playback_info_transcode_section)
+                    title = stringResource(id = PlayerR.string.playback_info_transcode_section),
                 ) {
                     infoData.transcodeVideoCodec?.let {
                         PlaybackInfoRow(
                             label =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_transcode_video_codec
+                                    id = PlayerR.string.playback_info_transcode_video_codec,
                                 ),
                             value = it,
                         )
@@ -111,7 +111,7 @@ fun PlaybackInfoView(
                         PlaybackInfoRow(
                             label =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_transcode_audio_codec
+                                    id = PlayerR.string.playback_info_transcode_audio_codec,
                                 ),
                             value = it,
                         )
@@ -120,7 +120,7 @@ fun PlaybackInfoView(
                         PlaybackInfoRow(
                             label =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_transcode_resolution
+                                    id = PlayerR.string.playback_info_transcode_resolution,
                                 ),
                             value = it,
                         )
@@ -140,7 +140,7 @@ fun PlaybackInfoView(
                             Text(
                                 text =
                                     stringResource(
-                                        id = PlayerR.string.playback_info_transcode_reasons
+                                        id = PlayerR.string.playback_info_transcode_reasons,
                                     ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
@@ -189,7 +189,7 @@ fun PlaybackInfoView(
                                 Text(
                                     text =
                                         stringResource(
-                                            id = PlayerR.string.playback_info_transcode_speed_graph
+                                            id = PlayerR.string.playback_info_transcode_speed_graph,
                                         ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
@@ -217,7 +217,7 @@ fun PlaybackInfoView(
         // 3. Original Content Info
         item {
             PlaybackInfoSectionCard(
-                title = stringResource(id = PlayerR.string.playback_info_original_section)
+                title = stringResource(id = PlayerR.string.playback_info_original_section),
             ) {
                 infoData.container?.let {
                     PlaybackInfoRow(
@@ -239,7 +239,7 @@ fun PlaybackInfoView(
                 }
                 if (infoData.hasVideoInfo) {
                     PlaybackInfoSubSection(
-                        title = stringResource(id = PlayerR.string.playback_info_video_section)
+                        title = stringResource(id = PlayerR.string.playback_info_video_section),
                     ) {
                         infoData.videoCodec?.let {
                             PlaybackInfoRow(
@@ -276,7 +276,7 @@ fun PlaybackInfoView(
                 }
                 if (infoData.hasAudioInfo) {
                     PlaybackInfoSubSection(
-                        title = stringResource(id = PlayerR.string.playback_info_audio_section)
+                        title = stringResource(id = PlayerR.string.playback_info_audio_section),
                     ) {
                         infoData.audioCodec?.let {
                             PlaybackInfoRow(
@@ -305,7 +305,7 @@ fun PlaybackInfoView(
         // 4. Nerd Stats
         item {
             PlaybackInfoSectionCard(
-                title = stringResource(id = PlayerR.string.playback_info_nerd_stats_section)
+                title = stringResource(id = PlayerR.string.playback_info_nerd_stats_section),
             ) {
                 infoData.playbackStatus?.let {
                     PlaybackInfoRow(
@@ -536,9 +536,9 @@ private fun SimpleStatGraph(
                             topEnd = 8.dp,
                             bottomStart = 16.dp,
                             bottomEnd = 16.dp,
-                        )
+                        ),
                     )
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f)),
         ) {
             drawStatGraph(
                 data = data,
@@ -590,7 +590,7 @@ private fun PlaybackInfoViewPreview() {
                             bufferHealth = "15.2s",
                             bufferHealthHistory = listOf(10f, 12f, 13.5f, 15.2f),
                             audioOutput = "AudioTrack",
-                        )
+                        ),
                 )
             }
         }

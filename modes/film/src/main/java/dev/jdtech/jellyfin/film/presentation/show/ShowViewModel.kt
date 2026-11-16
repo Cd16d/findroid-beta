@@ -56,7 +56,7 @@ constructor(
                         actors = actors,
                         director = director,
                         writers = writers,
-                    )
+                    ),
                 )
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))

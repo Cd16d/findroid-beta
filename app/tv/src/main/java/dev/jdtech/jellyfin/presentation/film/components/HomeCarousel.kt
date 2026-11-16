@@ -114,7 +114,7 @@ fun HomeCarousel(
                 .clip(CentralShapes.LargeCard)
                 .then(
                     if (playFocusRequester != null) Modifier.focusRequester(playFocusRequester)
-                    else Modifier
+                    else Modifier,
                 )
                 .then(
                     if (upFocusRequester != null || downFocusRequester != null) {
@@ -122,7 +122,7 @@ fun HomeCarousel(
                             if (upFocusRequester != null) up = upFocusRequester
                             if (downFocusRequester != null) down = downFocusRequester
                         }
-                    } else Modifier
+                    } else Modifier,
                 )
                 .onFocusChanged {
                     if (isFocused != it.isFocused) {
@@ -204,8 +204,8 @@ fun HomeCarousel(
                                 .clip(CircleShape)
                                 .background(
                                     if (isIndicatorActive) MaterialTheme.colorScheme.primary
-                                    else Color.White.copy(alpha = 0.4f)
-                                )
+                                    else Color.White.copy(alpha = 0.4f),
+                                ),
                     )
                 }
             }

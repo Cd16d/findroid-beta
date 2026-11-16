@@ -74,7 +74,7 @@ class MPVPlayer(
         private set
 
     private constructor(
-        builder: Builder
+        builder: Builder,
     ) : this(
         context = builder.context,
         audioAttributes = builder.audioAttributes,
@@ -569,7 +569,7 @@ class MPVPlayer(
                                     "seek",
                                     "${seekToMs.toDouble().div(C.MILLIS_PER_SECOND)}",
                                     "absolute",
-                                )
+                                ),
                             )
                             return@post
                         }
@@ -594,7 +594,7 @@ class MPVPlayer(
                         val isPausedForCache = mpvLib.getPropertyBoolean("paused-for-cache") == true
                         setResizeMode(currentResizeMode)
                         setPlayerStateAndNotifyIfChanged(
-                            playbackState = if (isPausedForCache) STATE_BUFFERING else STATE_READY
+                            playbackState = if (isPausedForCache) STATE_BUFFERING else STATE_READY,
                         )
                         for (videoListener in videoListeners) {
                             videoListener.onRenderedFirstFrame()
@@ -602,7 +602,7 @@ class MPVPlayer(
                     } else {
                         val isPausedForCache = mpvLib.getPropertyBoolean("paused-for-cache") == true
                         setPlayerStateAndNotifyIfChanged(
-                            playbackState = if (isPausedForCache) STATE_BUFFERING else STATE_READY
+                            playbackState = if (isPausedForCache) STATE_BUFFERING else STATE_READY,
                         )
                     }
                 }
@@ -861,7 +861,7 @@ class MPVPlayer(
                     "${mediaItem.localConfiguration?.uri}",
                     "insert-at",
                     index.toString(),
-                )
+                ),
             )
         }
     }
@@ -964,7 +964,7 @@ class MPVPlayer(
                     "loadfile",
                     "${mediaItem.localConfiguration?.uri}",
                     if (index == 0) "replace" else "append",
-                )
+                ),
             )
         }
         prepareMediaItem(initialIndex)
@@ -1131,7 +1131,7 @@ class MPVPlayer(
                                 "seek",
                                 "${seekTo.toDouble().div(C.MILLIS_PER_SECOND)}",
                                 "absolute",
-                            )
+                            ),
                         )
                     }
                     0L
@@ -1157,13 +1157,13 @@ class MPVPlayer(
                             /* flags= */ "auto",
                             /* title= */ "${subtitle.label}",
                             /* lang= */ "${subtitle.language}",
-                        )
+                        ),
                     )
                 }
             }
             if (isDialogueBoostActive) {
                 initialCommands.add(
-                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95")
+                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
                 )
             }
             // Only set the playlist index when the index is not the currently playing item.
@@ -1598,7 +1598,7 @@ class MPVPlayer(
     @Deprecated("Deprecated in Java")
     override fun setDeviceVolume(volume: Int) {
         throw IllegalArgumentException(
-            "You should use global volume controls. Check out AUDIO_SERVICE."
+            "You should use global volume controls. Check out AUDIO_SERVICE.",
         )
     }
 
@@ -1610,13 +1610,13 @@ class MPVPlayer(
     @Deprecated("Deprecated in Java")
     override fun increaseDeviceVolume() {
         throw IllegalArgumentException(
-            "You should use global volume controls. Check out AUDIO_SERVICE."
+            "You should use global volume controls. Check out AUDIO_SERVICE.",
         )
     }
 
     override fun increaseDeviceVolume(flags: Int) {
         throw IllegalArgumentException(
-            "You should use global volume controls. Check out AUDIO_SERVICE."
+            "You should use global volume controls. Check out AUDIO_SERVICE.",
         )
     }
 
@@ -1624,13 +1624,13 @@ class MPVPlayer(
     @Deprecated("Deprecated in Java")
     override fun decreaseDeviceVolume() {
         throw IllegalArgumentException(
-            "You should use global volume controls. Check out AUDIO_SERVICE."
+            "You should use global volume controls. Check out AUDIO_SERVICE.",
         )
     }
 
     override fun decreaseDeviceVolume(flags: Int) {
         throw IllegalArgumentException(
-            "You should use global volume controls. Check out AUDIO_SERVICE."
+            "You should use global volume controls. Check out AUDIO_SERVICE.",
         )
     }
 
@@ -1638,7 +1638,7 @@ class MPVPlayer(
     @Deprecated("Deprecated in Java")
     override fun setDeviceMuted(muted: Boolean) {
         throw IllegalArgumentException(
-            "You should use global volume controls. Check out AUDIO_SERVICE."
+            "You should use global volume controls. Check out AUDIO_SERVICE.",
         )
     }
 
@@ -1752,7 +1752,7 @@ class MPVPlayer(
         commandExecutor.execute {
             if (enabled) {
                 mpvLib.command(
-                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95")
+                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
                 )
             } else {
                 mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
@@ -1779,7 +1779,7 @@ class MPVPlayer(
                     if (select) "select" else "auto",
                     title ?: "External",
                     language ?: "und",
-                )
+                ),
             )
         }
     }
@@ -1831,7 +1831,7 @@ class MPVPlayer(
                     .setLabel(json.optNullableString("title"))
                     .setLanguage(json.optNullableString("lang"))
                     .setSelectionFlags(
-                        if (json.optBoolean("default")) C.SELECTION_FLAG_DEFAULT else 0
+                        if (json.optBoolean("default")) C.SELECTION_FLAG_DEFAULT else 0,
                     )
                     .setCodecs(json.optNullableString("codec"))
                     .build()
@@ -1846,7 +1846,7 @@ class MPVPlayer(
                             .setWidth(json.optInt("demux-w", Format.NO_VALUE))
                             .setHeight(json.optInt("demux-h", Format.NO_VALUE))
                             .setFrameRate(
-                                (json.optNullableDouble("demux-w") ?: Format.NO_VALUE).toFloat()
+                                (json.optNullableDouble("demux-w") ?: Format.NO_VALUE).toFloat(),
                             )
                             .build()
                     }

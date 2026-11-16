@@ -56,12 +56,12 @@ fun FloatingSelectionToolbar(
                             painter =
                                 painterResource(
                                     if (anyDownloadingOrPending) CoreR.drawable.ic_pause
-                                    else CoreR.drawable.ic_play
+                                    else CoreR.drawable.ic_play,
                                 ),
                             contentDescription =
                                 stringResource(
                                     if (anyDownloadingOrPending) CoreR.string.pause_all
-                                    else CoreR.string.resume_all
+                                    else CoreR.string.resume_all,
                                 ),
                             tint = MaterialTheme.colorScheme.primary,
                         )

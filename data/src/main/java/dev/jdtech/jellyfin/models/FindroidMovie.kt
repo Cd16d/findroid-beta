@@ -52,7 +52,7 @@ suspend fun BaseItemDto.toFindroidMovie(
             }
         if (currentUserId != null && serverDatabase.isItemDownloadedForUser(currentUserId, id)) {
             sources.addAll(
-                serverDatabase.getSources(id).map { it.toFindroidSource(serverDatabase) }
+                serverDatabase.getSources(id).map { it.toFindroidSource(serverDatabase) },
             )
         }
     }
@@ -169,7 +169,7 @@ suspend fun FindroidMovieDto.toFindroidMovie(
                                     backdrop = part.images.backdrop ?: movieImages.backdrop,
                                     logo = part.images.logo ?: movieImages.logo,
                                 )
-                            } else part.images
+                            } else part.images,
                     )
                 } ?: emptyList(),
     )

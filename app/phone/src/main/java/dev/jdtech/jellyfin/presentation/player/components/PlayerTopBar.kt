@@ -240,7 +240,7 @@ fun PlayerTopBar(
                                             CoreR.drawable.ic_rotate_off
                                         } else {
                                             CoreR.drawable.ic_rotate
-                                        }
+                                        },
                                 ),
                             contentDescription = null,
                             modifier = Modifier.size(iconSize),

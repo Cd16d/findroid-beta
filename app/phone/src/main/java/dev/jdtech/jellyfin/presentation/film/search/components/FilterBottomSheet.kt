@@ -86,7 +86,7 @@ fun FilterBottomSheet(
             modifier =
                 Modifier.fillMaxWidth()
                     .padding(horizontal = MaterialTheme.spacings.default)
-                    .padding(bottom = MaterialTheme.spacings.large)
+                    .padding(bottom = MaterialTheme.spacings.large),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -100,7 +100,7 @@ fun FilterBottomSheet(
                 )
                 if (state.isCategoryActive(category)) {
                     TextButton(
-                        onClick = { onAction(SearchAction.ClearCategoryFilters(category)) }
+                        onClick = { onAction(SearchAction.ClearCategoryFilters(category)) },
                     ) {
                         Text(text = stringResource(CoreR.string.filter_clear_all))
                     }

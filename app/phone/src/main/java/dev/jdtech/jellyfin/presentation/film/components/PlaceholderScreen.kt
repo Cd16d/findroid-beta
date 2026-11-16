@@ -84,7 +84,7 @@ fun PlaceholderScreenContent(
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val isExpanded =
         windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+            WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
         )
 
     val hasTitle = !title.isNullOrBlank()

@@ -118,7 +118,7 @@ private fun SmartDownloadsScreenLayout(
                     shape = RoundedCornerShape(20.dp),
                     colors =
                         CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         ),
                     border =
                         BorderStroke(
@@ -138,7 +138,7 @@ private fun SmartDownloadsScreenLayout(
                                         stringResource(CoreR.string.download_smart_downloads_title),
                                     style =
                                         MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
                                         ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -174,7 +174,7 @@ private fun SmartDownloadsScreenLayout(
                                         stringResource(CoreR.string.download_next_episodes_label),
                                     style =
                                         MaterialTheme.typography.labelMedium.copy(
-                                            fontWeight = FontWeight.SemiBold
+                                            fontWeight = FontWeight.SemiBold,
                                         ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -189,14 +189,16 @@ private fun SmartDownloadsScreenLayout(
                                             selected = isSelected,
                                             onClick = {
                                                 onAction(
-                                                    SmartDownloadsAction.SetNextEpisodesCount(count)
+                                                    SmartDownloadsAction.SetNextEpisodesCount(
+                                                        count,
+                                                    ),
                                                 )
                                             },
                                             label = {
                                                 val labelText =
                                                     if (count == 1)
                                                         stringResource(
-                                                            CoreR.string.download_next_episodes_one
+                                                            CoreR.string.download_next_episodes_one,
                                                         )
                                                     else
                                                         stringResource(
@@ -226,7 +228,7 @@ private fun SmartDownloadsScreenLayout(
                                         stringResource(CoreR.string.download_storage_limit_label),
                                     style =
                                         MaterialTheme.typography.labelMedium.copy(
-                                            fontWeight = FontWeight.SemiBold
+                                            fontWeight = FontWeight.SemiBold,
                                         ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -255,8 +257,8 @@ private fun SmartDownloadsScreenLayout(
                                                 onClick = {
                                                     onAction(
                                                         SmartDownloadsAction.SetStorageLimitGb(
-                                                            limitGb
-                                                        )
+                                                            limitGb,
+                                                        ),
                                                     )
                                                 },
                                                 label = { Text(text = label) },
@@ -285,7 +287,7 @@ private fun SmartDownloadsScreenLayout(
                     shape = RoundedCornerShape(20.dp),
                     colors =
                         CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         ),
                     border =
                         BorderStroke(
@@ -304,7 +306,7 @@ private fun SmartDownloadsScreenLayout(
                                     text = stringResource(CoreR.string.download_auto_delete_title),
                                     style =
                                         MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
                                         ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
@@ -363,7 +365,7 @@ private fun SmartDownloadsScreenLayout(
                     shape = RoundedCornerShape(20.dp),
                     colors =
                         CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         ),
                     border =
                         BorderStroke(
@@ -401,7 +403,7 @@ private fun SmartDownloadsScreenLayout(
                                         stringResource(CoreR.string.download_quality_presets_title),
                                     style =
                                         MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
                                         ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )

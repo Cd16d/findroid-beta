@@ -143,7 +143,7 @@ fun SettingsSegmentConfigCard(
                             .clip(CircleShape)
                             .background(Color(preference.color))
                             .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-                            .clickable { showColorDialog = true }
+                            .clickable { showColorDialog = true },
                 )
             }
         }
@@ -206,7 +206,7 @@ fun SegmentActionSelectionDialog(
         onDismiss = onDismissRequest,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacings.default)
+            modifier = Modifier.fillMaxWidth().padding(bottom = MaterialTheme.spacings.default),
         ) {
             options.forEach { (action, label) ->
                 Row(
@@ -266,7 +266,7 @@ fun SegmentColorPickerDialog(
                     .clip(CircleShape)
                     .background(
                         if (isDefaultSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainerHigh
+                        else MaterialTheme.colorScheme.surfaceContainerHigh,
                     )
                     .border(
                         width = if (isDefaultSelected) 2.dp else 1.dp,
@@ -290,7 +290,7 @@ fun SegmentColorPickerDialog(
                             .background(
                                 if (isDefaultSelected)
                                     MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
                             )
                             .border(
                                 1.dp,

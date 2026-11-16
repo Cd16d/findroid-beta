@@ -150,13 +150,13 @@ internal fun QualityList(
                         onBack()
                     } else {
                         viewModel.selectVideoQuality(
-                            VideoQualityOption.createFixedOption(tier.name, currentBitrate)
+                            VideoQualityOption.createFixedOption(tier.name, currentBitrate),
                         )
                     }
                 },
                 onBitrateChange = { newBitrate ->
                     viewModel.selectVideoQuality(
-                        VideoQualityOption.createFixedOption(tier.name, newBitrate)
+                        VideoQualityOption.createFixedOption(tier.name, newBitrate),
                     )
                 },
             )

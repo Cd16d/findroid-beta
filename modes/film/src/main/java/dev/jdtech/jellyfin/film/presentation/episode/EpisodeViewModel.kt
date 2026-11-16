@@ -56,7 +56,7 @@ constructor(
                         actors = actors,
                         displayExtraInfo = displayExtraInfo,
                         hideEpisodeSpoilers = hideEpisodeSpoilers,
-                    )
+                    ),
                 )
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))

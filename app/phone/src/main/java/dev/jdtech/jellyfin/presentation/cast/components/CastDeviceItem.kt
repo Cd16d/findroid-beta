@@ -66,7 +66,7 @@ fun CastDeviceItem(
                         MaterialTheme.colorScheme.primaryContainer
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
-                    }
+                    },
             ),
     ) {
         Row(

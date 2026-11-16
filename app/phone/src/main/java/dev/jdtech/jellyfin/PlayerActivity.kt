@@ -244,7 +244,7 @@ class PlayerActivity : AppCompatActivity() {
                                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                                 } else {
                                     window.clearFlags(
-                                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                                     )
                                 }
                                 updatePipParams(event.isPlaying)
@@ -385,7 +385,7 @@ class PlayerActivity : AppCompatActivity() {
                                 VolumeKeyEvent(
                                     isUp = keyCode == KeyEvent.KEYCODE_VOLUME_UP,
                                     isRepeat = isRepeat,
-                                )
+                                ),
                             )
                         }
                     }
@@ -401,7 +401,7 @@ class PlayerActivity : AppCompatActivity() {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 isPipGestureEnabled &&
                 viewModel.player.isPlaying &&
-                !isControlsLocked
+                !isControlsLocked,
     ): PictureInPictureParams {
         val videoSize = viewModel.player.videoSize
         val aspectRatio =

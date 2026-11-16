@@ -109,7 +109,7 @@ class SubtitleOffsetRenderer(
 
     override fun supportsResetPositionWithoutKeyFrameReset(positionUs: Long): Boolean =
         super.supportsResetPositionWithoutKeyFrameReset(
-            adjust(positionUs, subtitleDelayUsProvider())
+            adjust(positionUs, subtitleDelayUsProvider()),
         )
 
     private fun rewindStream(rendererPositionUs: Long) {

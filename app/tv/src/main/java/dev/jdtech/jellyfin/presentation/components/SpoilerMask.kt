@@ -47,8 +47,8 @@ fun SpoilerMask(
                             Modifier.blur(blurRadius)
                         } else {
                             Modifier
-                        }
-                    )
+                        },
+                    ),
         ) {
             content()
         }

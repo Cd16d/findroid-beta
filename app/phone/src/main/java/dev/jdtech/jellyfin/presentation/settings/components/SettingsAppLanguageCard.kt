@@ -50,7 +50,7 @@ fun SettingsAppLanguageCard(preference: Preference, modifier: Modifier = Modifie
                     Intent(
                         Settings.ACTION_APP_LOCALE_SETTINGS,
                         "package:${context.packageName}".toUri(),
-                    )
+                    ),
                 )
             }
         },
@@ -89,7 +89,7 @@ private fun SettingsAppLanguageCardPreview() {
                     nameStringResource = CoreR.string.app_name,
                     descriptionStringRes = null,
                     iconDrawableId = null,
-                )
+                ),
         )
     }
 }

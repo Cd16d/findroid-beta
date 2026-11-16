@@ -212,7 +212,7 @@ private fun ShowDownloadsScreenLayout(
                         }
                         showMoveStorageDialog = false
                         episodeToMove = null
-                    }
+                    },
                 ) {
                     Text(text = stringResource(CoreR.string.sd_card))
                 }
@@ -228,7 +228,7 @@ private fun ShowDownloadsScreenLayout(
                         }
                         showMoveStorageDialog = false
                         episodeToMove = null
-                    }
+                    },
                 ) {
                     Text(text = stringResource(CoreR.string.internal_storage))
                 }
@@ -288,7 +288,7 @@ private fun ShowDownloadsScreenLayout(
                                 text = showTitle,
                                 style =
                                     MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
                                     ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -329,7 +329,7 @@ private fun ShowDownloadsScreenLayout(
                             } else {
                                 navigateBack()
                             }
-                        }
+                        },
                     ) {
                         Icon(
                             painter =
@@ -355,8 +355,8 @@ private fun ShowDownloadsScreenLayout(
                                 text =
                                     stringResource(
                                         if (isAllSelected) CoreR.string.deselect_all
-                                        else CoreR.string.select_all
-                                    )
+                                        else CoreR.string.select_all,
+                                    ),
                             )
                         }
                     } else if (allSeasonGroups.any { it.episodes.isNotEmpty() }) {
@@ -370,7 +370,7 @@ private fun ShowDownloadsScreenLayout(
                                 text = stringResource(CoreR.string.select),
                                 style =
                                     MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.SemiBold,
                                     ),
                             )
                         }
@@ -542,7 +542,7 @@ private fun ShowDownloadsScreenLayout(
                                         onClick = {
                                             if (state.isSelectionMode) {
                                                 onAction(
-                                                    ShowDownloadsAction.ToggleSelection(episode.id)
+                                                    ShowDownloadsAction.ToggleSelection(episode.id),
                                                 )
                                             } else if (status == DownloadStatus.DOWNLOADED) {
                                                 onEpisodeClick(episode)
@@ -551,12 +551,12 @@ private fun ShowDownloadsScreenLayout(
                                         onLongClick = {
                                             onAction(ShowDownloadsAction.EnterSelectionMode)
                                             onAction(
-                                                ShowDownloadsAction.ToggleSelection(episode.id)
+                                                ShowDownloadsAction.ToggleSelection(episode.id),
                                             )
                                         },
                                         onSwipeDelete = {
                                             onAction(
-                                                ShowDownloadsAction.StageDeleteEpisode(episode)
+                                                ShowDownloadsAction.StageDeleteEpisode(episode),
                                             )
                                         },
                                         onPauseDownload = {
@@ -596,9 +596,9 @@ private fun ShowDownloadsScreenLayout(
                                         listOf(
                                             Color.Transparent,
                                             MaterialTheme.colorScheme.surface,
-                                        )
-                                )
-                            )
+                                        ),
+                                ),
+                            ),
                 )
             }
 
@@ -611,8 +611,8 @@ private fun ShowDownloadsScreenLayout(
                     Modifier.align(Alignment.BottomCenter)
                         .windowInsetsPadding(
                             WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
-                            )
+                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                            ),
                         )
                         .padding(bottom = 8.dp),
             ) {
@@ -660,7 +660,7 @@ private fun ShowDownloadsScreenLayoutPreview() {
                                 seasonNumber = 1,
                                 headerTitle = "Season 1 • 1 episode",
                                 episodes = listOf(dummyEpisode),
-                            )
+                            ),
                         ),
                     totalEpisodesCount = 1,
                     totalDiskSizeFormatted = "1.2 GB",

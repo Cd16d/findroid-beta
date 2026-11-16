@@ -91,7 +91,7 @@ fun CastBottomSheetLayout(
                     start = safePadding.start,
                     end = safePadding.end,
                     bottom = paddingBottom,
-                )
+                ),
     ) {
         Text(
             text =

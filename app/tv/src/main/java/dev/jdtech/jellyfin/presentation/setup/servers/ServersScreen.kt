@@ -127,7 +127,7 @@ private fun ServersScreenLayout(state: ServersState, onAction: (ServersAction) -
                         stringResource(
                             SetupR.string.remove_server_dialog_text,
                             selectedServer!!.name,
-                        )
+                        ),
                 )
             },
             onDismissRequest = { openDeleteDialog = false },
@@ -136,7 +136,7 @@ private fun ServersScreenLayout(state: ServersState, onAction: (ServersAction) -
                     onClick = {
                         openDeleteDialog = false
                         onAction(ServersAction.DeleteServer(selectedServer!!.id))
-                    }
+                    },
                 ) {
                     Text(text = stringResource(SetupR.string.confirm))
                 }
@@ -184,8 +184,8 @@ private fun ServersScreenLayoutPreview() {
                                 server = dummyServer,
                                 addresses = listOf(dummyServerAddress),
                                 user = null,
-                            )
-                        )
+                            ),
+                        ),
                 ),
             onAction = {},
         )

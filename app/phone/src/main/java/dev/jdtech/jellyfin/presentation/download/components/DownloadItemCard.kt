@@ -102,7 +102,7 @@ fun DownloadItemCard(
                 CardDefaults.cardColors(
                     containerColor =
                         if (state.isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainer
+                        else MaterialTheme.colorScheme.surfaceContainer,
                 ),
             modifier =
                 Modifier.fillMaxWidth()
@@ -111,7 +111,7 @@ fun DownloadItemCard(
                     .then(
                         if (state.isSelected)
                             Modifier.border(2.dp, MaterialTheme.colorScheme.primary, cardShape)
-                        else Modifier
+                        else Modifier,
                     )
                     .combinedClickable(
                         onClick = actions.onClick,
@@ -135,7 +135,8 @@ fun DownloadItemCard(
                 // Poster thumbnail
                 Box(
                     modifier =
-                        Modifier.size(width = 64.dp, height = 96.dp).clip(RoundedCornerShape(12.dp))
+                        Modifier.size(width = 64.dp, height = 96.dp)
+                            .clip(RoundedCornerShape(12.dp)),
                 ) {
                     ItemPoster(
                         item = item,
@@ -185,7 +186,7 @@ fun DownloadItemCard(
                                     fontWeight =
                                         if (state.status == DownloadStatus.PENDING)
                                             FontWeight.Medium
-                                        else FontWeight.Normal
+                                        else FontWeight.Normal,
                                 ),
                             color =
                                 if (state.status == DownloadStatus.PENDING)
@@ -318,12 +319,12 @@ fun DownloadItemCard(
                                         painter =
                                             painterResource(
                                                 if (state.isPaused) CoreR.drawable.ic_play
-                                                else CoreR.drawable.ic_pause
+                                                else CoreR.drawable.ic_pause,
                                             ),
                                         contentDescription =
                                             stringResource(
                                                 if (state.isPaused) CoreR.string.resume
-                                                else CoreR.string.pause
+                                                else CoreR.string.pause,
                                             ),
                                         tint = tintColor,
                                         modifier = Modifier.size(20.dp),
@@ -346,12 +347,12 @@ fun DownloadItemCard(
                                         painter =
                                             painterResource(
                                                 if (state.isPaused) CoreR.drawable.ic_play
-                                                else CoreR.drawable.ic_hourglass
+                                                else CoreR.drawable.ic_hourglass,
                                             ),
                                         contentDescription =
                                             stringResource(
                                                 if (state.isPaused) CoreR.string.resume
-                                                else CoreR.string.pending_in_queue
+                                                else CoreR.string.pending_in_queue,
                                             ),
                                         tint = MaterialTheme.colorScheme.tertiary,
                                         modifier = Modifier.size(20.dp),

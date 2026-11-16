@@ -43,7 +43,7 @@ fun SettingsCategoryCard(preference: PreferenceCategory, modifier: Modifier = Mo
         border =
             ClickableSurfaceDefaults.border(
                 focusedBorder =
-                    Border(BorderStroke(4.dp, Color.White), shape = CentralShapes.ItemCard)
+                    Border(BorderStroke(4.dp, Color.White), shape = CentralShapes.ItemCard),
             ),
         scale = ClickableSurfaceScale.None,
         modifier = modifier,
@@ -88,7 +88,7 @@ private fun SettingsCategoryCardPreview() {
                 PreferenceCategory(
                     nameStringResource = SettingsR.string.settings_category_player,
                     iconDrawableId = SettingsR.drawable.ic_play,
-                )
+                ),
         )
     }
 }

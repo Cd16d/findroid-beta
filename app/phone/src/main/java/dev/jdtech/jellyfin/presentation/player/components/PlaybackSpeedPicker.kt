@@ -165,7 +165,7 @@ fun PlaybackSpeedPicker(
 
         Spacer(
             modifier =
-                Modifier.height(if (isTabletLayout) 10.dp else if (isLandscape) 12.dp else 20.dp)
+                Modifier.height(if (isTabletLayout) 10.dp else if (isLandscape) 12.dp else 20.dp),
         )
 
         if (isTabletLayout) {
@@ -245,7 +245,7 @@ fun PlaybackSpeedPicker(
                                             .clip(CircleShape)
                                             .background(
                                                 if (isSelected) MaterialTheme.colorScheme.primary
-                                                else PlayerOverlayBackground
+                                                else PlayerOverlayBackground,
                                             )
                                             .clickable(
                                                 interactionSource =
@@ -396,7 +396,7 @@ private fun SpeedSliderSection(
                     modifier =
                         Modifier.size(width = animatedThumbWidth, height = animatedThumbHeight)
                             .clip(RoundedCornerShape(animatedThumbWidth / 2f))
-                            .background(Color.White)
+                            .background(Color.White),
                 )
             },
             track = { sliderState ->

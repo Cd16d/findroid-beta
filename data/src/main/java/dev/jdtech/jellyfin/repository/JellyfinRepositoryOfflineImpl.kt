@@ -498,12 +498,12 @@ class JellyfinRepositoryOfflineImpl(
                 items.addAll(
                     database.getDownloadedMoviesByServerAndUser(serverId, userId).map {
                         it.toFindroidMovie(database, userId)
-                    }
+                    },
                 )
                 items.addAll(
                     database.getDownloadedShowsByServerAndUser(serverId, userId).map {
                         it.toFindroidShow(database, userId)
-                    }
+                    },
                 )
             }
             items
@@ -535,6 +535,6 @@ class JellyfinRepositoryOfflineImpl(
     override suspend fun canTranscode(): Boolean = false
 
     override suspend fun getActiveTranscodingInfo(
-        playSessionId: String?
+        playSessionId: String?,
     ): org.jellyfin.sdk.model.api.TranscodingInfo? = null
 }

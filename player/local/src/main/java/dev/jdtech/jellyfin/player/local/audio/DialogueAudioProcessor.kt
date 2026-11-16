@@ -23,7 +23,7 @@ class DialogueAudioProcessor : BaseAudioProcessor() {
     @Volatile var isEnabled: Boolean = false
 
     override fun onConfigure(
-        inputAudioFormat: AudioProcessor.AudioFormat
+        inputAudioFormat: AudioProcessor.AudioFormat,
     ): AudioProcessor.AudioFormat {
         if (
             inputAudioFormat.encoding != C.ENCODING_PCM_16BIT &&

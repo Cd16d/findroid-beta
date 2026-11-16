@@ -189,7 +189,7 @@ fun DeviceScreenContent(
                                 painter =
                                     painterResource(
                                         if (videoExpanded) CoreR.drawable.ic_chevron_up
-                                        else CoreR.drawable.ic_chevron_down
+                                        else CoreR.drawable.ic_chevron_down,
                                     ),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -263,7 +263,7 @@ fun DeviceScreenContent(
                                 painter =
                                     painterResource(
                                         if (audioExpanded) CoreR.drawable.ic_chevron_up
-                                        else CoreR.drawable.ic_chevron_down
+                                        else CoreR.drawable.ic_chevron_down,
                                     ),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,

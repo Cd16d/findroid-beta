@@ -128,7 +128,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                 modifier =
                     Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
                         size = coordinates.size.toSize()
-                    }
+                    },
             ) {
                 val image = show.images.backdrop
                 val imageUri =
@@ -153,8 +153,8 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                         listOf(Color.Black.copy(alpha = .2f), Color.Black),
                                         center = Offset(size.width, 0f),
                                         radius = size.width * .8f,
-                                    )
-                                )
+                                    ),
+                                ),
                     )
                 }
                 LazyColumn(
@@ -185,7 +185,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                 Modifier.padding(
                                     start = MaterialTheme.spacings.default * 2,
                                     end = MaterialTheme.spacings.default * 2,
-                                )
+                                ),
                         ) {
                             Text(text = show.name, style = MaterialTheme.typography.displayMedium)
                             if (show.originalTitle != show.name) {
@@ -199,7 +199,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                             Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
                             Row(
                                 horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.small)
+                                    Arrangement.spacedBy(MaterialTheme.spacings.small),
                             ) {
                                 Text(
                                     text = getShowDateString(show),
@@ -226,7 +226,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                         )
                                         Spacer(
                                             modifier =
-                                                Modifier.width(MaterialTheme.spacings.extraSmall)
+                                                Modifier.width(MaterialTheme.spacings.extraSmall),
                                         )
                                         Text(
                                             text = String.format(locale, "%.1f", it),
@@ -246,7 +246,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                             Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))
                             Row(
                                 horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.medium)
+                                    Arrangement.spacedBy(MaterialTheme.spacings.medium),
                             ) {
                                 Button(
                                     onClick = { onAction(ShowAction.Play()) },
@@ -261,7 +261,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                 }
                                 show.trailer?.let { trailerUri ->
                                     Button(
-                                        onClick = { onAction(ShowAction.PlayTrailer(trailerUri)) }
+                                        onClick = { onAction(ShowAction.PlayTrailer(trailerUri)) },
                                     ) {
                                         Icon(
                                             painter = painterResource(id = CoreR.drawable.ic_film),
@@ -277,7 +277,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                             true -> onAction(ShowAction.UnmarkAsPlayed)
                                             false -> onAction(ShowAction.MarkAsPlayed)
                                         }
-                                    }
+                                    },
                                 ) {
                                     Icon(
                                         painter = painterResource(id = CoreR.drawable.ic_check),
@@ -292,8 +292,8 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                             stringResource(
                                                 id =
                                                     if (show.played) CoreR.string.unmark_as_played
-                                                    else CoreR.string.mark_as_played
-                                            )
+                                                    else CoreR.string.mark_as_played,
+                                            ),
                                     )
                                 }
                                 Button(
@@ -302,7 +302,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                             true -> onAction(ShowAction.UnmarkAsFavorite)
                                             false -> onAction(ShowAction.MarkAsFavorite)
                                         }
-                                    }
+                                    },
                                 ) {
                                     Icon(
                                         painter =
@@ -310,7 +310,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                                 id =
                                                     if (show.favorite)
                                                         CoreR.drawable.ic_heart_filled
-                                                    else CoreR.drawable.ic_heart
+                                                    else CoreR.drawable.ic_heart,
                                             ),
                                         contentDescription = null,
                                         tint =
@@ -324,15 +324,15 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                                 id =
                                                     if (show.favorite)
                                                         CoreR.string.remove_from_favorites
-                                                    else CoreR.string.add_to_favorites
-                                            )
+                                                    else CoreR.string.add_to_favorites,
+                                            ),
                                     )
                                 }
                             }
                             Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))
                             Row(
                                 horizontalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.large)
+                                    Arrangement.spacedBy(MaterialTheme.spacings.large),
                             ) {
                                 Column {
                                     Text(

@@ -355,7 +355,7 @@ private fun PresetDetailCard(
                             text = preset.displayName.asString(),
                             style =
                                 MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
                                 ),
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -369,7 +369,7 @@ private fun PresetDetailCard(
                                     text = stringResource(CoreR.string.download_preset_max_quality),
                                     style =
                                         MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
                                         ),
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -493,7 +493,7 @@ private fun EditPresetDialog(
         mutableStateOf(
             if (supportedAudioCodecs.contains(preset.audioCodec.lowercase()))
                 preset.audioCodec.lowercase()
-            else supportedAudioCodecs.first()
+            else supportedAudioCodecs.first(),
         )
     }
 
@@ -534,7 +534,7 @@ private fun EditPresetDialog(
                     },
                     colors =
                         ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
+                            contentColor = MaterialTheme.colorScheme.error,
                         ),
                 ) {
                     Text(stringResource(CoreR.string.download_preset_delete))
@@ -553,7 +553,7 @@ private fun EditPresetDialog(
         title = {
             Text(
                 if (isNew) stringResource(CoreR.string.download_preset_add_preset)
-                else stringResource(CoreR.string.download_preset_edit)
+                else stringResource(CoreR.string.download_preset_edit),
             )
         },
         text = {
@@ -630,7 +630,7 @@ private fun EditPresetDialog(
                     label = {
                         Text(
                             stringResource(CoreR.string.download_preset_video_bitrate_label) +
-                                " (Mbps)"
+                                " (Mbps)",
                         )
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -719,7 +719,7 @@ private fun EditPresetDialog(
                             approxGbPerHour = UiText.DynamicString(""),
                         )
                     onSave(updated)
-                }
+                },
             ) {
                 Text(stringResource(android.R.string.ok))
             }
@@ -731,7 +731,7 @@ private fun EditPresetDialog(
                         onClick = { showDeleteConfirm = true },
                         colors =
                             ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
+                                contentColor = MaterialTheme.colorScheme.error,
                             ),
                     ) {
                         Text(stringResource(CoreR.string.download_preset_delete))
@@ -814,7 +814,7 @@ private fun ImportPresetsDialog(
                     } else {
                         isError = true
                     }
-                }
+                },
             ) {
                 Text(stringResource(CoreR.string.download_preset_import))
             }

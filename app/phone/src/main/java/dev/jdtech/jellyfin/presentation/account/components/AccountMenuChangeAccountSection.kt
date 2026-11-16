@@ -112,7 +112,7 @@ fun AccountMenuChangeAccountSection(
                                         modifier =
                                             Modifier.widthIn(min = 24.dp)
                                                 .padding(
-                                                    horizontal = MaterialTheme.spacings.extraSmall
+                                                    horizontal = MaterialTheme.spacings.extraSmall,
                                                 ),
                                     ) {
                                         Text(
@@ -135,7 +135,7 @@ fun AccountMenuChangeAccountSection(
                                 imageVector =
                                     ImageVector.vectorResource(
                                         if (isExpanded) CoreR.drawable.ic_chevron_up
-                                        else CoreR.drawable.ic_chevron_down
+                                        else CoreR.drawable.ic_chevron_down,
                                     ),
                                 contentDescription = null,
                             )

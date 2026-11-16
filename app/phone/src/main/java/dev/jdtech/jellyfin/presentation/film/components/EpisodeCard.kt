@@ -75,7 +75,7 @@ fun EpisodeCard(
                 .spoilerCardGesture(
                     state = spoilerState,
                     onClick = onClick,
-                )
+                ),
     ) {
         val hasBlurHash =
             episode.images.backdrop?.blurHash != null || episode.images.primary?.blurHash != null

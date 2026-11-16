@@ -156,9 +156,10 @@ fun SelectableTrackItem(
                                     .background(
                                         if (isSelected)
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                        else
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                                     )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
                             Text(
                                 text = chip,

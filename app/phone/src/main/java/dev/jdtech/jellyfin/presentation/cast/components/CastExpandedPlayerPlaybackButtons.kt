@@ -152,12 +152,12 @@ fun PlaybackButtons(
                 Icon(
                     painter =
                         painterResource(
-                            if (isPlaying) CoreR.drawable.ic_pause else CoreR.drawable.ic_play
+                            if (isPlaying) CoreR.drawable.ic_pause else CoreR.drawable.ic_play,
                         ),
                     contentDescription =
                         stringResource(
                             if (isPlaying) R.string.player_controls_pause
-                            else R.string.player_controls_play
+                            else R.string.player_controls_play,
                         ),
                     modifier = Modifier.size(32.dp),
                 )
@@ -167,7 +167,7 @@ fun PlaybackButtons(
                         text =
                             stringResource(
                                 if (isPlaying) R.string.player_controls_pause
-                                else R.string.player_controls_play
+                                else R.string.player_controls_play,
                             ),
                         style = MaterialTheme.typography.titleMedium,
                     )
@@ -256,7 +256,7 @@ fun PlaybackButtonsPreview() {
                                     FindroidSegmentType.INTRO,
                                     0,
                                     1,
-                                )
+                                ),
                         ),
                 isPlaying = true,
                 onPlay = {},

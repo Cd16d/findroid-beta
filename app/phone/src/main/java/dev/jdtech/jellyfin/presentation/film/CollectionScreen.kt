@@ -108,8 +108,8 @@ private fun CollectionScreenLayoutPreview() {
                                 id = 0,
                                 name = UiText.StringResource(CoreR.string.movies_label),
                                 items = dummyMovies,
-                            )
-                        )
+                            ),
+                        ),
                 ),
             onAction = {},
         )

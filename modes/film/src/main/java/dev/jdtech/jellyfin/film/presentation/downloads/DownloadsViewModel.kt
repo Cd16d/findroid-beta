@@ -204,7 +204,7 @@ constructor(
                         episodes = episodes,
                         totalDiskSize = totalSize,
                         seasonsFormatted = seasonsFormatted,
-                    )
+                    ),
                 )
             }
         }
@@ -530,7 +530,7 @@ constructor(
     ) {
         _state.update {
             it.copy(
-                activeTransfers = it.activeTransfers + (id to StorageTransferProgress(itemId = id))
+                activeTransfers = it.activeTransfers + (id to StorageTransferProgress(itemId = id)),
             )
         }
         try {
@@ -548,7 +548,7 @@ constructor(
                                         bytesTransferred = bytesTransferred,
                                         totalBytes = totalBytes,
                                         progress = progress,
-                                    ))
+                                    )),
                     )
                 }
             }

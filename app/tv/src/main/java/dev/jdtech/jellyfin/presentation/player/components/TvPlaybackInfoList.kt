@@ -102,13 +102,13 @@ internal fun PlaybackInfoList(
         if (infoData.isTranscoding) {
             item {
                 TvPlaybackInfoCard(
-                    title = stringResource(id = PlayerR.string.playback_info_transcode_section)
+                    title = stringResource(id = PlayerR.string.playback_info_transcode_section),
                 ) {
                     infoData.transcodeVideoCodec?.let {
                         TvPlaybackInfoRow(
                             label =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_transcode_video_codec
+                                    id = PlayerR.string.playback_info_transcode_video_codec,
                                 ),
                             value = it,
                         )
@@ -117,7 +117,7 @@ internal fun PlaybackInfoList(
                         TvPlaybackInfoRow(
                             label =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_transcode_audio_codec
+                                    id = PlayerR.string.playback_info_transcode_audio_codec,
                                 ),
                             value = it,
                         )
@@ -126,7 +126,7 @@ internal fun PlaybackInfoList(
                         TvPlaybackInfoRow(
                             label =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_transcode_resolution
+                                    id = PlayerR.string.playback_info_transcode_resolution,
                                 ),
                             value = it,
                         )
@@ -155,7 +155,7 @@ internal fun PlaybackInfoList(
                             Text(
                                 text =
                                     stringResource(
-                                        id = PlayerR.string.playback_info_transcode_reasons
+                                        id = PlayerR.string.playback_info_transcode_reasons,
                                     ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.7f),
@@ -195,7 +195,7 @@ internal fun PlaybackInfoList(
                             Text(
                                 text =
                                     stringResource(
-                                        id = PlayerR.string.playback_info_transcode_speed_graph
+                                        id = PlayerR.string.playback_info_transcode_speed_graph,
                                     ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.7f),
@@ -223,7 +223,7 @@ internal fun PlaybackInfoList(
         // Original Content Info Section
         item {
             TvPlaybackInfoCard(
-                title = stringResource(id = PlayerR.string.playback_info_original_section)
+                title = stringResource(id = PlayerR.string.playback_info_original_section),
             ) {
                 infoData.container?.let {
                     TvPlaybackInfoRow(
@@ -245,7 +245,7 @@ internal fun PlaybackInfoList(
                 }
                 if (infoData.hasVideoInfo) {
                     TvPlaybackInfoSubSection(
-                        title = stringResource(id = PlayerR.string.playback_info_video_section)
+                        title = stringResource(id = PlayerR.string.playback_info_video_section),
                     ) {
                         infoData.videoCodec?.let {
                             TvPlaybackInfoRow(
@@ -282,7 +282,7 @@ internal fun PlaybackInfoList(
                 }
                 if (infoData.hasAudioInfo) {
                     TvPlaybackInfoSubSection(
-                        title = stringResource(id = PlayerR.string.playback_info_audio_section)
+                        title = stringResource(id = PlayerR.string.playback_info_audio_section),
                     ) {
                         infoData.audioCodec?.let {
                             TvPlaybackInfoRow(
@@ -311,7 +311,7 @@ internal fun PlaybackInfoList(
         // Stats for Nerds Section
         item {
             TvPlaybackInfoCard(
-                title = stringResource(id = PlayerR.string.playback_info_nerd_stats_section)
+                title = stringResource(id = PlayerR.string.playback_info_nerd_stats_section),
             ) {
                 infoData.playbackStatus?.let {
                     TvPlaybackInfoRow(
@@ -337,7 +337,7 @@ internal fun PlaybackInfoList(
                         Text(
                             text =
                                 stringResource(
-                                    id = PlayerR.string.playback_info_buffer_health_graph
+                                    id = PlayerR.string.playback_info_buffer_health_graph,
                                 ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.7f),
@@ -399,7 +399,7 @@ private fun TvSimpleStatGraph(
                 Modifier.fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.04f))
+                    .background(Color.White.copy(alpha = 0.04f)),
         ) {
             drawStatGraph(
                 data = data,

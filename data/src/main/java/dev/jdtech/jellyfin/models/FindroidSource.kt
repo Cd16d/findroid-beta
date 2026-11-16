@@ -72,7 +72,7 @@ suspend fun MediaSourceInfo.toFindroidSource(
 }
 
 suspend fun FindroidSourceDto.toFindroidSource(
-    serverDatabaseDao: ServerDatabaseDao
+    serverDatabaseDao: ServerDatabaseDao,
 ): FindroidSource {
     return FindroidSource(
         id = id,

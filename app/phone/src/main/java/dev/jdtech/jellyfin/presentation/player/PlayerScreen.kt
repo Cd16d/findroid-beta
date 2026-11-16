@@ -597,7 +597,7 @@ fun PlayerScreen(
                     val maxW = (screenWidth - 432.dp - 32.dp).coerceAtLeast(0.dp)
                     val maxH =
                         (screenHeight - reservedTopHeight - reservedBottomHeight).coerceAtLeast(
-                            0.dp
+                            0.dp,
                         )
                     if (videoAspectRatio > 0f && maxW.value > 0f && maxH.value > 0f) {
                         val containerRatio = maxW.value / maxH.value
@@ -777,8 +777,8 @@ fun PlayerScreen(
                             .then(
                                 if (currentRadius > 0.dp)
                                     Modifier.clip(RoundedCornerShape(currentRadius))
-                                else Modifier
-                            )
+                                else Modifier,
+                            ),
                 ) {
                     AndroidView(
                         factory = { ctx ->
@@ -809,10 +809,10 @@ fun PlayerScreen(
                                                 CaptionStyleCompat.EDGE_TYPE_OUTLINE,
                                                 android.graphics.Color.BLACK,
                                                 null,
-                                            )
+                                            ),
                                         )
                                         setFractionalTextSize(
-                                            SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 1.25f
+                                            SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 1.25f,
                                         )
                                     }
                                     setBottomPaddingFraction(0.08f)
@@ -824,7 +824,7 @@ fun PlayerScreen(
                                 )
                                 playerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                 playerView.setShutterBackgroundColor(
-                                    android.graphics.Color.TRANSPARENT
+                                    android.graphics.Color.TRANSPARENT,
                                 )
                                 playerView
                                     .findViewById<View>(androidx.media3.ui.R.id.exo_shutter)
@@ -857,7 +857,7 @@ fun PlayerScreen(
                                     videoPlayerState.sidePanelType = PlayerSidePanelType.NONE
                                     videoPlayerState.hideControls()
                                     openedPanelDirectly = false
-                                }
+                                },
                         )
                     }
                 }
@@ -1111,7 +1111,7 @@ fun PlayerScreen(
                                                     delay(3000.milliseconds)
                                                     showUnlockButton = false
                                                 }
-                                            }
+                                            },
                                         )
                                     } else {
                                         detectTapGestures(
@@ -1133,7 +1133,7 @@ fun PlayerScreen(
                                                     openedPanelDirectly = false
                                                 } else {
                                                     videoPlayerState.toggleControls(
-                                                        autoHide = isPlaying
+                                                        autoHide = isPlaying,
                                                     )
                                                 }
                                             },
@@ -1241,7 +1241,7 @@ fun PlayerScreen(
                                                     if (isHorizontalDrag) {
                                                         currentHaptics.gestureEnd()
                                                         viewModel.player.seekTo(
-                                                            gestureScrubPositionMs
+                                                            gestureScrubPositionMs,
                                                         )
                                                         isGestureScrubbing = false
                                                         gestureScrubDeltaMs = 0L
@@ -1281,7 +1281,7 @@ fun PlayerScreen(
                                                                     PlayerResizeMode.ZOOM
                                                             ) {
                                                                 onResizeModeChange(
-                                                                    PlayerResizeMode.ZOOM
+                                                                    PlayerResizeMode.ZOOM,
                                                                 )
                                                                 totalZoom = 1f
                                                                 triggerPinchZoomFeedback()
@@ -1292,7 +1292,7 @@ fun PlayerScreen(
                                                                     PlayerResizeMode.FIT
                                                             ) {
                                                                 onResizeModeChange(
-                                                                    PlayerResizeMode.FIT
+                                                                    PlayerResizeMode.FIT,
                                                                 )
                                                                 totalZoom = 1f
                                                                 triggerPinchZoomFeedback()
@@ -1323,7 +1323,7 @@ fun PlayerScreen(
                                                                 viewModel.player
                                                                     .playbackParameters =
                                                                     PlaybackParameters(
-                                                                        originalSpeed
+                                                                        originalSpeed,
                                                                     )
                                                             }
                                                             isVerticalDrag = true
@@ -1331,11 +1331,11 @@ fun PlayerScreen(
                                                             if (isRightSide) {
                                                                 val maxVol =
                                                                     audioManager.getStreamMaxVolume(
-                                                                        AudioManager.STREAM_MUSIC
+                                                                        AudioManager.STREAM_MUSIC,
                                                                     )
                                                                 val currentVol =
                                                                     audioManager.getStreamVolume(
-                                                                        AudioManager.STREAM_MUSIC
+                                                                        AudioManager.STREAM_MUSIC,
                                                                     )
                                                                 continuousVolume =
                                                                     if (isVolumeHudVisible) {
@@ -1390,7 +1390,7 @@ fun PlayerScreen(
                                                                 viewModel.player
                                                                     .playbackParameters =
                                                                     PlaybackParameters(
-                                                                        originalSpeed
+                                                                        originalSpeed,
                                                                     )
                                                             }
                                                             isHorizontalDrag = true
@@ -1408,7 +1408,7 @@ fun PlayerScreen(
                                                         if (isRightSide) {
                                                             val maxVol =
                                                                 audioManager.getStreamMaxVolume(
-                                                                    AudioManager.STREAM_MUSIC
+                                                                    AudioManager.STREAM_MUSIC,
                                                                 )
                                                             val newContinuousVolume =
                                                                 (continuousVolume + deltaPercent)
@@ -1429,7 +1429,7 @@ fun PlayerScreen(
                                                             val targetVol =
                                                                 kotlin.math
                                                                     .round(
-                                                                        continuousVolume * maxVol
+                                                                        continuousVolume * maxVol,
                                                                     )
                                                                     .toInt()
                                                             if (targetVol != lastSetVolumeInt) {
@@ -1497,7 +1497,7 @@ fun PlayerScreen(
                                                         dragChange.consume()
                                                         val duration =
                                                             viewModel.player.duration.coerceAtLeast(
-                                                                0L
+                                                                0L,
                                                             )
                                                         val deltaMs =
                                                             (totalDragX / size.width * 120_000L)
@@ -1514,7 +1514,7 @@ fun PlayerScreen(
                                             }
                                         }
                                     }
-                                }
+                                },
                     )
                 }
 
@@ -1582,7 +1582,7 @@ fun PlayerScreen(
                     modifier =
                         Modifier.align(Alignment.TopCenter)
                             .padding(top = insets.calculateTopPadding() + 20.dp)
-                            .zIndex(10f)
+                            .zIndex(10f),
                 ) {
                     QuickSpeedOverlay(
                         visible = isQuickSpeedActive,
@@ -1728,7 +1728,7 @@ fun PlayerScreen(
                                         (if (isCompactWidth) 0.25f else 0.15f) to Color.Transparent,
                                         (if (isPortrait) 0.60f else 0.75f) to Color.Transparent,
                                         1.0f to Color.Black.copy(alpha = 0.80f),
-                                    )
+                                    ),
                                 )
                                 .padding(
                                     start = maxHorizontalInset + 16.dp,
@@ -1737,7 +1737,7 @@ fun PlayerScreen(
                                     bottom =
                                         insets.calculateBottomPadding() +
                                             (if (isPortrait) 16.dp else 24.dp),
-                                )
+                                ),
                     ) {
                         // Top Bar: Back, Title, Top-Right Actions (Subtitles, Audio, Lock, PiP,
                         // Settings)

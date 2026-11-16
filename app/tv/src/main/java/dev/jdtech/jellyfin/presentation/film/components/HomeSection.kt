@@ -206,7 +206,7 @@ private fun ViewAllCard(
         border =
             ClickableSurfaceDefaults.border(
                 focusedBorder =
-                    Border(BorderStroke(2.5.dp, Color.White), shape = CentralShapes.ItemCard)
+                    Border(BorderStroke(2.5.dp, Color.White), shape = CentralShapes.ItemCard),
             ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         glow =
@@ -215,7 +215,7 @@ private fun ViewAllCard(
                     Glow(
                         elevationColor = Color.White.copy(alpha = 0.3f),
                         elevation = 10.dp,
-                    )
+                    ),
             ),
         colors =
             ClickableSurfaceDefaults.colors(
@@ -228,11 +228,11 @@ private fun ViewAllCard(
                 .height(itemWidth * 1.5f)
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                    else Modifier
+                    else Modifier,
                 )
                 .then(
                     if (upFocusRequester != null) Modifier.focusProperties { up = upFocusRequester }
-                    else Modifier
+                    else Modifier,
                 )
                 .onFocusChanged {
                     if (isFocused != it.isFocused) {

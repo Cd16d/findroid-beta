@@ -49,7 +49,10 @@ class LoginViewModel @Inject constructor(private val repository: SetupRepository
             try {
                 val isEnabled = repository.getIsQuickConnectEnabled()
                 _state.emit(
-                    _state.value.copy(quickConnectEnabled = isEnabled, isQuickConnectChecked = true)
+                    _state.value.copy(
+                        quickConnectEnabled = isEnabled,
+                        isQuickConnectChecked = true,
+                    ),
                 )
             } catch (_: Exception) {
                 _state.emit(_state.value.copy(isQuickConnectChecked = true))

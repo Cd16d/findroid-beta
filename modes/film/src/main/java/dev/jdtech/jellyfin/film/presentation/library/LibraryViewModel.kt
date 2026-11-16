@@ -94,7 +94,7 @@ constructor(
                     sortBy = sortBy,
                     sortOrder = sortOrder,
                     filterWatched = filterWatched,
-                )
+                ),
             )
         }
     }

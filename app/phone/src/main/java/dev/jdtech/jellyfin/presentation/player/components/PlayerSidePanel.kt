@@ -112,7 +112,7 @@ fun PlayerSidePanel(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(horizontal = 24.dp)
-                    .padding(top = 28.dp, bottom = 24.dp)
+                    .padding(top = 28.dp, bottom = 24.dp),
         ) {
             // Header with Back navigation & Title
             SidePanelHeader(
@@ -287,7 +287,7 @@ private fun SidePanelHeader(
                                 PlayerSidePanelType.PLAYBACK_INFO -> PlayerR.string.playback_info
                                 PlayerSidePanelType.SETTINGS,
                                 PlayerSidePanelType.NONE -> CoreR.string.title_settings
-                            }
+                            },
                     ),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,

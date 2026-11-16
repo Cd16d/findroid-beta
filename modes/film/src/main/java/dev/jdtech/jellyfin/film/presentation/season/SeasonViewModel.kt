@@ -57,7 +57,7 @@ constructor(
                         season = season,
                         episodes = episodes,
                         hideEpisodeSpoilers = hideEpisodeSpoilers,
-                    )
+                    ),
                 )
             } catch (e: Exception) {
                 _state.emit(_state.value.copy(error = e))

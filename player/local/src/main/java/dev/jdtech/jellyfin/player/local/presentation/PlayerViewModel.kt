@@ -135,7 +135,7 @@ constructor(
                     (appPreferences.getValue(appPreferences.castMaxBitrateKbps) * 1_000L)
                         .coerceAtMost(Int.MAX_VALUE.toLong())
                         .toInt(),
-            )
+            ),
         )
     val uiState = _uiState.asStateFlow()
 
@@ -328,11 +328,11 @@ constructor(
             trackSelector
                 .buildUponParameters()
                 .setPreferredAudioLanguage(
-                    appPreferences.getValue(appPreferences.preferredAudioLanguage)
+                    appPreferences.getValue(appPreferences.preferredAudioLanguage),
                 )
                 .setPreferredTextLanguage(
-                    appPreferences.getValue(appPreferences.preferredSubtitleLanguage)
-                )
+                    appPreferences.getValue(appPreferences.preferredSubtitleLanguage),
+                ),
         )
 
         combine(
@@ -381,7 +381,7 @@ constructor(
                                     return DefaultAudioSink.Builder(context)
                                         .setEnableFloatOutput(enableFloatOutput)
                                         .setEnableAudioTrackPlaybackParams(
-                                            enableAudioTrackPlaybackParams
+                                            enableAudioTrackPlaybackParams,
                                         )
                                         .setAudioProcessors(arrayOf(dialogueAudioProcessor))
                                         .build()
@@ -413,7 +413,7 @@ constructor(
                                 }
                             }
                             .setExtensionRendererMode(
-                                DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                                DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON,
                             )
                     val loadControl =
                         DefaultLoadControl.Builder()
@@ -430,10 +430,10 @@ constructor(
                         .setAudioAttributes(audioAttributes, true)
                         .setTrackSelector(trackSelector)
                         .setSeekBackIncrementMs(
-                            appPreferences.getValue(appPreferences.playerSeekBackInc)
+                            appPreferences.getValue(appPreferences.playerSeekBackInc),
                         )
                         .setSeekForwardIncrementMs(
-                            appPreferences.getValue(appPreferences.playerSeekForwardInc)
+                            appPreferences.getValue(appPreferences.playerSeekForwardInc),
                         )
                         .setPauseAtEndOfMediaItems(true)
                         .build()
@@ -453,10 +453,10 @@ constructor(
                         .setAudioAttributes(audioAttributes, handleAudioFocus = true)
                         .setTrackSelectionParameters(trackSelector.parameters)
                         .setSeekBackIncrementMs(
-                            appPreferences.getValue(appPreferences.playerSeekBackInc)
+                            appPreferences.getValue(appPreferences.playerSeekBackInc),
                         )
                         .setSeekForwardIncrementMs(
-                            appPreferences.getValue(appPreferences.playerSeekForwardInc)
+                            appPreferences.getValue(appPreferences.playerSeekForwardInc),
                         )
                         .setPauseAtEndOfMediaItems(pauseAtEndOfMediaItems = true)
                         .setVideoOutput(appPreferences.getPlayerMpvVo().value)
@@ -1697,7 +1697,7 @@ constructor(
                     state.playbackInfoData.copy(
                         transcodeSpeedHistory = emptyList(),
                         bufferHealthHistory = emptyList(),
-                    )
+                    ),
             )
         }
     }
@@ -1758,7 +1758,7 @@ constructor(
                         playbackStatus = statusText,
                         audioOutput = audioOutputText,
                         bufferHealthHistory = newBufHistory,
-                    )
+                    ),
             )
         }
 
@@ -1862,7 +1862,7 @@ constructor(
                                 transcodeAudioCodec = aCodec,
                                 transcodeReasons = reasons,
                                 transcodeSpeedHistory = newSpeedHistory,
-                            )
+                            ),
                     )
                 }
             }
@@ -1976,7 +1976,7 @@ constructor(
                     externalSubtitle.title.ifBlank {
                         externalSubtitle.displayTitle?.ifBlank { null }
                             ?: application.getString(CoreR.string.external)
-                    }
+                    },
                 )
                 .setMimeType(externalSubtitle.mimeType)
                 .setLanguage(externalSubtitle.language)
@@ -2363,7 +2363,7 @@ constructor(
                                 .filter { it.type == trackType && it.isSupported }[index]
                                 .mediaTrackGroup,
                             0,
-                        )
+                        ),
                     )
                     .setTrackTypeDisabled(trackType, false)
                     .build()
@@ -2426,7 +2426,7 @@ constructor(
                         }
                         if (existingIndex != -1) {
                             Timber.i(
-                                "External subtitle already loaded, selecting track at index $existingIndex"
+                                "External subtitle already loaded, selecting track at index $existingIndex",
                             )
                             switchToTrack(C.TRACK_TYPE_TEXT, existingIndex)
                         }
@@ -2456,7 +2456,7 @@ constructor(
                             if (totalBytes > maxBytes) {
                                 cacheFile.delete()
                                 throw IOException(
-                                    "Subtitle file exceeds maximum allowed size (10MB)"
+                                    "Subtitle file exceeds maximum allowed size (10MB)",
                                 )
                             }
                             output.write(buffer, 0, read)
@@ -2558,7 +2558,7 @@ constructor(
                 _uiState.update {
                     it.copy(
                         sleepTimerStatus =
-                            SleepTimerStatus(SleepTimerMode.EndOfMedia, initialRemaining)
+                            SleepTimerStatus(SleepTimerMode.EndOfMedia, initialRemaining),
                     )
                 }
                 sleepTimerJob = viewModelScope.launch {
@@ -2570,7 +2570,7 @@ constructor(
                         _uiState.update {
                             it.copy(
                                 sleepTimerStatus =
-                                    SleepTimerStatus(SleepTimerMode.EndOfMedia, remaining)
+                                    SleepTimerStatus(SleepTimerMode.EndOfMedia, remaining),
                             )
                         }
                     }

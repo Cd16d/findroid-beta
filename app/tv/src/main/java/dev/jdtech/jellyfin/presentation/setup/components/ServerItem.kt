@@ -50,7 +50,7 @@ fun ServerItem(
                     Border(
                         BorderStroke(4.dp, Color.White),
                         shape = CentralShapes.MediumCard,
-                    )
+                    ),
             ),
         modifier = Modifier.width(270.dp).height(115.dp),
     ) {

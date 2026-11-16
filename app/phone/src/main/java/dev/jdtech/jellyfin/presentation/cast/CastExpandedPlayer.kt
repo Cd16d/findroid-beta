@@ -84,7 +84,7 @@ fun CastExpandedPlayer(
     val isExpandedScreen =
         remember(windowAdaptiveInfo) {
             windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
-                WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+                WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
             )
         }
 

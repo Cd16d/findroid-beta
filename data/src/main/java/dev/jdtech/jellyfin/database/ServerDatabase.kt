@@ -67,7 +67,7 @@ val MIGRATION_6_7 =
         override suspend fun migrate(connection: SQLiteConnection) {
             connection.execSQL("DROP TABLE segments")
             connection.execSQL(
-                "CREATE TABLE segments (`itemId` TEXT NOT NULL, `type` TEXT NOT NULL, `startTicks` INTEGER NOT NULL, `endTicks` INTEGER NOT NULL, PRIMARY KEY(`itemId`, `type`), FOREIGN KEY(`itemId`) REFERENCES `episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+                "CREATE TABLE segments (`itemId` TEXT NOT NULL, `type` TEXT NOT NULL, `startTicks` INTEGER NOT NULL, `endTicks` INTEGER NOT NULL, PRIMARY KEY(`itemId`, `type`), FOREIGN KEY(`itemId`) REFERENCES `episodes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
             )
         }
     }
@@ -76,7 +76,7 @@ val MIGRATION_9_10 =
     object : Migration(startVersion = 9, endVersion = 10) {
         override suspend fun migrate(connection: SQLiteConnection) {
             connection.execSQL(
-                "CREATE TABLE IF NOT EXISTS `user_downloads` (`userId` TEXT NOT NULL, `itemId` TEXT NOT NULL, `downloadedAt` INTEGER NOT NULL, PRIMARY KEY(`userId`, `itemId`))"
+                "CREATE TABLE IF NOT EXISTS `user_downloads` (`userId` TEXT NOT NULL, `itemId` TEXT NOT NULL, `downloadedAt` INTEGER NOT NULL, PRIMARY KEY(`userId`, `itemId`))",
             )
             connection.execSQL(
                 """
@@ -87,7 +87,7 @@ val MIGRATION_9_10 =
                 JOIN servers srv ON m.serverId = srv.id
                 JOIN users u ON u.id = srv.currentUserId
                 """
-                    .trimIndent()
+                    .trimIndent(),
             )
             connection.execSQL(
                 """
@@ -98,7 +98,7 @@ val MIGRATION_9_10 =
                 JOIN servers srv ON ep.serverId = srv.id
                 JOIN users u ON u.id = srv.currentUserId
                 """
-                    .trimIndent()
+                    .trimIndent(),
             )
             connection.execSQL(
                 """
@@ -107,7 +107,7 @@ val MIGRATION_9_10 =
                 FROM sources s
                 JOIN userdata ud ON s.itemId = ud.itemId
                 """
-                    .trimIndent()
+                    .trimIndent(),
             )
         }
     }

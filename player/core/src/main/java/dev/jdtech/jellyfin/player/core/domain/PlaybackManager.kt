@@ -164,7 +164,7 @@ constructor(
     ) {
         if (positionMs < 0) {
             Timber.w(
-                "Skipping playback progress report for item $itemId: invalid positionMs: $positionMs"
+                "Skipping playback progress report for item $itemId: invalid positionMs: $positionMs",
             )
             return
         }
@@ -202,7 +202,7 @@ constructor(
     ) {
         if (positionMs < 0) {
             Timber.w(
-                "Skipping playback progress report for item $itemId: invalid positionMs: $positionMs"
+                "Skipping playback progress report for item $itemId: invalid positionMs: $positionMs",
             )
             return
         }

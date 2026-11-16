@@ -67,7 +67,7 @@ fun SettingsMultiSelectCard(
         border =
             ClickableSurfaceDefaults.border(
                 focusedBorder =
-                    Border(BorderStroke(4.dp, Color.White), shape = CentralShapes.ItemCard)
+                    Border(BorderStroke(4.dp, Color.White), shape = CentralShapes.ItemCard),
             ),
         scale = ClickableSurfaceScale.None,
         modifier = modifier.fillMaxWidth(),

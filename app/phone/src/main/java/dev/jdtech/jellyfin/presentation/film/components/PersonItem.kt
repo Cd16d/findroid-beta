@@ -36,7 +36,7 @@ import dev.jdtech.jellyfin.utils.toOptimizedImageUri
 fun PersonItem(person: FindroidItemPerson, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier =
-            modifier.width(110.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick)
+            modifier.width(110.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick),
     ) {
         BoxWithConstraints(
             modifier =

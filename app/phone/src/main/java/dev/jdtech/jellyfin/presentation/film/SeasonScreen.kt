@@ -297,7 +297,7 @@ private fun SeasonScreenLayout(
                                         DownloadedBadge(
                                             modifier =
                                                 Modifier.align(Alignment.TopEnd)
-                                                    .padding(MaterialTheme.spacings.small)
+                                                    .padding(MaterialTheme.spacings.small),
                                         )
                                     } else if (isSeasonDownloading) {
                                         DownloadingBadge(
@@ -310,7 +310,7 @@ private fun SeasonScreenLayout(
                                         DownloadedBadge(
                                             modifier =
                                                 Modifier.align(Alignment.TopEnd)
-                                                    .padding(MaterialTheme.spacings.small)
+                                                    .padding(MaterialTheme.spacings.small),
                                         )
                                     }
                                 }
@@ -375,7 +375,7 @@ private fun SeasonScreenLayout(
                                     presetId = presetId,
                                     downloadExternalAudio = downloadExternalAudio,
                                     audioStreamIndex = audioStreamIndex,
-                                )
+                                ),
                             )
                         },
                         onDownloadCancelClick = {

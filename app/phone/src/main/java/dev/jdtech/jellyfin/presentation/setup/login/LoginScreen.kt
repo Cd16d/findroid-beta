@@ -208,7 +208,7 @@ private fun LoginScreenLayout(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         HorizontalDivider(
-                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                         )
                         Text(
                             text = stringResource(SetupR.string.or),
@@ -216,7 +216,7 @@ private fun LoginScreenLayout(
                             style = MaterialTheme.typography.bodySmall,
                         )
                         HorizontalDivider(
-                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -237,7 +237,7 @@ private fun LoginScreenLayout(
                             Text(
                                 text =
                                     if (state.quickConnectCode != null) state.quickConnectCode!!
-                                    else stringResource(SetupR.string.login_btn_quick_connect)
+                                    else stringResource(SetupR.string.login_btn_quick_connect),
                             )
                         }
                     }

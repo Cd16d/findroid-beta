@@ -208,7 +208,7 @@ private fun SearchScreenLayout(
         onAction(
             SearchAction.OnRandomClick { randomItem ->
                 onAction(SearchAction.OnItemClick(randomItem))
-            }
+            },
         )
     }
 
@@ -245,9 +245,9 @@ private fun SearchScreenLayout(
                     onTap = {
                         focusManager.clearFocus()
                         keyboardController?.hide()
-                    }
+                    },
                 )
-            }
+            },
     ) {
         // Main content area
         AnimatedContent(
@@ -299,7 +299,7 @@ private fun SearchScreenLayout(
                                     modifier = Modifier.padding(itemsPadding),
                                 )
                                 Spacer(
-                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall)
+                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall),
                                 )
                                 LazyRow(
                                     contentPadding = itemsPadding,
@@ -335,12 +335,12 @@ private fun SearchScreenLayout(
                                     title =
                                         stringResource(
                                             if (isSeasonSection) CoreR.string.seasons_label
-                                            else CoreR.string.shows_label
+                                            else CoreR.string.shows_label,
                                         ),
                                     modifier = Modifier.padding(itemsPadding),
                                 )
                                 Spacer(
-                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall)
+                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall),
                                 )
                                 LazyRow(
                                     contentPadding = itemsPadding,
@@ -376,7 +376,7 @@ private fun SearchScreenLayout(
                                     modifier = Modifier.padding(itemsPadding),
                                 )
                                 Spacer(
-                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall)
+                                    modifier = Modifier.height(MaterialTheme.spacings.extraSmall),
                                 )
                                 LazyRow(
                                     contentPadding = itemsPadding,
@@ -419,11 +419,11 @@ private fun SearchScreenLayout(
                                     listOf(
                                         MaterialTheme.colorScheme.surface,
                                         Color.Transparent,
-                                    )
-                            )
+                                    ),
+                            ),
                     )
                     .padding(top = safePadding.top + MaterialTheme.spacings.small)
-                    .padding(bottom = MaterialTheme.spacings.small)
+                    .padding(bottom = MaterialTheme.spacings.small),
         ) {
             if (isWideScreen) {
                 Row(
@@ -600,7 +600,7 @@ private fun ContainedSearchBar(
                     onValueChange = onValueChange,
                     textStyle =
                         MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         ),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     singleLine = true,

@@ -87,14 +87,14 @@ constructor(
                         onClick = {
                             viewModelScope.launch {
                                 eventsChannel.send(
-                                    SettingsEvent.NavigateToSettings(listOf(it.nameStringResource))
+                                    SettingsEvent.NavigateToSettings(listOf(it.nameStringResource)),
                                 )
                             }
                         },
                         nestedPreferenceGroups =
                             listOf(PreferenceGroup(preferences = permissionPreferences)),
-                    )
-                )
+                    ),
+                ),
         )
 
     private val topLevelPreferences =
@@ -113,8 +113,8 @@ constructor(
                                 }
                             },
                             backendPreference = appPreferences.offlineMode,
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -128,8 +128,8 @@ constructor(
                                     eventsChannel.send(SettingsEvent.NavigateToUsers)
                                 }
                             },
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -142,8 +142,8 @@ constructor(
                                     eventsChannel.send(SettingsEvent.NavigateToServers)
                                 }
                             },
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -155,8 +155,8 @@ constructor(
                                 viewModelScope.launch {
                                     eventsChannel.send(
                                         SettingsEvent.NavigateToSettings(
-                                            listOf(it.nameStringResource)
-                                        )
+                                            listOf(it.nameStringResource),
+                                        ),
                                     )
                                 }
                             },
@@ -177,8 +177,8 @@ constructor(
                                                                     value
                                                                         ?: Constants.Theme.SYSTEM
                                                                             .name
-                                                                            .lowercase()
-                                                                )
+                                                                            .lowercase(),
+                                                                ),
                                                             )
                                                         }
                                                     },
@@ -256,11 +256,11 @@ constructor(
                                                     backendPreference =
                                                         appPreferences.hideEpisodeSpoilers,
                                                 ),
-                                            )
+                                            ),
                                     ),
                                 ),
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -272,8 +272,8 @@ constructor(
                                 viewModelScope.launch {
                                     eventsChannel.send(
                                         SettingsEvent.NavigateToSettings(
-                                            listOf(it.nameStringResource)
-                                        )
+                                            listOf(it.nameStringResource),
+                                        ),
                                     )
                                 }
                             },
@@ -288,8 +288,8 @@ constructor(
                                                     enabled =
                                                         Build.VERSION.SDK_INT >=
                                                             Build.VERSION_CODES.TIRAMISU,
-                                                )
-                                            )
+                                                ),
+                                            ),
                                     ),
                                     PreferenceGroup(
                                         preferences =
@@ -315,11 +315,11 @@ constructor(
                                                     optionValues = R.array.languages_values,
                                                     optionsIncludeNull = true,
                                                 ),
-                                            )
+                                            ),
                                     ),
                                 ),
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -331,8 +331,8 @@ constructor(
                                 viewModelScope.launch {
                                     eventsChannel.send(
                                         SettingsEvent.NavigateToSettings(
-                                            listOf(it.nameStringResource)
-                                        )
+                                            listOf(it.nameStringResource),
+                                        ),
                                     )
                                 }
                             },
@@ -441,8 +441,8 @@ constructor(
                                                                         R.string
                                                                             .settings_category_player,
                                                                         it.nameStringResource,
-                                                                    )
-                                                                )
+                                                                    ),
+                                                                ),
                                                             )
                                                         }
                                                     },
@@ -488,7 +488,7 @@ constructor(
                                                                             optionValues =
                                                                                 R.array.mpv_aos,
                                                                         ),
-                                                                    )
+                                                                    ),
                                                             ),
                                                             PreferenceGroup(
                                                                 nameStringResource =
@@ -509,8 +509,8 @@ constructor(
                                                                                                 SettingsEvent
                                                                                                     .NavigateToSettingsFileEdit(
                                                                                                         it
-                                                                                                            .filePath
-                                                                                                    )
+                                                                                                            .filePath,
+                                                                                                    ),
                                                                                             )
                                                                                     }
                                                                             },
@@ -529,8 +529,8 @@ constructor(
                                                                                                 SettingsEvent
                                                                                                     .NavigateToSettingsFileEdit(
                                                                                                         it
-                                                                                                            .filePath
-                                                                                                    )
+                                                                                                            .filePath,
+                                                                                                    ),
                                                                                             )
                                                                                     }
                                                                             },
@@ -718,9 +718,9 @@ constructor(
                                                                 SettingsEvent.LaunchIntent(
                                                                     Intent(
                                                                         Settings
-                                                                            .ACTION_CAPTIONING_SETTINGS
-                                                                    )
-                                                                )
+                                                                            .ACTION_CAPTIONING_SETTINGS,
+                                                                    ),
+                                                                ),
                                                             )
                                                         }
                                                     },
@@ -769,7 +769,7 @@ constructor(
                                                     supportedDeviceTypes = listOf(DeviceType.PHONE),
                                                     backendPreference =
                                                         appPreferences.playerPipGesture,
-                                                )
+                                                ),
                                             ),
                                     ),
                                     PreferenceGroup(
@@ -821,13 +821,13 @@ constructor(
                                                             R.string.pref_cast_enabled_summary,
                                                         backendPreference =
                                                             appPreferences.castEnabled,
-                                                    )
+                                                    ),
                                                 ),
                                         )
                                     else null,
                                 ),
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -840,8 +840,8 @@ constructor(
                                 viewModelScope.launch {
                                     eventsChannel.send(
                                         SettingsEvent.NavigateToSettings(
-                                            listOf(it.nameStringResource)
-                                        )
+                                            listOf(it.nameStringResource),
+                                        ),
                                     )
                                 }
                             },
@@ -886,7 +886,7 @@ constructor(
                                                         dependencies =
                                                             listOf(
                                                                 appPreferences
-                                                                    .downloadOverMobileData
+                                                                    .downloadOverMobileData,
                                                             ),
                                                         supportedDeviceTypes =
                                                             listOf(DeviceType.PHONE),
@@ -918,7 +918,7 @@ constructor(
                                                         dependencies =
                                                             listOf(
                                                                 appPreferences
-                                                                    .smartDownloadNextEpisode
+                                                                    .smartDownloadNextEpisode,
                                                             ),
                                                         supportedDeviceTypes =
                                                             listOf(DeviceType.PHONE),
@@ -938,7 +938,7 @@ constructor(
                                                         dependencies =
                                                             listOf(
                                                                 appPreferences
-                                                                    .smartDownloadNextEpisode
+                                                                    .smartDownloadNextEpisode,
                                                             ),
                                                         supportedDeviceTypes =
                                                             listOf(DeviceType.PHONE),
@@ -988,7 +988,7 @@ constructor(
                                                                     viewModelScope.launch {
                                                                         eventsChannel.send(
                                                                             SettingsEvent
-                                                                                .NavigateToDownloadPresets
+                                                                                .NavigateToDownloadPresets,
                                                                         )
                                                                     }
                                                                 },
@@ -1011,8 +1011,8 @@ constructor(
                                             groups
                                         }
                                     },
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -1024,8 +1024,8 @@ constructor(
                                 viewModelScope.launch {
                                     eventsChannel.send(
                                         SettingsEvent.NavigateToSettings(
-                                            listOf(it.nameStringResource)
-                                        )
+                                            listOf(it.nameStringResource),
+                                        ),
                                     )
                                 }
                             },
@@ -1055,11 +1055,11 @@ constructor(
                                                         appPreferences.socketTimeout,
                                                     suffixRes = R.string.ms,
                                                 ),
-                                            )
-                                    )
+                                            ),
+                                    ),
                                 ),
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -1071,8 +1071,8 @@ constructor(
                                 viewModelScope.launch {
                                     eventsChannel.send(
                                         SettingsEvent.NavigateToSettings(
-                                            listOf(it.nameStringResource)
-                                        )
+                                            listOf(it.nameStringResource),
+                                        ),
                                     )
                                 }
                             },
@@ -1099,11 +1099,11 @@ constructor(
                                                         appPreferences.imageCacheSize,
                                                     suffixRes = R.string.mb,
                                                 ),
-                                            )
-                                    )
+                                            ),
+                                    ),
                                 ),
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -1117,8 +1117,8 @@ constructor(
                                     eventsChannel.send(SettingsEvent.NavigateToDevice)
                                 }
                             },
-                        )
-                    )
+                        ),
+                    ),
             ),
             PreferenceGroup(
                 preferences =
@@ -1132,8 +1132,8 @@ constructor(
                                     eventsChannel.send(SettingsEvent.NavigateToAbout)
                                 }
                             },
-                        )
-                    )
+                        ),
+                    ),
             ),
         ) +
             // Show the Permissions category only if at least one permission applies on this Android
@@ -1234,7 +1234,7 @@ constructor(
                                                             },
                                                     value =
                                                         appPreferences.getValue(
-                                                            preference.backendPreference
+                                                            preference.backendPreference,
                                                         ),
                                                 )
                                             }
@@ -1250,13 +1250,13 @@ constructor(
                                                                 "-1" to
                                                                     context.getString(
                                                                         R.string
-                                                                            .downloads_storage_ask_every_time
-                                                                    )
+                                                                            .downloads_storage_ask_every_time,
+                                                                    ),
                                                             )
                                                             storageDevices.forEach { device ->
                                                                 add(
                                                                     device.index.toString() to
-                                                                        device.name
+                                                                        device.name,
                                                                 )
                                                             }
                                                         }
@@ -1271,7 +1271,7 @@ constructor(
                                                             },
                                                     value =
                                                         appPreferences.getValue(
-                                                            preference.backendPreference
+                                                            preference.backendPreference,
                                                         ),
                                                     dynamicOptions = dynamicOptions,
                                                 )
@@ -1285,7 +1285,7 @@ constructor(
                                                             },
                                                     value =
                                                         appPreferences.getValue(
-                                                            preference.backendPreference
+                                                            preference.backendPreference,
                                                         ),
                                                 )
                                             }
@@ -1298,7 +1298,7 @@ constructor(
                                                             },
                                                     value =
                                                         appPreferences.getValue(
-                                                            preference.backendPreference
+                                                            preference.backendPreference,
                                                         ),
                                                 )
                                             }
@@ -1311,7 +1311,7 @@ constructor(
                                                             },
                                                     value =
                                                         appPreferences.getValue(
-                                                            preference.backendPreference
+                                                            preference.backendPreference,
                                                         ),
                                                 )
                                             }
@@ -1324,7 +1324,7 @@ constructor(
                                                             },
                                                     value =
                                                         appPreferences.getValue(
-                                                            preference.backendPreference
+                                                            preference.backendPreference,
                                                         ),
                                                 )
                                             }
@@ -1332,11 +1332,11 @@ constructor(
                                                 preference.copy(
                                                     action =
                                                         appPreferences.getSegmentAction(
-                                                            preference.segmentType
+                                                            preference.segmentType,
                                                         ),
                                                     color =
                                                         appPreferences.getSegmentColor(
-                                                            preference.segmentType
+                                                            preference.segmentType,
                                                         ),
                                                     onActionChange = { action ->
                                                         appPreferences.setSegmentAction(
@@ -1345,7 +1345,7 @@ constructor(
                                                         )
                                                         loadPreferences(
                                                             savedStateHandle.get<List<Int>>(
-                                                                "indexes"
+                                                                "indexes",
                                                             ) ?: emptyList(),
                                                             deviceType,
                                                         )
@@ -1357,7 +1357,7 @@ constructor(
                                                         )
                                                         loadPreferences(
                                                             savedStateHandle.get<List<Int>>(
-                                                                "indexes"
+                                                                "indexes",
                                                             ) ?: emptyList(),
                                                             deviceType,
                                                         )
@@ -1369,7 +1369,7 @@ constructor(
                                             }
                                             else -> preference
                                         }
-                                    }
+                                    },
                         )
                     }
                     .filter { it.preferences.isNotEmpty() }

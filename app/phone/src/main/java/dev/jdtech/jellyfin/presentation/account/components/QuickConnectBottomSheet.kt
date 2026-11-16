@@ -254,7 +254,7 @@ fun QuickConnectCodeInput(
                 Text(
                     text =
                         if (isSuccess) stringResource(CoreR.string.authenticated)
-                        else stringResource(CoreR.string.authenticate)
+                        else stringResource(CoreR.string.authenticate),
                 )
             }
         }

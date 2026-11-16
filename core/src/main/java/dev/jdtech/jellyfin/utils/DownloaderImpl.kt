@@ -248,7 +248,7 @@ class DownloaderImpl(
                     allowMetered = allowMetered,
                     allowRoaming = allowRoaming,
                     estimatedTotalBytes = estimatedBytes,
-                )
+                ),
             )
 
             for ((_, _, partRequest) in partRequests) {
@@ -266,7 +266,7 @@ class DownloaderImpl(
             database.insertSource(sourceDto.copy(downloadId = downloadId))
             database.insertUserData(effectiveItem.toFindroidUserDataDto(currentUserId))
             database.insertUserDownload(
-                UserDownloadDto(userId = currentUserId, itemId = effectiveItem.id)
+                UserDownloadDto(userId = currentUserId, itemId = effectiveItem.id),
             )
 
             startAttachmentsWorker(effectiveItem, source.id, effectiveIndex, downloadExternalAudio)
@@ -278,7 +278,7 @@ class DownloaderImpl(
                 database.insertPart(part.toFindroidPartDto(serverId))
                 database.insertUserData(part.toFindroidUserDataDto(currentUserId))
                 database.insertUserDownload(
-                    UserDownloadDto(userId = currentUserId, itemId = part.id)
+                    UserDownloadDto(userId = currentUserId, itemId = part.id),
                 )
                 startAttachmentsWorker(part, partSource.id, effectiveIndex, downloadExternalAudio)
             }
@@ -287,7 +287,7 @@ class DownloaderImpl(
             segments.forEach { database.insertSegment(it.toFindroidSegmentsDto(effectiveItem.id)) }
 
             Timber.i(
-                "downloadItem enqueued for ${effectiveItem.name}, downloadId=$downloadId, parts=${partDlIds.size}"
+                "downloadItem enqueued for ${effectiveItem.name}, downloadId=$downloadId, parts=${partDlIds.size}",
             )
 
             Pair(downloadId, null)
@@ -325,7 +325,7 @@ class DownloaderImpl(
         // original directly
         if (originalBitrate in 1..preset.maxBitrateBps && originalHeight <= preset.maxHeight) {
             Timber.i(
-                "Original file bitrate ($originalBitrate bps) <= preset (${preset.maxBitrateBps} bps); skipping transcode and downloading original."
+                "Original file bitrate ($originalBitrate bps) <= preset (${preset.maxBitrateBps} bps); skipping transcode and downloading original.",
             )
             return source.path
         }
@@ -354,7 +354,7 @@ class DownloaderImpl(
         val request =
             OneTimeWorkRequestBuilder<MediaAttachmentsWorker>()
                 .setConstraints(
-                    Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+                    Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build(),
                 )
                 .setInputData(
                     workDataOf(
@@ -362,7 +362,7 @@ class DownloaderImpl(
                         MediaAttachmentsWorker.KEY_SOURCE_ID to sourceId,
                         MediaAttachmentsWorker.KEY_STORAGE_INDEX to storageIndex,
                         MediaAttachmentsWorker.KEY_DOWNLOAD_EXTERNAL_AUDIO to downloadExternalAudio,
-                    )
+                    ),
                 )
                 .build()
         workManager.enqueue(request)
@@ -440,7 +440,7 @@ class DownloaderImpl(
             }
         if (existingSources.isNotEmpty()) {
             Timber.i(
-                "downloadItem: item ${item.name} already exists on disk, linking to user $currentUserId"
+                "downloadItem: item ${item.name} already exists on disk, linking to user $currentUserId",
             )
             val serverId = appPreferences.getValue(appPreferences.currentServer)
             insertItemMetadataToDb(
@@ -460,7 +460,7 @@ class DownloaderImpl(
             for (part in additionalParts) {
                 database.insertPart(part.toFindroidPartDto(serverId))
                 database.insertUserDownload(
-                    UserDownloadDto(userId = currentUserId, itemId = part.id)
+                    UserDownloadDto(userId = currentUserId, itemId = part.id),
                 )
                 database.insertUserData(part.toFindroidUserDataDto(currentUserId))
             }
@@ -614,7 +614,7 @@ class DownloaderImpl(
 
         if (database.countUserDownloads(item.id) > 0) {
             Timber.i(
-                "deleteItem: item ${item.name} still downloaded by other user(s), preserving physical files"
+                "deleteItem: item ${item.name} still downloaded by other user(s), preserving physical files",
             )
             return
         }
@@ -768,7 +768,7 @@ class DownloaderImpl(
                     return@withContext true
                 }
                 Timber.w(
-                    "finalizeDownload: partialFile ${partialFile.absolutePath} does not exist or is empty"
+                    "finalizeDownload: partialFile ${partialFile.absolutePath} does not exist or is empty",
                 )
                 return@withContext false
             }
@@ -784,7 +784,7 @@ class DownloaderImpl(
                 val hasSpace = stats == null || stats.availableBytes >= partialFile.length()
                 if (hasSpace) {
                     Timber.i(
-                        "Remuxing fragmented MP4 for download $downloadId into seekable MP4: ${finalFile.name}"
+                        "Remuxing fragmented MP4 for download $downloadId into seekable MP4: ${finalFile.name}",
                     )
                     val remuxed = Mp4Remuxer.remuxToStandardMp4(partialFile, finalFile)
                     if (remuxed && finalFile.exists() && finalFile.length() > 0L) {
@@ -792,7 +792,7 @@ class DownloaderImpl(
                         success = true
                     } else {
                         Timber.w(
-                            "Remux failed for download $downloadId; falling back to direct rename"
+                            "Remux failed for download $downloadId; falling back to direct rename",
                         )
                         if (finalFile.exists() && finalFile.length() == 0L) {
                             finalFile.delete()
@@ -800,7 +800,7 @@ class DownloaderImpl(
                     }
                 } else {
                     Timber.w(
-                        "Insufficient storage to remux download $downloadId (available=${stats.availableBytes}, needed=${partialFile.length()}); falling back to rename"
+                        "Insufficient storage to remux download $downloadId (available=${stats.availableBytes}, needed=${partialFile.length()}); falling back to rename",
                     )
                 }
             }
@@ -833,7 +833,7 @@ class DownloaderImpl(
                 true
             } else {
                 Timber.e(
-                    "finalizeDownload failed for $downloadId: finalFile exists=${finalFile.exists()} length=${finalFile.length()}"
+                    "finalizeDownload failed for $downloadId: finalFile exists=${finalFile.exists()} length=${finalFile.length()}",
                 )
                 false
             }
@@ -850,11 +850,11 @@ class DownloaderImpl(
                 val targetDir =
                     dirs.getOrNull(targetStorageIndex)
                         ?: return@withContext Result.failure(
-                            IllegalStateException("Target storage unavailable")
+                            IllegalStateException("Target storage unavailable"),
                         )
                 if (Environment.getExternalStorageState(targetDir) != Environment.MEDIA_MOUNTED) {
                     return@withContext Result.failure(
-                        IllegalStateException("Target storage not mounted")
+                        IllegalStateException("Target storage not mounted"),
                     )
                 }
                 val targetDownloadsDir = File(targetDir, "downloads").apply { mkdirs() }
@@ -1029,7 +1029,7 @@ class DownloaderImpl(
                         ImagesDownloaderWorker.KEY_ITEM_ID to userId.toString(),
                         ImagesDownloaderWorker.KEY_TYPE to ImagesDownloaderWorker.TYPE_USER,
                         ImagesDownloaderWorker.KEY_IMAGE_TAG to imageTag,
-                    )
+                    ),
                 )
                 .build()
 

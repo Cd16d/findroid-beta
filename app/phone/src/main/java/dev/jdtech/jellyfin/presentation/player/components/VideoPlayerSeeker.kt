@@ -225,7 +225,7 @@ fun VideoPlayerSeeker(
                                 modifier =
                                     Modifier.size(4.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.6f))
+                                        .background(Color.White.copy(alpha = 0.6f)),
                             )
                             Text(
                                 text = contentDurationString,
@@ -271,7 +271,7 @@ fun VideoPlayerSeeker(
                                 modifier =
                                     Modifier.size(4.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.6f))
+                                        .background(Color.White.copy(alpha = 0.6f)),
                             )
                             Text(
                                 text = contentDurationString,

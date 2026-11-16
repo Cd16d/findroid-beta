@@ -325,7 +325,7 @@ fun VideoPlayerSeekBar(
                         else -> false
                     }
                 }
-                .focusable(interactionSource = interactionSource)
+                .focusable(interactionSource = interactionSource),
     ) {
         val yOffset = size.height / 2f
         val trackHeightPx = animatedTrackHeight.toPx()
@@ -419,7 +419,7 @@ fun VideoPlayerSeekBar(
                         bottomLeft = leftRadius,
                         topRight = rightRadius,
                         bottomRight = rightRadius,
-                    )
+                    ),
                 )
 
                 clipPath(slicePath) {
@@ -738,7 +738,7 @@ fun VideoPlayerSeekBar(
                             bottom = yOffset + trackHeightPx / 2f,
                         ),
                     cornerRadius = fullCornerRadius,
-                )
+                ),
             )
 
             clipPath(slicePath) {
@@ -783,7 +783,7 @@ fun VideoPlayerSeekBar(
 
                         val bufferedX =
                             (bufferedProgress.coerceIn(0f, 1f) * size.width).coerceAtMost(
-                                size.width
+                                size.width,
                             )
                         val bufEnd = maxOf(inactiveLimit, bufferedX)
 

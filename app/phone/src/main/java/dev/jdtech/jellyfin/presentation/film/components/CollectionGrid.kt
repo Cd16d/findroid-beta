@@ -101,7 +101,7 @@ private fun CollectionGridPreview() {
                         id = 1,
                         name = UiText.DynamicString("Movies"),
                         items = listOf(dummyMovie),
-                    )
+                    ),
                 ),
             innerPadding = PaddingValues(0.dp),
             onAction = {},

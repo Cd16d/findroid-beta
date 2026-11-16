@@ -40,13 +40,13 @@ fun rememberSafePadding(
             // height (phone landscape)
             when {
                 windowSizeClass.isWidthAtLeastBreakpoint(
-                    WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND
+                    WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND,
                 ) ||
                     windowSizeClass.isWidthAtLeastBreakpoint(
-                        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+                        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
                     ) ||
                     !windowSizeClass.isHeightAtLeastBreakpoint(
-                        WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND
+                        WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND,
                     ) -> 0.dp
 
                 else -> with(density) { safeInsets.getLeft(this, layoutDirection).toDp() }
@@ -61,7 +61,7 @@ fun rememberSafePadding(
         } else {
             when {
                 windowSizeClass.isWidthAtLeastBreakpoint(
-                    WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+                    WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
                 ) -> with(density) { safeInsets.getBottom(this).toDp() }
 
                 else -> 0.dp

@@ -104,7 +104,7 @@ private fun Modifier.repeatingClickable(
                     job.cancel()
                     interactionSource.emit(PressInteraction.Release(press))
                 }
-            }
+            },
         )
     }
 }
@@ -450,7 +450,7 @@ internal fun TrackChip(text: String) {
         modifier =
             Modifier.clip(ChipShape)
                 .background(contentColor.copy(alpha = 0.12f))
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(
             text = text,

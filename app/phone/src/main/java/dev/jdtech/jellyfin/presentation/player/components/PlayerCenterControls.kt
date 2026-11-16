@@ -69,8 +69,8 @@ fun PlayerCenterControls(
                         .clip(CircleShape)
                         .background(
                             PlayerOverlayBackground.copy(
-                                alpha = if (hasPreviousItem) 0.6f else 0.25f
-                            )
+                                alpha = if (hasPreviousItem) 0.6f else 0.25f,
+                            ),
                         )
                         .then(
                             if (hasPreviousItem) {
@@ -84,7 +84,7 @@ fun PlayerCenterControls(
                                 )
                             } else {
                                 Modifier
-                            }
+                            },
                         ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -149,7 +149,7 @@ fun PlayerCenterControls(
                 Icon(
                     painter =
                         painterResource(
-                            id = if (isPlaying) CoreR.drawable.ic_pause else CoreR.drawable.ic_play
+                            id = if (isPlaying) CoreR.drawable.ic_pause else CoreR.drawable.ic_play,
                         ),
                     contentDescription = null,
                     modifier = Modifier.size(36.dp),
@@ -189,7 +189,7 @@ fun PlayerCenterControls(
                     Modifier.size(48.dp)
                         .clip(CircleShape)
                         .background(
-                            PlayerOverlayBackground.copy(alpha = if (hasNextItem) 0.6f else 0.25f)
+                            PlayerOverlayBackground.copy(alpha = if (hasNextItem) 0.6f else 0.25f),
                         )
                         .then(
                             if (hasNextItem) {
@@ -203,7 +203,7 @@ fun PlayerCenterControls(
                                 )
                             } else {
                                 Modifier
-                            }
+                            },
                         ),
                 contentAlignment = Alignment.Center,
             ) {

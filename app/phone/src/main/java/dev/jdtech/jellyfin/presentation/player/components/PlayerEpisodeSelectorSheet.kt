@@ -133,7 +133,7 @@ fun PlayerNavigationHeaderSelector(
                                         PlayerNavTab.CHAPTERS -> PlayerR.string.chapters
                                         PlayerNavTab.EPISODES -> PlayerR.string.episodes
                                         PlayerNavTab.INFO -> PlayerR.string.player_tab_info
-                                    }
+                                    },
                             ),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
@@ -292,7 +292,7 @@ fun PlayerEpisodeSelectorContent(
                         } else if (selectedSeasonId != null) {
                             viewModel.selectSeason(selectedSeasonId)
                         }
-                    }
+                    },
                 ) {
                     Text(text = stringResource(id = CoreR.string.retry))
                 }
@@ -377,7 +377,7 @@ fun PlayerEpisodeCard(
                         .aspectRatio(16f / 9f)
                         .clip(EpisodeThumbShape)
                         .border(thumbBorder, EpisodeThumbShape)
-                        .background(Color.Black)
+                        .background(Color.Black),
             ) {
                 ItemPoster(
                     item = episode,
@@ -456,7 +456,7 @@ fun PlayerEpisodeCard(
                                 if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 else
                                     MaterialTheme.colorScheme.surfaceContainerHighest.copy(
-                                        alpha = 0.7f
+                                        alpha = 0.7f,
                                     ),
                         ) {
                             Text(

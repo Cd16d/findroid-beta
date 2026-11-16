@@ -320,7 +320,7 @@ fun HomeCarouselItem(
                         .clip(CircleShape)
                         .background(
                             if (isFocused) MaterialTheme.colorScheme.primary
-                            else Color.White.copy(alpha = 0.15f)
+                            else Color.White.copy(alpha = 0.15f),
                         )
                         .border(
                             width = 1.dp,

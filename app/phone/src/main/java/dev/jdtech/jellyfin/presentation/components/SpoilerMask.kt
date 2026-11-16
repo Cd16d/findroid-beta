@@ -389,7 +389,7 @@ fun SpoilerMask(
             modifier
                 .clip(shape)
                 .onGloballyPositioned { coordinates -> maskCoordinates = coordinates }
-                .then(gestureModifier)
+                .then(gestureModifier),
     ) {
         Box(
             modifier =
@@ -399,9 +399,9 @@ fun SpoilerMask(
                             Modifier.blur(animatedBlurRadius)
                         } else {
                             Modifier
-                        }
+                        },
                     )
-                    .graphicsLayer { alpha = animatedContentAlpha }
+                    .graphicsLayer { alpha = animatedContentAlpha },
         ) {
             content()
         }

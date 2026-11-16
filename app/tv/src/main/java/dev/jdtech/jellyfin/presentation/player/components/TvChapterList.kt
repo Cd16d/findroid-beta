@@ -78,7 +78,7 @@ internal fun ChapterList(
         }
     val listState =
         rememberLazyListState(
-            initialFirstVisibleItemIndex = (currentChapterIndex - 1).coerceAtLeast(0)
+            initialFirstVisibleItemIndex = (currentChapterIndex - 1).coerceAtLeast(0),
         )
 
     LaunchedEffect(currentChapterIndex) {
@@ -224,7 +224,7 @@ internal fun ChapterItem(
                     Box(
                         modifier =
                             Modifier.fillMaxSize()
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
                     )
                 }
             }

@@ -112,7 +112,7 @@ fun PlayerNavigationItem(
                     modifier =
                         Modifier.clip(CentralShapes.Tiny)
                             .background(onSurface.copy(alpha = 0.12f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
                         text = badge,

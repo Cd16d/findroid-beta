@@ -45,7 +45,7 @@ fun CastButton(
     viewModel: CastPlayerViewModel =
         hiltViewModel(
             LocalContext.current.findViewModelStoreOwner()
-                ?: checkNotNull(LocalViewModelStoreOwner.current)
+                ?: checkNotNull(LocalViewModelStoreOwner.current),
         ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

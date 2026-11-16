@@ -92,7 +92,7 @@ fun CastMiniPlayerLayout(
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val isMediumScreen =
         windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
-            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+            WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
         )
 
     val safePadding = rememberSafePadding(handleBottomInsets = handleBottomInsets)
@@ -117,7 +117,7 @@ fun CastMiniPlayerLayout(
                         Modifier.widthIn(max = 1000.dp).fillMaxWidth(0.5f)
                     } else {
                         Modifier.fillMaxWidth()
-                    }
+                    },
                 ),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
@@ -189,7 +189,7 @@ private fun MiniPlayerThumbnail(
             modifier
                 .height(if (isMediumScreen) 80.dp else 64.dp)
                 .aspectRatio(defaultAspectRatio)
-                .clip(MaterialTheme.shapes.medium)
+                .clip(MaterialTheme.shapes.medium),
     ) {
         val imageUri = poster?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
 

@@ -320,6 +320,6 @@ interface JellyfinRepository {
     suspend fun canTranscode(): Boolean
 
     suspend fun getActiveTranscodingInfo(
-        playSessionId: String?
+        playSessionId: String?,
     ): org.jellyfin.sdk.model.api.TranscodingInfo?
 }

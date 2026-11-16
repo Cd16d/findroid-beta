@@ -80,7 +80,7 @@ internal fun PhoneChaptersList(viewModel: PlayerViewModel) {
             androidx.compose.material3.Text(
                 text =
                     androidx.compose.ui.res.stringResource(
-                        id = dev.jdtech.jellyfin.player.core.R.string.no_chapters
+                        id = dev.jdtech.jellyfin.player.core.R.string.no_chapters,
                     ),
                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,

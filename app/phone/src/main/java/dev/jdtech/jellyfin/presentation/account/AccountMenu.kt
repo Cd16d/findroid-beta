@@ -186,7 +186,7 @@ fun AccountMenuWrapper(
                                     Modifier.width(420.dp)
                                         .wrapContentHeight()
                                         .padding(top = 64.dp, bottom = 16.dp)
-                                else Modifier.fillMaxSize()
+                                else Modifier.fillMaxSize(),
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -290,7 +290,7 @@ fun AccountMenuContent(
                     top = topPadding,
                     start = startPadding,
                     end = endPadding,
-                )
+                ),
     ) {
         if (useSplitLayout) {
             Row(modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp)) {
@@ -412,11 +412,11 @@ fun AccountMenuContent(
                                         listOf(
                                             MaterialTheme.colorScheme.primaryContainer,
                                             Color.Transparent,
-                                        )
-                                )
+                                        ),
+                                ),
                             )
-                        }
-                    )
+                        },
+                    ),
         ) {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -455,7 +455,7 @@ fun AccountMenuContent(
                 // Offline badge
                 if (LocalOfflineMode.current) {
                     AccountMenuOfflineBadge(
-                        shadowElevation = if (!isTablet) shadowElevation else 0.dp
+                        shadowElevation = if (!isTablet) shadowElevation else 0.dp,
                     )
                 }
             }
@@ -495,9 +495,9 @@ fun AccountMenuContent(
                                     listOf(
                                         Color.Transparent,
                                         MaterialTheme.colorScheme.primaryContainer,
-                                    )
-                            )
-                        )
+                                    ),
+                            ),
+                        ),
             )
         }
     }
@@ -527,7 +527,7 @@ fun AccountMenuContentExpandedPreview() {
                                     Modifier.width(420.dp)
                                         .wrapContentHeight()
                                         .padding(top = 64.dp, bottom = 16.dp)
-                                else Modifier.fillMaxSize()
+                                else Modifier.fillMaxSize(),
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },

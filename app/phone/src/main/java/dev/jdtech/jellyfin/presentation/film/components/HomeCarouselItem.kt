@@ -47,7 +47,7 @@ fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
         modifier =
             Modifier.aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large).clickable {
                 onAction(HomeAction.OnItemClick(item))
-            }
+            },
     ) {
         val image = item.images.backdrop
 

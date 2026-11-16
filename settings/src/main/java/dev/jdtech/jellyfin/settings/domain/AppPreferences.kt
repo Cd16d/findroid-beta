@@ -25,12 +25,12 @@ import timber.log.Timber
  */
 class AppPreferences @Inject constructor(val sharedPreferences: SharedPreferences) {
     constructor(
-        context: Context
+        context: Context,
     ) : this(
         context.getSharedPreferences(
             context.packageName + "_preferences",
             Context.MODE_PRIVATE,
-        )
+        ),
     )
 
     // Server
@@ -315,7 +315,7 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
             }
         } catch (_: Exception) {
             Timber.w(
-                "Failed to load ${preference.backendName} preference. Resetting to default value..."
+                "Failed to load ${preference.backendName} preference. Resetting to default value...",
             )
             setValue(preference, preference.defaultValue)
             preference.defaultValue

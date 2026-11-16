@@ -309,7 +309,7 @@ fun PlayerSubtitleOptionsCard(
                                 Text(
                                     text =
                                         stringResource(
-                                            id = PlayerR.string.load_external_subtitle_summary
+                                            id = PlayerR.string.load_external_subtitle_summary,
                                         ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -351,7 +351,7 @@ private fun Modifier.repeatingClickable(
                     job.cancel()
                     interactionSource.emit(PressInteraction.Release(press))
                 }
-            }
+            },
         )
     }
 }
@@ -473,7 +473,7 @@ private fun SubtitleDelaySliderSection(
                     modifier =
                         Modifier.size(width = animatedThumbWidth, height = animatedThumbHeight)
                             .clip(RoundedCornerShape(animatedThumbWidth / 2f))
-                            .background(Color.White)
+                            .background(Color.White),
                 )
             },
             track = { sliderState ->

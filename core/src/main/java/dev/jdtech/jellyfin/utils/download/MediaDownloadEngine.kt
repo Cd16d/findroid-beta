@@ -463,7 +463,7 @@ constructor(
                 // and falling to the queue's slow 30s/2m/10m backoff retry.
                 if (pausedForNetwork(req)) {
                     Timber.i(
-                        "Download id=${req.id} interrupted by connectivity loss; pausing to resume"
+                        "Download id=${req.id} interrupted by connectivity loss; pausing to resume",
                     )
                     continue
                 }
@@ -622,7 +622,7 @@ constructor(
                     if (plan.totalBytes > 0L) plan.totalBytes else req.estimatedTotalBytes
 
                 Timber.i(
-                    "Starting HTTP transfer for id=${req.id}: startByte=${plan.startByte}, totalBytes=${state.totalBytes}, url=${req.url.take(80)}..."
+                    "Starting HTTP transfer for id=${req.id}: startByte=${plan.startByte}, totalBytes=${state.totalBytes}, url=${req.url.take(80)}...",
                 )
 
                 body.use { responseBody ->
@@ -692,7 +692,7 @@ constructor(
                 // Verify completed file integrity before atomic promotion
                 if (plan.totalBytes > 0L && partFile.length() != plan.totalBytes) {
                     throw IOException(
-                        "Downloaded size mismatch for id=${req.id}: expected ${plan.totalBytes} bytes, got ${partFile.length()} bytes"
+                        "Downloaded size mismatch for id=${req.id}: expected ${plan.totalBytes} bytes, got ${partFile.length()} bytes",
                     )
                 }
                 if (partFile.length() <= 0L && plan.totalBytes != 0L) {
@@ -705,7 +705,7 @@ constructor(
                 }
 
                 Timber.i(
-                    "HTTP transfer finished successfully for id=${req.id}, size=${req.destFile.length()} bytes"
+                    "HTTP transfer finished successfully for id=${req.id}, size=${req.destFile.length()} bytes",
                 )
             }
         } finally {

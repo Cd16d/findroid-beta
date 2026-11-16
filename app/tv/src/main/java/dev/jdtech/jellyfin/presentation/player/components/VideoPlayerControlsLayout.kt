@@ -62,7 +62,7 @@ fun VideoPlayerControlsLayout(
                 Modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .offset(y = shelfOffset)
-                    .padding(bottom = 20.dp)
+                    .padding(bottom = 20.dp),
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                 seeker()

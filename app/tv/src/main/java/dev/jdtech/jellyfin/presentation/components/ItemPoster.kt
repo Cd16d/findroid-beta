@@ -55,7 +55,7 @@ fun ItemPoster(
         }
 
     BoxWithConstraints(
-        modifier = modifier.aspectRatio(if (direction == Direction.HORIZONTAL) 16f / 9f else 0.70f)
+        modifier = modifier.aspectRatio(if (direction == Direction.HORIZONTAL) 16f / 9f else 0.70f),
     ) {
         val imageUri = image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
 

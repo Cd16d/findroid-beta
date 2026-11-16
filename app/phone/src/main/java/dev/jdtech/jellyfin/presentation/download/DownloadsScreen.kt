@@ -224,7 +224,7 @@ fun DownloadsScreen(
                         }
                         showMoveStorageDialog = false
                         itemToMoveId = null
-                    }
+                    },
                 ) {
                     Text(text = stringResource(CoreR.string.sd_card))
                 }
@@ -240,7 +240,7 @@ fun DownloadsScreen(
                         }
                         showMoveStorageDialog = false
                         itemToMoveId = null
-                    }
+                    },
                 ) {
                     Text(text = stringResource(CoreR.string.internal_storage))
                 }
@@ -327,7 +327,7 @@ fun DownloadsScreen(
                                 text = stringResource(CoreR.string.title_download),
                                 style =
                                     MaterialTheme.typography.titleLarge.copy(
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
                                     ),
                             )
                         }
@@ -335,7 +335,7 @@ fun DownloadsScreen(
                     navigationIcon = {
                         if (state.isSelectionMode) {
                             IconButton(
-                                onClick = { viewModel.onAction(DownloadsAction.ExitSelectionMode) }
+                                onClick = { viewModel.onAction(DownloadsAction.ExitSelectionMode) },
                             ) {
                                 Icon(
                                     painter = painterResource(CoreR.drawable.ic_x),
@@ -357,8 +357,8 @@ fun DownloadsScreen(
                                     text =
                                         stringResource(
                                             if (isAllSelected) CoreR.string.deselect_all
-                                            else CoreR.string.select_all
-                                        )
+                                            else CoreR.string.select_all,
+                                        ),
                                 )
                             }
                         } else {
@@ -376,7 +376,7 @@ fun DownloadsScreen(
                                         text = stringResource(CoreR.string.select),
                                         style =
                                             MaterialTheme.typography.labelMedium.copy(
-                                                fontWeight = FontWeight.SemiBold
+                                                fontWeight = FontWeight.SemiBold,
                                             ),
                                     )
                                 }
@@ -605,7 +605,7 @@ fun DownloadsScreen(
                                     onClick = {
                                         if (state.isSelectionMode) {
                                             viewModel.onAction(
-                                                DownloadsAction.ToggleSelection(movie.id)
+                                                DownloadsAction.ToggleSelection(movie.id),
                                             )
                                         } else if (status == DownloadStatus.DOWNLOADED) {
                                             onMovieClick(movie)
@@ -614,7 +614,7 @@ fun DownloadsScreen(
                                     onLongClick = {
                                         viewModel.onAction(DownloadsAction.EnterSelectionMode)
                                         viewModel.onAction(
-                                            DownloadsAction.ToggleSelection(movie.id)
+                                            DownloadsAction.ToggleSelection(movie.id),
                                         )
                                     },
                                     onSwipeDelete = {
@@ -837,7 +837,7 @@ fun DownloadsScreen(
                                     onClick = {
                                         if (state.isSelectionMode) {
                                             viewModel.onAction(
-                                                DownloadsAction.ToggleSelection(showItem.show.id)
+                                                DownloadsAction.ToggleSelection(showItem.show.id),
                                             )
                                         } else {
                                             onShowClick(showItem.show)
@@ -846,27 +846,27 @@ fun DownloadsScreen(
                                     onLongClick = {
                                         viewModel.onAction(DownloadsAction.EnterSelectionMode)
                                         viewModel.onAction(
-                                            DownloadsAction.ToggleSelection(showItem.show.id)
+                                            DownloadsAction.ToggleSelection(showItem.show.id),
                                         )
                                     },
                                     onSwipeDelete = {
                                         viewModel.onAction(
-                                            DownloadsAction.StageDeleteShow(showItem)
+                                            DownloadsAction.StageDeleteShow(showItem),
                                         )
                                     },
                                     onPauseDownload = {
                                         viewModel.onAction(
-                                            DownloadsAction.PauseDownload(showItem.show.id)
+                                            DownloadsAction.PauseDownload(showItem.show.id),
                                         )
                                     },
                                     onResumeDownload = {
                                         viewModel.onAction(
-                                            DownloadsAction.ResumeDownload(showItem.show.id)
+                                            DownloadsAction.ResumeDownload(showItem.show.id),
                                         )
                                     },
                                     onUndoDelete = {
                                         viewModel.onAction(
-                                            DownloadsAction.UndoDelete(showItem.show.id)
+                                            DownloadsAction.UndoDelete(showItem.show.id),
                                         )
                                     },
                                 ),
@@ -890,9 +890,9 @@ fun DownloadsScreen(
                                     listOf(
                                         Color.Transparent,
                                         MaterialTheme.colorScheme.surface,
-                                    )
-                                )
-                            )
+                                    ),
+                                ),
+                            ),
                 )
             }
 
@@ -905,8 +905,8 @@ fun DownloadsScreen(
                     Modifier.align(Alignment.BottomCenter)
                         .windowInsetsPadding(
                             WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
-                            )
+                                WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                            ),
                         )
                         .padding(bottom = 8.dp),
             ) {
@@ -915,7 +915,7 @@ fun DownloadsScreen(
                         state.selectedItemIds.contains(entry.id) ||
                             (entry.item is FindroidEpisode &&
                                 state.selectedItemIds.contains(
-                                    (entry.item as FindroidEpisode).seriesId
+                                    (entry.item as FindroidEpisode).seriesId,
                                 ))
                     }
                 val anyDownloadingOrPending =

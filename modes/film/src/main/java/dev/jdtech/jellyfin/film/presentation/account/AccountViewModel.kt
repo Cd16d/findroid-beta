@@ -61,7 +61,7 @@ constructor(
                 userImageUrl = imageUrl,
                 otherUsers = otherUsers,
                 baseUrl = baseUrl,
-            )
+            ),
         )
     }
 

@@ -166,11 +166,11 @@ private fun HomeScreenLayout(
                                     listOf(
                                         MaterialTheme.colorScheme.surface,
                                         Color.Transparent,
-                                    )
-                            )
+                                    ),
+                            ),
                     )
                     .padding(start = paddingStart, top = paddingTop, end = paddingEnd)
-                    .padding(bottom = MaterialTheme.spacings.small)
+                    .padding(bottom = MaterialTheme.spacings.small),
         ) {
             HomeHeader(
                 serverName = state.server?.name ?: "",

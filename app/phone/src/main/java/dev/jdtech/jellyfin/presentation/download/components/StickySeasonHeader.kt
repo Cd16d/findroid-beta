@@ -122,9 +122,9 @@ fun StickySeasonHeader(
                     Brush.verticalGradient(
                         0.0f to MaterialTheme.colorScheme.surface.copy(alpha = gradientAlpha),
                         1.0f to Color.Transparent,
-                    )
+                    ),
                 )
-                .padding(contentPadding)
+                .padding(contentPadding),
     ) {
         Surface(
             shape = CircleShape,

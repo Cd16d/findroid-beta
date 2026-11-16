@@ -31,7 +31,7 @@ constructor(
         MutableStateFlow(
             appPreferences.getValue(appPreferences.customDeviceName).ifBlank {
                 repository.getDeviceName().ifBlank { DeviceUtils.getDeviceName(context) }
-            }
+            },
         )
     val deviceName = _deviceName.asStateFlow()
 

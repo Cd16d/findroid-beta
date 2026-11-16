@@ -239,14 +239,14 @@ class DownloadPumpService : Service() {
                         CoreR.string.notification_download_progress_size,
                         downloadedFormatted,
                         totalFormatted,
-                    )
+                    ),
                 )
             }
         } else if (downloading != null && downloading.state is DownloadQueue.EntryState.Pending) {
             bigTextBuilder.append(getString(CoreR.string.pending_in_queue))
             if (totalFormatted.isNotEmpty()) {
                 bigTextBuilder.append(
-                    getString(CoreR.string.notification_download_size, totalFormatted)
+                    getString(CoreR.string.notification_download_size, totalFormatted),
                 )
             }
         }
@@ -254,7 +254,7 @@ class DownloadPumpService : Service() {
         val queuedItems = active.filter { it.id != downloading?.id }
         if (queuedItems.isNotEmpty()) {
             bigTextBuilder.append(
-                getString(CoreR.string.notification_download_in_queue, queuedItems.size)
+                getString(CoreR.string.notification_download_in_queue, queuedItems.size),
             )
             queuedItems.take(4).forEach { queued ->
                 val epTitle =
@@ -269,7 +269,7 @@ class DownloadPumpService : Service() {
             }
             if (queuedItems.size > 4) {
                 bigTextBuilder.append(
-                    getString(CoreR.string.notification_download_more_items, queuedItems.size - 4)
+                    getString(CoreR.string.notification_download_more_items, queuedItems.size - 4),
                 )
             }
         }
@@ -284,7 +284,7 @@ class DownloadPumpService : Service() {
                             active.size,
                             active.size,
                         )
-                    else null
+                    else null,
                 )
                 .bigText(bigTextBuilder.toString())
 

@@ -67,8 +67,8 @@ fun HomeView(
                                 name = view.view.name,
                                 images = FindroidImages(),
                                 type = view.view.type,
-                            )
-                        )
+                            ),
+                        ),
                     )
                 },
                 modifier = Modifier.align(Alignment.CenterEnd),
@@ -109,7 +109,7 @@ private fun HomeViewPreview() {
                             name = "Movies",
                             items = listOf(dummyMovie),
                             type = CollectionType.Movies,
-                        )
+                        ),
                 ),
             itemsPadding = PaddingValues(16.dp),
             onAction = {},

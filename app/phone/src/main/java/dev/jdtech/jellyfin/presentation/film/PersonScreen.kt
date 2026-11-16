@@ -101,7 +101,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                 Spacer(Modifier.height(paddingTop))
                 when {
                     windowSizeClass.isWidthAtLeastBreakpoint(
-                        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND
+                        WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND,
                     ) -> {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(itemsPadding),
@@ -111,7 +111,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
                             PersonImage(person)
                             Column(
                                 verticalArrangement =
-                                    Arrangement.spacedBy(MaterialTheme.spacings.medium)
+                                    Arrangement.spacedBy(MaterialTheme.spacings.medium),
                             ) {
                                 Text(
                                     text = person.name,

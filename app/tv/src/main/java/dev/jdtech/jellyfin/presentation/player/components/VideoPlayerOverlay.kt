@@ -78,7 +78,7 @@ fun VideoPlayerOverlay(
                         }
                     }
                     false
-                }
+                },
         ) {
             Spacer(
                 modifier =
@@ -90,8 +90,8 @@ fun VideoPlayerOverlay(
                                 0.50f to Color.Transparent,
                                 0.72f to Color.Black.copy(alpha = 0.65f),
                                 1.0f to Color.Black.copy(alpha = 0.92f),
-                            )
-                        )
+                            ),
+                        ),
             )
 
             controls()

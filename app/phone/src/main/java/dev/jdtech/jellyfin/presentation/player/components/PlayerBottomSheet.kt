@@ -201,7 +201,7 @@ fun PlayerBottomSheet(
                 Modifier.fillMaxWidth()
                     .widthIn(max = 540.dp)
                     .align(Alignment.CenterHorizontally)
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 20.dp),
         ) {
             // Header with Back navigation & Title
             val showBackButton = (panelType != PlayerSidePanelType.SETTINGS) && !openedDirectly
@@ -281,7 +281,7 @@ fun PlayerBottomSheet(
                                             PlayerR.string.playback_info
                                         PlayerSidePanelType.SETTINGS,
                                         PlayerSidePanelType.NONE -> CoreR.string.title_settings
-                                    }
+                                    },
                             ),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -308,7 +308,7 @@ fun PlayerBottomSheet(
                                 sizeAnimationSpec = { _, _ ->
                                     tween(durationMillis = 300, easing = FastOutSlowInEasing)
                                 },
-                            )
+                            ),
                         )
                 },
                 label = "PlayerBottomSheetPanelTransition",

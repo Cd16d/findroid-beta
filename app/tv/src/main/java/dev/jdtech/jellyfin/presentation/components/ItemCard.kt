@@ -81,7 +81,7 @@ fun ItemCard(
             border =
                 ClickableSurfaceDefaults.border(
                     focusedBorder =
-                        Border(BorderStroke(2.5.dp, Color.White), shape = CentralShapes.ItemCard)
+                        Border(BorderStroke(2.5.dp, Color.White), shape = CentralShapes.ItemCard),
                 ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.14f),
             glow =
@@ -90,17 +90,17 @@ fun ItemCard(
                         Glow(
                             elevationColor = Color.White.copy(alpha = 0.3f),
                             elevation = 10.dp,
-                        )
+                        ),
                 ),
             modifier =
                 Modifier.then(
                         if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                        else Modifier
+                        else Modifier,
                     )
                     .then(
                         if (upFocusRequester != null)
                             Modifier.focusProperties { up = upFocusRequester }
-                        else Modifier
+                        else Modifier,
                     )
                     .onFocusChanged {
                         if (isFocused != it.isFocused) {
@@ -135,14 +135,14 @@ fun ItemCard(
                         Column(
                             modifier =
                                 Modifier.align(Alignment.BottomStart)
-                                    .padding(MaterialTheme.spacings.small)
+                                    .padding(MaterialTheme.spacings.small),
                         ) {
                             Box(
                                 modifier =
                                     Modifier.height(4.dp)
                                         .width(progressWidth)
                                         .clip(MaterialTheme.shapes.extraSmall)
-                                        .background(MaterialTheme.colorScheme.primary)
+                                        .background(MaterialTheme.colorScheme.primary),
                             )
                         }
                     }

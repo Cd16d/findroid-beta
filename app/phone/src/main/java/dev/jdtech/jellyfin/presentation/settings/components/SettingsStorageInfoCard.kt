@@ -56,7 +56,7 @@ fun SettingsStorageInfoCard(
                         isPrimary = true,
                         isRemovable = false,
                         isDefault = false,
-                    )
+                    ),
                 )
             }
         }
@@ -101,8 +101,9 @@ fun SettingsStorageInfoCard(
                                 .clip(CircleShape)
                                 .background(
                                     if (isSelected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
+                                    else
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                ),
                     )
                 }
             }
@@ -126,7 +127,7 @@ private fun StorageCardContent(
         storage.name.ifBlank {
             stringResource(
                 if (storage.isRemovable) SettingsR.string.downloads_storage_sdcard
-                else SettingsR.string.downloads_storage_internal
+                else SettingsR.string.downloads_storage_internal,
             )
         }
 
@@ -145,7 +146,7 @@ private fun StorageCardContent(
                     painter =
                         painterResource(
                             if (storage.isRemovable) CoreR.drawable.ic_hard_drive
-                            else SettingsR.drawable.ic_smartphone
+                            else SettingsR.drawable.ic_smartphone,
                         ),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
@@ -168,7 +169,7 @@ private fun StorageCardContent(
                         text = stringResource(SettingsR.string.downloads_storage_default),
                         style =
                             MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
                             ),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -216,7 +217,7 @@ private fun StorageCardContent(
                 Modifier.fillMaxWidth()
                     .height(10.dp)
                     .clip(RoundedCornerShape(5.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         ) {
             val dlWeight = storage.downloadedFraction
             val otherWeight = storage.otherUsedFraction
@@ -229,7 +230,7 @@ private fun StorageCardContent(
                         modifier =
                             Modifier.fillMaxHeight()
                                 .weight(otherWeight)
-                                .background(MaterialTheme.colorScheme.outlineVariant)
+                                .background(MaterialTheme.colorScheme.outlineVariant),
                     )
                 }
                 if (dlWeight > 0.001f) {
@@ -237,13 +238,13 @@ private fun StorageCardContent(
                         modifier =
                             Modifier.fillMaxHeight()
                                 .weight(dlWeight)
-                                .background(MaterialTheme.colorScheme.primary)
+                                .background(MaterialTheme.colorScheme.primary),
                     )
                 }
                 if (freeWeight > 0.001f) {
                     Box(
                         modifier =
-                            Modifier.fillMaxHeight().weight(freeWeight).background(EmeraldGreen)
+                            Modifier.fillMaxHeight().weight(freeWeight).background(EmeraldGreen),
                     )
                 }
             }
@@ -322,9 +323,9 @@ private fun SettingsStorageInfoCardSinglePreview() {
                                 totalBytes = 128_000_000_000L,
                                 availableBytes = 45_200_000_000L,
                                 downloadedBytes = 12_400_000_000L,
-                            )
-                        )
-                )
+                            ),
+                        ),
+                ),
         )
     }
 }
@@ -358,8 +359,8 @@ private fun SettingsStorageInfoCardMultiPreview() {
                                 availableBytes = 28_000_000_000L,
                                 downloadedBytes = 18_000_000_000L,
                             ),
-                        )
-                )
+                        ),
+                ),
         )
     }
 }

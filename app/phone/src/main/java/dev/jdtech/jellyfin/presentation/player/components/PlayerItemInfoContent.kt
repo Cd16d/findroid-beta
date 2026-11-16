@@ -458,7 +458,7 @@ private fun PlayerItemInfoLayout(
                                 text =
                                     stringResource(
                                         if (isExpanded) PlayerR.string.show_less
-                                        else PlayerR.string.show_more
+                                        else PlayerR.string.show_more,
                                     ),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
@@ -893,7 +893,7 @@ private fun PlayerPersonDetailContent(
                                 text =
                                     stringResource(
                                         if (isExpanded) PlayerR.string.show_less
-                                        else PlayerR.string.show_more
+                                        else PlayerR.string.show_more,
                                     ),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
@@ -1200,7 +1200,7 @@ private fun PlayerPersonDetailContentPreview() {
                                     "Imdb" to "nm4043618",
                                     "Tmdb" to "1195886",
                                     "Tvdb" to "321",
-                                )
+                                ),
                         ),
                     items = listOf(dummyMovie),
                     isLoading = false,

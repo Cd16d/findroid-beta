@@ -969,7 +969,7 @@ class JellyfinRepositoryImpl(
                             includePath,
                             playSessionId = playSessionId,
                         )
-                    }
+                    },
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Error fetching posted playback info")
@@ -1091,7 +1091,7 @@ class JellyfinRepositoryImpl(
                     playbackOrder = PlaybackOrder.DEFAULT,
                     mediaSourceId = mediaSourceId,
                     playSessionId = playSessionId,
-                )
+                ),
             )
         }
     }
@@ -1129,7 +1129,7 @@ class JellyfinRepositoryImpl(
                         failed = false,
                         mediaSourceId = mediaSourceId,
                         playSessionId = playSessionId,
-                    )
+                    ),
                 )
             } catch (_: Exception) {
                 database.setUserDataToBeSynced(jellyfinApi.userId!!, itemId, true)
@@ -1161,7 +1161,7 @@ class JellyfinRepositoryImpl(
                         positionTicks = positionTicks,
                         mediaSourceId = mediaSourceId,
                         playSessionId = playSessionId,
-                    )
+                    ),
                 )
             } catch (_: Exception) {
                 database.setUserDataToBeSynced(jellyfinApi.userId!!, itemId, true)
@@ -1244,12 +1244,12 @@ class JellyfinRepositoryImpl(
                 items.addAll(
                     database.getDownloadedMoviesByServerAndUser(serverId, userId).map {
                         it.toFindroidMovie(database, userId)
-                    }
+                    },
                 )
                 items.addAll(
                     database.getDownloadedShowsByServerAndUser(serverId, userId).map {
                         it.toFindroidShow(database, userId)
-                    }
+                    },
                 )
             }
             items
@@ -1309,7 +1309,7 @@ class JellyfinRepositoryImpl(
         }
 
     override suspend fun getActiveTranscodingInfo(
-        playSessionId: String?
+        playSessionId: String?,
     ): org.jellyfin.sdk.model.api.TranscodingInfo? =
         withContext(Dispatchers.IO) {
             try {

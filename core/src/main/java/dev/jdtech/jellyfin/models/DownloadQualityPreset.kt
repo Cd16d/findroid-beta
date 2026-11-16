@@ -256,7 +256,7 @@ object DownloadQualityPresets {
                         audioSampleRate = audioSampleRate,
                         isOriginal = isOriginal,
                         customName = customName,
-                    )
+                    ),
                 )
             }
             list

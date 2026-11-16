@@ -147,7 +147,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                         Column(
                             modifier =
                                 Modifier.align(Alignment.BottomStart)
-                                    .padding(start = paddingStart, end = paddingEnd)
+                                    .padding(start = paddingStart, end = paddingEnd),
                         ) {
                             Text(
                                 text = show.name,
@@ -264,7 +264,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                     .spoilerCardGesture(
                                         state = nextUpSpoilerState,
                                         onClick = { onAction(ShowAction.NavigateToItem(nextUp)) },
-                                    )
+                                    ),
                         ) {
                             SpoilerMask(
                                 state = nextUpSpoilerState,

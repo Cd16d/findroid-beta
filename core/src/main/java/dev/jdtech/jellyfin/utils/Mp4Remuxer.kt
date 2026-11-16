@@ -100,7 +100,7 @@ object Mp4Remuxer {
                 val availableBytes = stat.availableBytes
                 if (availableBytes < inputFile.length()) {
                     Timber.e(
-                        "Insufficient disk space to remux ${inputFile.name}: available=$availableBytes, required=${inputFile.length()}"
+                        "Insufficient disk space to remux ${inputFile.name}: available=$availableBytes, required=${inputFile.length()}",
                     )
                     return false
                 }
@@ -266,7 +266,7 @@ object Mp4Remuxer {
 
             success = true
             Timber.i(
-                "Successfully remuxed ${inputFile.name} to ${outputFile.name} ($samplesWritten samples)"
+                "Successfully remuxed ${inputFile.name} to ${outputFile.name} ($samplesWritten samples)",
             )
             return true
         } catch (e: CancellationException) {

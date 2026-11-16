@@ -85,12 +85,12 @@ interface ServerDatabaseDao {
     suspend fun updateServerCurrentUser(serverId: String, userId: UUID)
 
     @Query(
-        "SELECT * FROM users WHERE id = (SELECT currentUserId FROM servers WHERE id = :serverId)"
+        "SELECT * FROM users WHERE id = (SELECT currentUserId FROM servers WHERE id = :serverId)",
     )
     suspend fun getServerCurrentUser(serverId: String): User?
 
     @Query(
-        "SELECT * FROM serverAddresses WHERE id = (SELECT currentServerAddressId FROM servers WHERE id = :serverId)"
+        "SELECT * FROM serverAddresses WHERE id = (SELECT currentServerAddressId FROM servers WHERE id = :serverId)",
     )
     suspend fun getServerCurrentAddress(serverId: String): ServerAddress?
 
@@ -123,7 +123,7 @@ interface ServerDatabaseDao {
     @Query("DELETE FROM movies WHERE id = :id") suspend fun deleteMovie(id: UUID)
 
     @Query(
-        "UPDATE userdata SET playbackPositionTicks = :playbackPositionTicks WHERE itemId = :itemId AND userid = :userId"
+        "UPDATE userdata SET playbackPositionTicks = :playbackPositionTicks WHERE itemId = :itemId AND userid = :userId",
     )
     suspend fun setPlaybackPositionTicks(itemId: UUID, userId: UUID, playbackPositionTicks: Long)
 
@@ -191,12 +191,12 @@ interface ServerDatabaseDao {
     suspend fun getEpisode(id: UUID): FindroidEpisodeDto
 
     @Query(
-        "SELECT * FROM episodes WHERE seriesId = :seriesId ORDER BY parentIndexNumber ASC, indexNumber ASC"
+        "SELECT * FROM episodes WHERE seriesId = :seriesId ORDER BY parentIndexNumber ASC, indexNumber ASC",
     )
     suspend fun getEpisodesByShowId(seriesId: UUID): List<FindroidEpisodeDto>
 
     @Query(
-        "SELECT * FROM episodes WHERE seriesId = :seriesId ORDER BY parentIndexNumber ASC, indexNumber ASC"
+        "SELECT * FROM episodes WHERE seriesId = :seriesId ORDER BY parentIndexNumber ASC, indexNumber ASC",
     )
     fun getDownloadedEpisodesByShowId(seriesId: UUID): Flow<List<FindroidEpisodeDto>>
 
@@ -204,12 +204,12 @@ interface ServerDatabaseDao {
     suspend fun getEpisodesBySeasonId(seasonId: UUID): List<FindroidEpisodeDto>
 
     @Query(
-        "SELECT * FROM episodes WHERE serverId = :serverId ORDER BY seriesName ASC, parentIndexNumber ASC, indexNumber ASC"
+        "SELECT * FROM episodes WHERE serverId = :serverId ORDER BY seriesName ASC, parentIndexNumber ASC, indexNumber ASC",
     )
     suspend fun getEpisodesByServerId(serverId: String): List<FindroidEpisodeDto>
 
     @Query(
-        "SELECT episodes.* FROM episodes INNER JOIN userdata ON episodes.id = userdata.itemId WHERE serverId = :serverId AND playbackPositionTicks > 0 ORDER BY episodes.parentIndexNumber ASC, episodes.indexNumber ASC"
+        "SELECT episodes.* FROM episodes INNER JOIN userdata ON episodes.id = userdata.itemId WHERE serverId = :serverId AND playbackPositionTicks > 0 ORDER BY episodes.parentIndexNumber ASC, episodes.indexNumber ASC",
     )
     suspend fun getEpisodeResumeItems(serverId: String): List<FindroidEpisodeDto>
 
@@ -263,7 +263,7 @@ interface ServerDatabaseDao {
     fun countUserDataToBeSynced(itemId: UUID): Int
 
     @Query(
-        "UPDATE userdata SET toBeSynced = :toBeSynced WHERE itemId = :itemId AND userId = :userId"
+        "UPDATE userdata SET toBeSynced = :toBeSynced WHERE itemId = :itemId AND userId = :userId",
     )
     suspend fun setUserDataToBeSynced(userId: UUID, itemId: UUID, toBeSynced: Boolean)
 
@@ -302,17 +302,17 @@ interface ServerDatabaseDao {
     suspend fun countUserDownloads(itemId: UUID): Int
 
     @Query(
-        "SELECT EXISTS(SELECT 1 FROM user_downloads WHERE userId = :userId AND itemId = :itemId)"
+        "SELECT EXISTS(SELECT 1 FROM user_downloads WHERE userId = :userId AND itemId = :itemId)",
     )
     suspend fun isItemDownloadedForUser(userId: UUID, itemId: UUID): Boolean
 
     @Query(
-        "SELECT movies.* FROM movies INNER JOIN user_downloads ON movies.id = user_downloads.itemId WHERE user_downloads.userId = :userId ORDER BY movies.name ASC"
+        "SELECT movies.* FROM movies INNER JOIN user_downloads ON movies.id = user_downloads.itemId WHERE user_downloads.userId = :userId ORDER BY movies.name ASC",
     )
     suspend fun getDownloadedMoviesByUser(userId: UUID): List<FindroidMovieDto>
 
     @Query(
-        "SELECT movies.* FROM movies INNER JOIN user_downloads ON movies.id = user_downloads.itemId WHERE movies.serverId = :serverId AND user_downloads.userId = :userId ORDER BY movies.name ASC"
+        "SELECT movies.* FROM movies INNER JOIN user_downloads ON movies.id = user_downloads.itemId WHERE movies.serverId = :serverId AND user_downloads.userId = :userId ORDER BY movies.name ASC",
     )
     suspend fun getDownloadedMoviesByServerAndUser(
         serverId: String,
@@ -320,12 +320,12 @@ interface ServerDatabaseDao {
     ): List<FindroidMovieDto>
 
     @Query(
-        "SELECT DISTINCT shows.* FROM shows INNER JOIN episodes ON shows.id = episodes.seriesId INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE user_downloads.userId = :userId ORDER BY shows.name ASC"
+        "SELECT DISTINCT shows.* FROM shows INNER JOIN episodes ON shows.id = episodes.seriesId INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE user_downloads.userId = :userId ORDER BY shows.name ASC",
     )
     suspend fun getDownloadedShowsByUser(userId: UUID): List<FindroidShowDto>
 
     @Query(
-        "SELECT DISTINCT shows.* FROM shows INNER JOIN episodes ON shows.id = episodes.seriesId INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE shows.serverId = :serverId AND user_downloads.userId = :userId ORDER BY shows.name ASC"
+        "SELECT DISTINCT shows.* FROM shows INNER JOIN episodes ON shows.id = episodes.seriesId INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE shows.serverId = :serverId AND user_downloads.userId = :userId ORDER BY shows.name ASC",
     )
     suspend fun getDownloadedShowsByServerAndUser(
         serverId: String,
@@ -333,7 +333,7 @@ interface ServerDatabaseDao {
     ): List<FindroidShowDto>
 
     @Query(
-        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.seriesId = :seriesId AND user_downloads.userId = :userId ORDER BY episodes.parentIndexNumber ASC, episodes.indexNumber ASC"
+        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.seriesId = :seriesId AND user_downloads.userId = :userId ORDER BY episodes.parentIndexNumber ASC, episodes.indexNumber ASC",
     )
     suspend fun getDownloadedEpisodesByShowAndUser(
         seriesId: UUID,
@@ -341,7 +341,7 @@ interface ServerDatabaseDao {
     ): List<FindroidEpisodeDto>
 
     @Query(
-        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.seasonId = :seasonId AND user_downloads.userId = :userId ORDER BY episodes.indexNumber ASC"
+        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.seasonId = :seasonId AND user_downloads.userId = :userId ORDER BY episodes.indexNumber ASC",
     )
     suspend fun getDownloadedEpisodesBySeasonAndUser(
         seasonId: UUID,
@@ -349,7 +349,7 @@ interface ServerDatabaseDao {
     ): List<FindroidEpisodeDto>
 
     @Query(
-        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.serverId = :serverId AND user_downloads.userId = :userId ORDER BY episodes.seriesName ASC, episodes.parentIndexNumber ASC, episodes.indexNumber ASC"
+        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.serverId = :serverId AND user_downloads.userId = :userId ORDER BY episodes.seriesName ASC, episodes.parentIndexNumber ASC, episodes.indexNumber ASC",
     )
     suspend fun getDownloadedEpisodesByServerAndUser(
         serverId: String,
@@ -357,7 +357,7 @@ interface ServerDatabaseDao {
     ): List<FindroidEpisodeDto>
 
     @Query(
-        "SELECT movies.* FROM movies INNER JOIN user_downloads ON movies.id = user_downloads.itemId WHERE movies.serverId = :serverId AND user_downloads.userId = :userId AND movies.name LIKE '%' || :name || '%' ORDER BY movies.name ASC"
+        "SELECT movies.* FROM movies INNER JOIN user_downloads ON movies.id = user_downloads.itemId WHERE movies.serverId = :serverId AND user_downloads.userId = :userId AND movies.name LIKE '%' || :name || '%' ORDER BY movies.name ASC",
     )
     suspend fun searchDownloadedMovies(
         serverId: String,
@@ -366,7 +366,7 @@ interface ServerDatabaseDao {
     ): List<FindroidMovieDto>
 
     @Query(
-        "SELECT DISTINCT shows.* FROM shows INNER JOIN episodes ON shows.id = episodes.seriesId INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE shows.serverId = :serverId AND user_downloads.userId = :userId AND shows.name LIKE '%' || :name || '%' ORDER BY shows.name ASC"
+        "SELECT DISTINCT shows.* FROM shows INNER JOIN episodes ON shows.id = episodes.seriesId INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE shows.serverId = :serverId AND user_downloads.userId = :userId AND shows.name LIKE '%' || :name || '%' ORDER BY shows.name ASC",
     )
     suspend fun searchDownloadedShows(
         serverId: String,
@@ -375,7 +375,7 @@ interface ServerDatabaseDao {
     ): List<FindroidShowDto>
 
     @Query(
-        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.serverId = :serverId AND user_downloads.userId = :userId AND episodes.name LIKE '%' || :name || '%' ORDER BY episodes.seriesName ASC, episodes.parentIndexNumber ASC, episodes.indexNumber ASC"
+        "SELECT episodes.* FROM episodes INNER JOIN user_downloads ON episodes.id = user_downloads.itemId WHERE episodes.serverId = :serverId AND user_downloads.userId = :userId AND episodes.name LIKE '%' || :name || '%' ORDER BY episodes.seriesName ASC, episodes.parentIndexNumber ASC, episodes.indexNumber ASC",
     )
     suspend fun searchDownloadedEpisodes(
         serverId: String,
@@ -389,13 +389,13 @@ interface ServerDatabaseDao {
         val now = System.currentTimeMillis()
         for (movie in movies) {
             insertUserDownload(
-                UserDownloadDto(userId = userId, itemId = movie.id, downloadedAt = now)
+                UserDownloadDto(userId = userId, itemId = movie.id, downloadedAt = now),
             )
         }
         val episodes = getEpisodesByServerId(serverId)
         for (episode in episodes) {
             insertUserDownload(
-                UserDownloadDto(userId = userId, itemId = episode.id, downloadedAt = now)
+                UserDownloadDto(userId = userId, itemId = episode.id, downloadedAt = now),
             )
         }
     }

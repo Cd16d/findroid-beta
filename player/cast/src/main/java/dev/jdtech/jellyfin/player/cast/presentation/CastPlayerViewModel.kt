@@ -131,7 +131,7 @@ constructor(
                 audioTracks = emptyList(),
                 subtitleTracks = emptyList(),
                 displayExtraInfo = appPreferences.getValue(appPreferences.displayExtraInfo),
-            )
+            ),
         )
 
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -451,7 +451,7 @@ constructor(
     fun onAudioTrackSelected(track: Track?) {
         _uiState.update { state ->
             state.copy(
-                audioTracks = state.audioTracks.map { it.copy(selected = it.id == track?.id) }
+                audioTracks = state.audioTracks.map { it.copy(selected = it.id == track?.id) },
             )
         }
         playerController.setAudioTrack(track, currentItemId)
@@ -464,7 +464,8 @@ constructor(
     fun onSubtitleTrackSelected(track: Track?) {
         _uiState.update { state ->
             state.copy(
-                subtitleTracks = state.subtitleTracks.map { it.copy(selected = it.id == track?.id) }
+                subtitleTracks =
+                    state.subtitleTracks.map { it.copy(selected = it.id == track?.id) },
             )
         }
         playerController.setSubtitleTrack(track)

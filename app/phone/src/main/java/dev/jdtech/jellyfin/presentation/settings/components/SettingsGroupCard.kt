@@ -78,8 +78,8 @@ fun SettingsGroupCard(
                                 onClick = {
                                     onAction(
                                         SettingsAction.OnUpdate(
-                                            preference.copy(value = !preference.value)
-                                        )
+                                            preference.copy(value = !preference.value),
+                                        ),
                                     )
                                     preference.onClick(preference)
                                 },
@@ -90,7 +90,7 @@ fun SettingsGroupCard(
                                 preference = preference,
                                 onUpdate = { value ->
                                     onAction(
-                                        SettingsAction.OnUpdate(preference.copy(value = value))
+                                        SettingsAction.OnUpdate(preference.copy(value = value)),
                                     )
                                     preference.onUpdate(value)
                                 },
@@ -101,7 +101,7 @@ fun SettingsGroupCard(
                                 preference = preference,
                                 onUpdate = { value ->
                                     onAction(
-                                        SettingsAction.OnUpdate(preference.copy(value = value))
+                                        SettingsAction.OnUpdate(preference.copy(value = value)),
                                     )
                                     preference.onUpdate(value)
                                 },
@@ -112,7 +112,7 @@ fun SettingsGroupCard(
                                 preference = preference,
                                 onUpdate = { value ->
                                     onAction(
-                                        SettingsAction.OnUpdate(preference.copy(value = value))
+                                        SettingsAction.OnUpdate(preference.copy(value = value)),
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -122,7 +122,7 @@ fun SettingsGroupCard(
                                 preference = preference,
                                 onUpdate = { value ->
                                     onAction(
-                                        SettingsAction.OnUpdate(preference.copy(value = value))
+                                        SettingsAction.OnUpdate(preference.copy(value = value)),
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -147,7 +147,7 @@ fun SettingsGroupCard(
                                 preference = preference,
                                 onUpdate = { value ->
                                     onAction(
-                                        SettingsAction.OnUpdate(preference.copy(value = value))
+                                        SettingsAction.OnUpdate(preference.copy(value = value)),
                                     )
                                 },
                                 modifier = Modifier.fillMaxWidth(),

@@ -197,7 +197,7 @@ suspend fun FindroidEpisodeDto.toFindroidEpisode(
                                         part.images.showBackdrop ?: episodeImages.showBackdrop,
                                     showLogo = part.images.showLogo ?: episodeImages.showLogo,
                                 )
-                            } else part.images
+                            } else part.images,
                     )
                 } ?: emptyList(),
     )

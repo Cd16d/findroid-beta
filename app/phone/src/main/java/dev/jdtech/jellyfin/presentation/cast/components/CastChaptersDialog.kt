@@ -222,7 +222,7 @@ fun CastChaptersDialog(
                         .widthIn(max = 500.dp)
                         .then(
                             if (isLandscape) Modifier.fillMaxHeight()
-                            else Modifier.heightIn(max = screenMaxHeight)
+                            else Modifier.heightIn(max = screenMaxHeight),
                         )
                         .fillMaxWidth()
                         .statusBarsPadding()
@@ -240,7 +240,7 @@ fun CastChaptersDialog(
                     modifier =
                         Modifier.nestedScroll(nestedScrollConnection)
                             .padding(MaterialTheme.spacings.medium)
-                            .then(if (isLandscape) Modifier.fillMaxHeight() else Modifier)
+                            .then(if (isLandscape) Modifier.fillMaxHeight() else Modifier),
                 ) {
                     Box(
                         modifier =
@@ -250,7 +250,7 @@ fun CastChaptersDialog(
                                 .background(
                                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                     CircleShape,
-                                )
+                                ),
                     )
 
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
@@ -268,7 +268,7 @@ fun CastChaptersDialog(
                             modifier =
                                 Modifier.fillMaxWidth()
                                     .graphicsLayer(
-                                        compositingStrategy = CompositingStrategy.Offscreen
+                                        compositingStrategy = CompositingStrategy.Offscreen,
                                     )
                                     .drawWithContent {
                                         drawContent()

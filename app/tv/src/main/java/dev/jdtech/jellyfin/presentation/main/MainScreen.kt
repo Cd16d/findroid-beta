@@ -209,10 +209,10 @@ private fun MainScreenLayout(
                                     Color.Black.copy(alpha = 0.85f),
                                     Color.Black.copy(alpha = 0.4f),
                                     Color.Transparent,
-                                )
-                        )
+                                ),
+                        ),
                     )
-                    .padding(horizontal = MaterialTheme.spacings.large)
+                    .padding(horizontal = MaterialTheme.spacings.large),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -280,7 +280,7 @@ private fun MainScreenLayout(
                         modifier =
                             Modifier.focusRequester(
                                     if (index == 0) homeTabFocusRequester
-                                    else librariesTabFocusRequester
+                                    else librariesTabFocusRequester,
                                 )
                                 .focusProperties {
                                     down =

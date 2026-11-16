@@ -253,7 +253,7 @@ constructor(
             is SearchAction.ToggleVideoQuality -> {
                 _state.update {
                     it.copy(
-                        selectedVideoQualities = it.selectedVideoQualities.toggle(action.quality)
+                        selectedVideoQualities = it.selectedVideoQualities.toggle(action.quality),
                     )
                 }
             }
@@ -270,14 +270,14 @@ constructor(
             is SearchAction.ToggleSeriesStatus -> {
                 _state.update {
                     it.copy(
-                        selectedSeriesStatuses = it.selectedSeriesStatuses.toggle(action.status)
+                        selectedSeriesStatuses = it.selectedSeriesStatuses.toggle(action.status),
                     )
                 }
             }
             is SearchAction.ToggleAudioLanguage -> {
                 _state.update {
                     it.copy(
-                        selectedAudioLanguages = it.selectedAudioLanguages.toggle(action.language)
+                        selectedAudioLanguages = it.selectedAudioLanguages.toggle(action.language),
                     )
                 }
             }
@@ -285,7 +285,7 @@ constructor(
                 _state.update {
                     it.copy(
                         selectedSubtitleLanguages =
-                            it.selectedSubtitleLanguages.toggle(action.language)
+                            it.selectedSubtitleLanguages.toggle(action.language),
                     )
                 }
             }

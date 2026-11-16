@@ -100,7 +100,7 @@ private fun UsersScreenLayout(
                 Modifier.padding(horizontal = 24.dp)
                     .widthIn(max = 480.dp)
                     .fillMaxWidth()
-                    .align(Alignment.Center)
+                    .align(Alignment.Center),
         ) {
             Spacer(modifier = Modifier.weight(0.2f))
             Image(
@@ -188,7 +188,7 @@ private fun UsersScreenLayout(
                             stringResource(
                                 SetupR.string.remove_user_dialog_text,
                                 selectedUser!!.name,
-                            )
+                            ),
                     )
                 },
                 onDismissRequest = { openDeleteDialog = false },
@@ -197,7 +197,7 @@ private fun UsersScreenLayout(
                         onClick = {
                             openDeleteDialog = false
                             onAction(UsersAction.OnDeleteUser(selectedUser!!.id))
-                        }
+                        },
                     ) {
                         Text(text = stringResource(SetupR.string.confirm))
                     }

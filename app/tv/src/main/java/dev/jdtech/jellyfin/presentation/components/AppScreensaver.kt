@@ -208,9 +208,9 @@ fun AppScreensaver(
                                             Color.Transparent,
                                             Color.Transparent,
                                             Color.Black.copy(alpha = 0.85f),
-                                        )
-                                )
-                            )
+                                        ),
+                                ),
+                            ),
                 )
 
                 // Top-Right: Date & Time with OLED burn-in drift
@@ -229,13 +229,13 @@ fun AppScreensaver(
                     ClockText(
                         style =
                             MaterialTheme.typography.displayMedium.copy(
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
                             ),
                         color = Color.White,
                         showDate = true,
                         dateStyle =
                             MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
                             ),
                         dateColor = Color.White.copy(alpha = 0.85f),
                     )
@@ -283,7 +283,7 @@ fun AppScreensaver(
                                 val offset = appLogoOffset()
                                 translationX = offset.x
                                 translationY = offset.y
-                            }
+                            },
                     ) {
                         Image(
                             painter = painterResource(id = CoreR.drawable.ic_logo),
@@ -308,8 +308,8 @@ private fun AppScreensaverPreview() {
                         title = "Findroid Screensaver",
                         backdropUri = null,
                         logoUri = null,
-                    )
-                )
+                    ),
+                ),
         )
     }
 }

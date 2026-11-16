@@ -73,7 +73,7 @@ fun ItemPoster(
         modifier =
             modifier
                 .aspectRatio(if (direction == Direction.HORIZONTAL) 16f / 9f else 2f / 3f)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         val imageUri = image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
 

@@ -210,7 +210,7 @@ private fun LoginScreenLayout(
                         modifier = Modifier.width(360.dp),
                     ) {
                         HorizontalDivider(
-                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                         )
                         Text(
                             text = stringResource(SetupR.string.or),
@@ -218,7 +218,7 @@ private fun LoginScreenLayout(
                             style = MaterialTheme.typography.bodySmall,
                         )
                         HorizontalDivider(
-                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                         )
                     }
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))

@@ -39,7 +39,7 @@ fun ProgressBadge(item: FindroidItem, modifier: Modifier = Modifier) {
                     .height(24.dp)
                     .defaultMinSize(24.dp)
                     .clip(CentralShapes.SmallCard)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(MaterialTheme.colorScheme.primary),
         ) {
             when (item.played) {
                 true -> {

@@ -95,7 +95,7 @@ constructor(
 
             if (runAttemptCount >= MAX_RETRIES) {
                 Timber.e(
-                    "MediaAttachmentsWorker exceeded max retry limit ($MAX_RETRIES) for item $itemId"
+                    "MediaAttachmentsWorker exceeded max retry limit ($MAX_RETRIES) for item $itemId",
                 )
                 return@withContext Result.failure()
             }
@@ -228,7 +228,7 @@ constructor(
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         Timber.w(
-                            "Failed to download image $name for item $id: HTTP ${response.code}"
+                            "Failed to download image $name for item $id: HTTP ${response.code}",
                         )
                         return@use
                     }
@@ -236,7 +236,7 @@ constructor(
                     val contentLength = body.contentLength()
                     if (contentLength > 0L && !hasEnoughSpace(baseDir, contentLength)) {
                         Timber.w(
-                            "Insufficient storage for image $name on item $id: required $contentLength bytes"
+                            "Insufficient storage for image $name on item $id: required $contentLength bytes",
                         )
                         return@use
                     }
@@ -311,7 +311,7 @@ constructor(
                 existing?.id
                     ?: UUID.nameUUIDFromBytes(
                         "${source.id}_${stream.index}_${stream.title}_${stream.language}_${stream.codec}_${stream.type}"
-                            .toByteArray()
+                            .toByteArray(),
                     )
 
             val streamFile = File(downloadsDir, "${item.id}.${source.id}.${streamId}.$extension")
@@ -323,7 +323,7 @@ constructor(
                             streamId,
                             source.id,
                             streamFile.absolutePath,
-                        )
+                        ),
                     )
                 }
                 continue
@@ -338,7 +338,7 @@ constructor(
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         Timber.w(
-                            "Failed to download external stream ${stream.title} for item ${item.id}: HTTP ${response.code}"
+                            "Failed to download external stream ${stream.title} for item ${item.id}: HTTP ${response.code}",
                         )
                         return@use
                     }
@@ -346,7 +346,7 @@ constructor(
                     val contentLength = body.contentLength()
                     if (contentLength > 0L && !hasEnoughSpace(downloadsDir, contentLength)) {
                         Timber.w(
-                            "Insufficient storage for external stream ${stream.title} on item ${item.id}: required $contentLength bytes"
+                            "Insufficient storage for external stream ${stream.title} on item ${item.id}: required $contentLength bytes",
                         )
                         return@use
                     }
@@ -361,7 +361,7 @@ constructor(
                                     streamId,
                                     source.id,
                                     streamFile.absolutePath,
-                                )
+                                ),
                             )
                         }
                     }
@@ -432,7 +432,7 @@ constructor(
             if (tileCount > 0) {
                 database.insertTrickplayInfo(trickplayInfo.toFindroidTrickplayInfoDto(sourceId))
                 Timber.i(
-                    "Trickplay data downloaded successfully for item ${item.id} ($tileCount tiles)"
+                    "Trickplay data downloaded successfully for item ${item.id} ($tileCount tiles)",
                 )
             }
         } catch (e: CancellationException) {

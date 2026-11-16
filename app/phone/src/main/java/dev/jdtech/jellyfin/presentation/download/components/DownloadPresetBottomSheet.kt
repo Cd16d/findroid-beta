@@ -466,7 +466,7 @@ fun DownloadPresetBottomSheetLayout(
             shape = CentralShapes.MediumCard,
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
             border =
                 BorderStroke(
@@ -533,7 +533,7 @@ fun DownloadPresetBottomSheetLayout(
                                             Text(
                                                 text =
                                                     stringResource(
-                                                        CoreR.string.download_select_audio_track
+                                                        CoreR.string.download_select_audio_track,
                                                     ),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurface,
@@ -549,7 +549,7 @@ fun DownloadPresetBottomSheetLayout(
                                                     } else {
                                                         stringResource(
                                                             CoreR.string
-                                                                .download_preset_original_audio
+                                                                .download_preset_original_audio,
                                                         )
                                                     }
                                                 Text(
@@ -602,11 +602,11 @@ fun DownloadPresetBottomSheetLayout(
                                                         Modifier.fillMaxWidth()
                                                             .clickable(role = Role.RadioButton) {
                                                                 onSelectedAudioStreamIndexChange(
-                                                                    stream.index
+                                                                    stream.index,
                                                                 )
                                                                 if (stream.isExternal) {
                                                                     onDownloadExternalAudioChange(
-                                                                        true
+                                                                        true,
                                                                     )
                                                                 }
                                                                 audioExpanded = false
@@ -629,7 +629,7 @@ fun DownloadPresetBottomSheetLayout(
                                                             Icon(
                                                                 painter =
                                                                     painterResource(
-                                                                        CoreR.drawable.ic_check
+                                                                        CoreR.drawable.ic_check,
                                                                     ),
                                                                 contentDescription = null,
                                                                 modifier = Modifier.size(16.dp),

@@ -151,7 +151,7 @@ fun VideoPlayerSeeker(
                             modifier =
                                 Modifier.size(5.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.6f))
+                                    .background(Color.White.copy(alpha = 0.6f)),
                         )
                         Text(
                             text = contentDurationString,
@@ -294,7 +294,7 @@ fun VideoPlayerSeeker(
                     .then(
                         if (playPauseFocusRequester != null) {
                             Modifier.focusProperties { down = playPauseFocusRequester }
-                        } else Modifier
+                        } else Modifier,
                     ),
         )
     }

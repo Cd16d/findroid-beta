@@ -67,7 +67,7 @@ class TvPivotRowController(
  */
 @Composable
 fun rememberTvPivotRowController(
-    lazyListState: LazyListState = rememberLazyListState()
+    lazyListState: LazyListState = rememberLazyListState(),
 ): TvPivotRowController {
     val scope = rememberCoroutineScope()
     return remember(lazyListState, scope) { TvPivotRowController(lazyListState, scope) }

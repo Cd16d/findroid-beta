@@ -17,7 +17,7 @@ import java.util.UUID
                 parentColumns = arrayOf("id"),
                 childColumns = arrayOf("serverId"),
                 onDelete = ForeignKey.CASCADE,
-            )
+            ),
         ],
 )
 data class User(

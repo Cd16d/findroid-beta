@@ -95,7 +95,7 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                 modifier =
                     Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
                         size = coordinates.size.toSize()
-                    }
+                    },
             ) {
                 val image = movie.images.backdrop
                 val imageUri =
@@ -120,8 +120,8 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                                         listOf(Color.Black.copy(alpha = .2f), Color.Black),
                                         center = Offset(size.width, 0f),
                                         radius = size.width * .8f,
-                                    )
-                                )
+                                    ),
+                                ),
                     )
                 }
                 Column(
@@ -129,7 +129,7 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                         Modifier.padding(
                             start = MaterialTheme.spacings.default * 2,
                             end = MaterialTheme.spacings.default * 2,
-                        )
+                        ),
                 ) {
                     Spacer(modifier = Modifier.height(112.dp))
                     Text(text = movie.name, style = MaterialTheme.typography.displayMedium)
@@ -140,7 +140,7 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                     }
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small)
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
                     ) {
                         movie.premiereDate?.let { premiereDate ->
                             Text(
@@ -185,7 +185,7 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                     )
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium)
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
                     ) {
                         Button(
                             onClick = { onAction(MovieAction.Play(startFromBeginning = false)) },
@@ -214,7 +214,7 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                                     true -> onAction(MovieAction.UnmarkAsPlayed)
                                     false -> onAction(MovieAction.MarkAsPlayed)
                                 }
-                            }
+                            },
                         ) {
                             Icon(
                                 painter = painterResource(id = CoreR.drawable.ic_check),
@@ -227,8 +227,8 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                                     stringResource(
                                         id =
                                             if (movie.played) CoreR.string.unmark_as_played
-                                            else CoreR.string.mark_as_played
-                                    )
+                                            else CoreR.string.mark_as_played,
+                                    ),
                             )
                         }
                         Button(
@@ -237,14 +237,14 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                                     true -> onAction(MovieAction.UnmarkAsFavorite)
                                     false -> onAction(MovieAction.MarkAsFavorite)
                                 }
-                            }
+                            },
                         ) {
                             Icon(
                                 painter =
                                     painterResource(
                                         id =
                                             if (movie.favorite) CoreR.drawable.ic_heart_filled
-                                            else CoreR.drawable.ic_heart
+                                            else CoreR.drawable.ic_heart,
                                     ),
                                 contentDescription = null,
                                 tint = if (movie.favorite) Color.Red else LocalContentColor.current,
@@ -255,14 +255,14 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
                                     stringResource(
                                         id =
                                             if (movie.favorite) CoreR.string.remove_from_favorites
-                                            else CoreR.string.add_to_favorites
-                                    )
+                                            else CoreR.string.add_to_favorites,
+                                    ),
                             )
                         }
                     }
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.large)
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.large),
                     ) {
                         Column {
                             Text(

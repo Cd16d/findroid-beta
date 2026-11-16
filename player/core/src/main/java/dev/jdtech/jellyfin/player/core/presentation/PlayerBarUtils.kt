@@ -149,7 +149,7 @@ fun DrawScope.drawCustomRoundRect(
                     topRight = topRightRadius,
                     bottomRight = bottomRightRadius,
                     bottomLeft = bottomLeftRadius,
-                )
+                ),
             )
         }
     drawPath(path = path, color = color)

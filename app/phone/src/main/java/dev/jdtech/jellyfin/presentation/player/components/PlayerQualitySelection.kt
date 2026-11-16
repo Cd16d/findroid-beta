@@ -136,7 +136,7 @@ internal fun PhoneQualityList(
                 selectedBitrateBps = currentBitrate,
                 onSelectResolution = {
                     onQualitySelected(
-                        VideoQualityOption.createFixedOption(tier.name, currentBitrate)
+                        VideoQualityOption.createFixedOption(tier.name, currentBitrate),
                     )
                 },
                 onBitrateChanged = { newBitrate ->
@@ -241,15 +241,15 @@ internal fun AutoQualityCard(
                                         .background(
                                             if (isSelected) {
                                                 MaterialTheme.colorScheme.primary.copy(
-                                                    alpha = 0.15f
+                                                    alpha = 0.15f,
                                                 )
                                             } else {
                                                 MaterialTheme.colorScheme.onSurface.copy(
-                                                    alpha = 0.08f
+                                                    alpha = 0.08f,
                                                 )
-                                            }
+                                            },
                                         )
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
                             ) {
                                 Text(
                                     text = chipText,
@@ -269,7 +269,7 @@ internal fun AutoQualityCard(
             AnimatedVisibility(visible = isSelected) {
                 Column(
                     modifier =
-                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp)
+                        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
                 ) {
                     Button(
                         onClick = onRefreshSpeedTest,
@@ -366,7 +366,7 @@ private fun ResolutionQualityCard(
                         .heightIn(min = 52.dp)
                         .then(
                             if (isSelected) Modifier.clickable { onSelectResolution() }
-                            else Modifier
+                            else Modifier,
                         )
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -402,7 +402,7 @@ private fun ResolutionQualityCard(
                         modifier =
                             Modifier.clip(CentralShapes.Chip)
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
                             text = formattedBitrate,

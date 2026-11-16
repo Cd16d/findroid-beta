@@ -46,7 +46,7 @@ fun SettingsStepperCard(
         Column(
             modifier =
                 Modifier.fillMaxWidth()
-                    .padding(horizontal = MaterialTheme.spacings.medium, vertical = 12.dp)
+                    .padding(horizontal = MaterialTheme.spacings.medium, vertical = 12.dp),
         ) {
             Text(
                 text = stringResource(preference.nameStringResource),
@@ -127,7 +127,7 @@ fun SettingsStepperCard(
                             text = displayValue,
                             style =
                                 MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
                                 ),
                             color =
                                 if (preference.enabled) {

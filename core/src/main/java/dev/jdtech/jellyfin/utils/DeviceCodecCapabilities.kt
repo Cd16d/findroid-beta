@@ -79,7 +79,7 @@ object DeviceCodecCapabilities {
                     MediaFormat.MIMETYPE_AUDIO_AAC.lowercase(),
                     MediaFormat.MIMETYPE_AUDIO_MPEG.lowercase(),
                     MediaFormat.MIMETYPE_AUDIO_RAW.lowercase(),
-                )
+                ),
             )
         }
 

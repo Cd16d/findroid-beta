@@ -136,7 +136,7 @@ fun ChapterCard(
                             if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             else
                                 MaterialTheme.colorScheme.surfaceContainerHighest.copy(
-                                    alpha = 0.7f
+                                    alpha = 0.7f,
                                 ),
                     ) {
                         Text(

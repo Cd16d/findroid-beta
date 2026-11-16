@@ -179,7 +179,7 @@ private fun ExtraInfoCardPreview() {
                     videoTracks = listOf("1080p H264 SDR"),
                     audioTracks = listOf("English - AC3 - 5.1", "Italian - AAC - Stereo"),
                     subtitleTracks = listOf("English", "Italian", "Spanish"),
-                )
+                ),
         )
     }
 }
@@ -213,11 +213,11 @@ private fun ExtraInfoCardMultiPartPreview() {
                                     path = "",
                                     size = 800000000,
                                     mediaStreams = emptyList(),
-                                )
+                                ),
                             ),
                         runtimeTicks = 0,
                         playbackPositionTicks = 0,
-                    )
+                    ),
                 ),
         )
     }

@@ -266,7 +266,7 @@ constructor(
                             } else {
                                 entry
                             }
-                        }
+                        },
                     )
             }
             if (updated) {
@@ -318,7 +318,7 @@ constructor(
                                 }
                                 entry.copy(state = EntryState.Paused, bytesPerSecond = 0L)
                             } else entry
-                        }
+                        },
                     )
             }
             dlIdToPause?.let { dlId ->
@@ -348,7 +348,7 @@ constructor(
                                     entry.copy(state = EntryState.Pending)
                                 }
                             } else entry
-                        }
+                        },
                     )
             }
             dlIdToResume?.let { dlId ->
@@ -529,13 +529,13 @@ constructor(
                                                         state =
                                                             EntryState.Failed(
                                                                 UiText.StringResource(
-                                                                    CoreR.string.downloading_error
-                                                                )
-                                                            )
+                                                                    CoreR.string.downloading_error,
+                                                                ),
+                                                            ),
                                                     )
                                                 }
                                             } else it
-                                        }
+                                        },
                                     )
                             }
                             if (success && entry.item is FindroidEpisode) {
@@ -569,12 +569,12 @@ constructor(
                                                         state =
                                                             EntryState.Failed(
                                                                 UiText.StringResource(
-                                                                    CoreR.string.downloading_error
-                                                                )
-                                                            )
+                                                                    CoreR.string.downloading_error,
+                                                                ),
+                                                            ),
                                                     )
                                                 } else it
-                                            }
+                                            },
                                         )
                                 }
                             }
@@ -589,7 +589,7 @@ constructor(
                         speedTrackers.remove(dlId)
                         val err = (failed.state as? EntryState.Failed)?.error
                         Timber.e(
-                            "Download failed for ${failed.item.name} (id=${failed.id}, retry=${failed.retryCount}/$MAX_AUTO_RETRIES): error=$err"
+                            "Download failed for ${failed.item.name} (id=${failed.id}, retry=${failed.retryCount}/$MAX_AUTO_RETRIES): error=$err",
                         )
                     }
                     val retryUpdates = mutableMapOf<UUID, Entry>()
@@ -599,7 +599,7 @@ constructor(
                                 RETRY_BACKOFF_MS[
                                     failed.retryCount.coerceAtMost(RETRY_BACKOFF_MS.lastIndex)]
                             Timber.w(
-                                "Scheduling retry #${failed.retryCount + 1} for ${failed.item.name} in ${backoffMs / 1000}s"
+                                "Scheduling retry #${failed.retryCount + 1} for ${failed.item.name} in ${backoffMs / 1000}s",
                             )
                             retryUpdates[failed.id] =
                                 failed.copy(
@@ -612,7 +612,7 @@ constructor(
                                 )
                         } else {
                             Timber.e(
-                                "Max auto-retries reached for ${failed.item.name}, notifying user of failure"
+                                "Max auto-retries reached for ${failed.item.name}, notifying user of failure",
                             )
                             notifyFailure(failed.item)
                         }
@@ -731,7 +731,7 @@ constructor(
                                     RETRY_BACKOFF_MS[
                                         e.retryCount.coerceAtMost(RETRY_BACKOFF_MS.lastIndex)]
                                 Timber.w(
-                                    "Scheduling retry #${e.retryCount + 1} for ${e.item.name} in ${backoffMs / 1000}s"
+                                    "Scheduling retry #${e.retryCount + 1} for ${e.item.name} in ${backoffMs / 1000}s",
                                 )
                                 e.copy(
                                     state = EntryState.Pending,
@@ -746,7 +746,7 @@ constructor(
                                 e.copy(state = EntryState.Failed(errorText))
                             }
                         }
-                    }
+                    },
                 )
         }
         notifyItem?.let {
@@ -780,7 +780,7 @@ constructor(
                     FAILURE_CHANNEL_ID,
                     context.getString(CoreR.string.download_failures_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
-                )
+                ),
             )
         }
         val title =
@@ -837,7 +837,7 @@ constructor(
                     appPreferences.getValue(appPreferences.smartDownloadStorageLimitGb).toLong()
                 if (isStorageLimitReached(limitGb)) {
                     Timber.i(
-                        "Smart Downloads: storage limit reached ($limitGb GB), skipping auto-enqueue"
+                        "Smart Downloads: storage limit reached ($limitGb GB), skipping auto-enqueue",
                     )
                     return@withContext
                 }
@@ -870,7 +870,7 @@ constructor(
                 val currentUnwatchedCount = downloadedUnwatchedIds.union(queuedIds).size
                 if (currentUnwatchedCount >= targetCount) {
                     Timber.d(
-                        "Smart Downloads: already have $currentUnwatchedCount unwatched episodes (target: $targetCount), skipping"
+                        "Smart Downloads: already have $currentUnwatchedCount unwatched episodes (target: $targetCount), skipping",
                     )
                     return@withContext
                 }
@@ -900,13 +900,13 @@ constructor(
                     coroutineContext.ensureActive()
                     if (isStorageLimitReached(limitGb)) {
                         Timber.i(
-                            "Smart Downloads: storage limit reached ($limitGb GB) while auto-queueing, stopping"
+                            "Smart Downloads: storage limit reached ($limitGb GB) while auto-queueing, stopping",
                         )
                         break
                     }
                     Timber.i(
                         "Smart Downloads: auto-queueing episode ${next.seriesName} S%02dE%02d"
-                            .format(next.parentIndexNumber, next.indexNumber)
+                            .format(next.parentIndexNumber, next.indexNumber),
                     )
                     enqueue(next)
                 }
@@ -985,7 +985,7 @@ constructor(
                             if (nextWatched) {
                                 for (candSource in candSources) {
                                     Timber.i(
-                                        "AutoDeleteWatched: safely deleting episode ${candEp.name} (S${candEp.parentIndexNumber}E${candEp.indexNumber}) because next episode ${nextEp.name} is also watched"
+                                        "AutoDeleteWatched: safely deleting episode ${candEp.name} (S${candEp.parentIndexNumber}E${candEp.indexNumber}) because next episode ${nextEp.name} is also watched",
                                     )
                                     downloader.deleteItem(
                                         candEp,

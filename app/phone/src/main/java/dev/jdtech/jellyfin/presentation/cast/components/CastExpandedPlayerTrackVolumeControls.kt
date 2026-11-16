@@ -357,7 +357,7 @@ private fun mockUiStateEpisode() =
                     codec = "aac",
                     selected = true,
                     supported = true,
-                )
+                ),
             ),
         subtitleTracks =
             listOf(
@@ -368,6 +368,6 @@ private fun mockUiStateEpisode() =
                     codec = "srt",
                     selected = false,
                     supported = true,
-                )
+                ),
             ),
     )

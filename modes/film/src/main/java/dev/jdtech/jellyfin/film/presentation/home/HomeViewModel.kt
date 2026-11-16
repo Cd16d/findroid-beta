@@ -192,8 +192,8 @@ constructor(
                 }
                 .awaitAll()
         }
-            // Exclude empty view categories and map remaining views to HomeItem.ViewItem wrappers
-            .filter { (_, latest) -> latest.isNotEmpty() }
+        // Exclude empty view categories and map remaining views to HomeItem.ViewItem wrappers
+        .filter { (_, latest) -> latest.isNotEmpty() }
             .map { (view, latest) -> HomeItem.ViewItem(view.toView(latest)) }
     }
 

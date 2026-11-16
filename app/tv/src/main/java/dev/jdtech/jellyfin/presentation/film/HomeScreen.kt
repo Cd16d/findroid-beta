@@ -352,7 +352,7 @@ private fun HomeScreenLayout(
         if (heroAlpha > 0.001f) {
             Box(
                 modifier =
-                    Modifier.align(Alignment.TopStart).fillMaxSize().alpha(heroAlpha).zIndex(0f)
+                    Modifier.align(Alignment.TopStart).fillMaxSize().alpha(heroAlpha).zIndex(0f),
             ) {
                 HeroPreviewHeader(
                     item = heroItem,
@@ -375,7 +375,7 @@ private fun HomeScreenLayout(
                             bottom = MaterialTheme.spacings.medium,
                         )
                         .alpha(carouselAlpha)
-                        .zIndex(if (isCarouselActive) 2f else 0f)
+                        .zIndex(if (isCarouselActive) 2f else 0f),
             ) {
                 HomeCarousel(
                     items = carouselItems,
@@ -750,7 +750,7 @@ private fun HeroPreviewHeader(
             modifier =
                 Modifier.align(Alignment.TopStart)
                     .padding(start = TvHorizontalKeyline, top = 20.dp)
-                    .fillMaxWidth(0.50f)
+                    .fillMaxWidth(0.50f),
         ) {
             Text(
                 text = categoryLabel,

@@ -41,7 +41,7 @@ fun EntryProviderScope<NavKey>.setupEntries(
             onContinueClick =
                 dropUnlessResumed {
                     navigate(if (permissionApplicable) PermissionRoute else ServersRoute)
-                }
+                },
         )
     }
     entry<PermissionRoute> {

@@ -138,7 +138,7 @@ fun PlayerSidePanel(
                     } else {
                         false
                     }
-                }
+                },
     ) {
         Column(modifier = Modifier.fillMaxHeight()) {
             PanelHeader(panelType = displayedPanelType)
@@ -250,7 +250,7 @@ private fun PlayerSidePanelPreview() {
                 modifier =
                     Modifier.fillMaxHeight()
                         .width(360.dp)
-                        .padding(end = 32.dp, top = 28.dp, bottom = 28.dp)
+                        .padding(end = 32.dp, top = 28.dp, bottom = 28.dp),
             ) {
                 PanelHeader(panelType = PlayerSidePanelType.SETTINGS)
                 Spacer(modifier = Modifier.height(16.dp))

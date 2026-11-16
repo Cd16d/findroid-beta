@@ -34,7 +34,7 @@ fun BaseBadge(
             modifier
                 .defaultMinSize(minWidth = 24.dp, minHeight = 24.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(containerColor)
+                .background(containerColor),
     ) {
         content()
     }

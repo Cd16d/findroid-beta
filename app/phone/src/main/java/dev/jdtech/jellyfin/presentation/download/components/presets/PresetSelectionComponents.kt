@@ -183,7 +183,7 @@ fun PresetCard(
                         isOriginalUnsupported ->
                             MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
                         else -> MaterialTheme.colorScheme.surfaceContainer
-                    }
+                    },
             ),
         border = BorderStroke(borderWidth, borderColor),
     ) {
@@ -199,7 +199,7 @@ fun PresetCard(
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight =
-                                    if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                                    if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                             ),
                         color =
                             when {
@@ -214,7 +214,7 @@ fun PresetCard(
                             text = stringResource(CoreR.string.download_preset_not_supported),
                             style =
                                 MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
                                 ),
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -234,7 +234,7 @@ fun PresetCard(
                         text = sizeBadgeText,
                         style =
                             MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
                             ),
                         color =
                             when {

@@ -123,9 +123,9 @@ private fun QuickConnectScreenLayout(
                                     ),
                                 center = Offset(side1, side2),
                                 radius = if (side1 < side2) side1 else side2,
-                            )
+                            ),
                     )
-                }
+                },
         )
 
         Surface(
@@ -149,7 +149,7 @@ private fun QuickConnectScreenLayout(
                 Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HorizontalDivider(
-                        modifier = Modifier.weight(1f).padding(end = MaterialTheme.spacings.medium)
+                        modifier = Modifier.weight(1f).padding(end = MaterialTheme.spacings.medium),
                     )
                     Text(
                         text = stringResource(SetupR.string.or),
@@ -158,7 +158,7 @@ private fun QuickConnectScreenLayout(
                     )
                     HorizontalDivider(
                         modifier =
-                            Modifier.weight(1f).padding(start = MaterialTheme.spacings.medium)
+                            Modifier.weight(1f).padding(start = MaterialTheme.spacings.medium),
                     )
                 }
                 Spacer(modifier = Modifier.height(MaterialTheme.spacings.default))

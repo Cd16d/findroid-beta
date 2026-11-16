@@ -578,7 +578,7 @@ fun PlayerScreen(
                         }
                         else -> false
                     }
-                }
+                },
     ) {
         val effectiveResizeMode =
             if (isPanelOpen) AspectRatioFrameLayout.RESIZE_MODE_FIT else resizeMode.aspectRatioMode
@@ -628,7 +628,7 @@ fun PlayerScreen(
             Box(
                 modifier =
                     Modifier.size(targetWidth, targetHeight)
-                        .clip(RoundedCornerShape(videoCornerRadius))
+                        .clip(RoundedCornerShape(videoCornerRadius)),
             ) {
                 AndroidView(
                     factory = { ctx ->
@@ -654,10 +654,10 @@ fun PlayerScreen(
                                             CaptionStyleCompat.EDGE_TYPE_OUTLINE,
                                             android.graphics.Color.BLACK,
                                             null,
-                                        )
+                                        ),
                                     )
                                     setFractionalTextSize(
-                                        SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 1.25f
+                                        SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 1.25f,
                                     )
                                 }
                                 setBottomPaddingFraction(0.08f)
@@ -959,7 +959,7 @@ fun VideoPlayerControls(
                                     player.seekToPreviousMediaItem()
                                 } else {
                                     player.seekTo(
-                                        (player.currentPosition - 10_000L).coerceAtLeast(0L)
+                                        (player.currentPosition - 10_000L).coerceAtLeast(0L),
                                     )
                                 }
                             },
@@ -971,7 +971,7 @@ fun VideoPlayerControls(
                             painterResource(
                                 id =
                                     if (isPlaying) CoreR.drawable.ic_pause
-                                    else CoreR.drawable.ic_play
+                                    else CoreR.drawable.ic_play,
                             ),
                         isPrimaryAction = true,
                         onClick = { if (isPlaying) player.pause() else player.play() },
@@ -989,7 +989,7 @@ fun VideoPlayerControls(
                                     scaleIn(initialScale = 0.92f, animationSpec = tween(220)))
                                 .togetherWith(
                                     fadeOut(tween(150)) +
-                                        scaleOut(targetScale = 0.92f, animationSpec = tween(150))
+                                        scaleOut(targetScale = 0.92f, animationSpec = tween(150)),
                                 )
                                 .using(
                                     SizeTransform(
@@ -1000,7 +1000,7 @@ fun VideoPlayerControls(
                                                 easing = FastOutSlowInEasing,
                                             )
                                         },
-                                    )
+                                    ),
                                 )
                         },
                         contentAlignment = Alignment.Center,
@@ -1027,7 +1027,7 @@ fun VideoPlayerControls(
                                         val targetPos =
                                             if (player.duration > 0L) {
                                                 (player.currentPosition + 10_000L).coerceAtMost(
-                                                    player.duration
+                                                    player.duration,
                                                 )
                                             } else {
                                                 player.currentPosition + 10_000L
@@ -1053,7 +1053,7 @@ fun VideoPlayerControls(
                             painterResource(
                                 id =
                                     if (isFavorite) CoreR.drawable.ic_heart_filled
-                                    else CoreR.drawable.ic_heart
+                                    else CoreR.drawable.ic_heart,
                             ),
                         onClick = onToggleFavorite,
                         modifier = mediaControlFocusModifier,
@@ -1099,14 +1099,14 @@ fun VideoPlayerControls(
                     }
 
                     CompositionLocalProvider(
-                        LocalBringIntoViewSpec provides NoOpBringIntoViewSpec
+                        LocalBringIntoViewSpec provides NoOpBringIntoViewSpec,
                     ) {
                         Column(
                             modifier =
                                 Modifier.fillMaxWidth().onFocusChanged {
                                     pivotController.isRowFocused = it.hasFocus
                                     isShelfFocused = it.hasFocus
-                                }
+                                },
                         ) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Row(
@@ -1211,7 +1211,7 @@ fun VideoPlayerControls(
                                                         focusedShelfIndex = goToSeriesIndex
                                                         state.showControls(seconds = Int.MAX_VALUE)
                                                         pivotController.onItemFocused(
-                                                            goToSeriesIndex
+                                                            goToSeriesIndex,
                                                         )
                                                     }
                                                 },
@@ -1252,7 +1252,7 @@ private fun ShelfCardContainer(
                 Border(
                     BorderStroke(2.dp, Color.White),
                     shape = RoundedCornerShape(12.dp),
-                )
+                ),
         ),
     sublabelColor: Color = MaterialTheme.colorScheme.primary,
     onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
@@ -1270,7 +1270,7 @@ private fun ShelfCardContainer(
                     .height(102.dp)
                     .then(
                         if (isShelfTarget) Modifier.focusRequester(shelfItemFocusRequester)
-                        else Modifier
+                        else Modifier,
                     )
                     .focusProperties { up = upFocusRequester }
                     .onPreviewKeyEvent(onPreviewKeyEvent)
@@ -1403,7 +1403,7 @@ private fun EpisodeShelfItemCard(
                                 .height(4.dp)
                                 .width(progressWidth)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(MaterialTheme.colorScheme.primary)
+                                .background(MaterialTheme.colorScheme.primary),
                     )
                 }
             }

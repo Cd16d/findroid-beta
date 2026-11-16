@@ -177,11 +177,11 @@ fun SleepTimerPicker(
                                     text =
                                         if (isMovie) {
                                             stringResource(
-                                                id = PlayerR.string.sleep_timer_end_of_video
+                                                id = PlayerR.string.sleep_timer_end_of_video,
                                             )
                                         } else {
                                             stringResource(
-                                                id = PlayerR.string.sleep_timer_end_of_episode
+                                                id = PlayerR.string.sleep_timer_end_of_episode,
                                             )
                                         },
                                     style = MaterialTheme.typography.labelMedium,
@@ -256,7 +256,7 @@ fun SleepTimerPicker(
                                 painterResource(
                                     id =
                                         if (isActive) CoreR.drawable.ic_x
-                                        else CoreR.drawable.ic_play
+                                        else CoreR.drawable.ic_play,
                                 ),
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),

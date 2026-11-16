@@ -135,7 +135,7 @@ fun VolumeBrightnessOverlay(
             // Liquid fill from bottom to top
             Box(
                 modifier =
-                    Modifier.fillMaxWidth().fillMaxHeight(fillPercent).background(Color.White)
+                    Modifier.fillMaxWidth().fillMaxHeight(fillPercent).background(Color.White),
             )
 
             // Numeric indicator at top (0 to 100, without percentage sign)
@@ -223,7 +223,7 @@ fun DoubleTapSeekOverlay(
                         painterResource(
                             id =
                                 if (isForward) CoreR.drawable.ic_fast_forward
-                                else CoreR.drawable.ic_rewind
+                                else CoreR.drawable.ic_rewind,
                         ),
                     contentDescription = null,
                     modifier = Modifier.size(32.dp),
@@ -488,7 +488,7 @@ fun SlideToUnlock(
                             onHorizontalDrag = { _, dragAmount ->
                                 coroutineScope.launch {
                                     dragOffset.snapTo(
-                                        (dragOffset.value + dragAmount).coerceIn(0f, maxDragPx)
+                                        (dragOffset.value + dragAmount).coerceIn(0f, maxDragPx),
                                     )
                                 }
                                 currentOnKeepAlive()
