@@ -5,6 +5,7 @@ rootProject.name = "findroid"
 include(":app:phone")
 include(":app:tv")
 include(":core")
+include(":core:ui")
 include(":data")
 include(":player:cast")
 include(":player:core")

@@ -54,6 +54,7 @@ import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.asString
 import dev.jdtech.jellyfin.presentation.components.Direction
 import dev.jdtech.jellyfin.presentation.components.ItemCard
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme

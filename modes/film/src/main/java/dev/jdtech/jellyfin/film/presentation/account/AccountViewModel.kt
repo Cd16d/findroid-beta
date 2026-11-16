@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.film.presentation.home.HomeViewModel
 import dev.jdtech.jellyfin.models.getProfileImageModel
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -75,6 +76,7 @@ constructor(
 
     private fun switchUser(userId: UUID) {
         viewModelScope.launch {
+            HomeViewModel.clearCache()
             repository.setCurrentUser(userId)
             val imageTag = repository.refreshUser(userId)
             downloader.downloadUserImage(userId, imageTag)

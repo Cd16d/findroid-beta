@@ -1288,13 +1288,17 @@ class JellyfinRepositoryImpl(
     override suspend fun setCurrentUser(userId: UUID) {
         val server = getCurrentServer() ?: return
         val user = database.getUser(userId) ?: return
-        server.currentUserId = user.id
-        database.updateServer(server)
 
         jellyfinApi.apply {
             api.update(accessToken = user.accessToken)
             this.userId = user.id
         }
+
+        cachedSuggestions = null
+        cachedSuggestionsUserId = null
+
+        server.currentUserId = user.id
+        database.updateServer(server)
     }
 
     override suspend fun canTranscode(): Boolean =

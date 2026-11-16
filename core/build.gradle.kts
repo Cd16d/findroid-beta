@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -22,20 +21,15 @@ android {
 
     flavorDimensions += "variant"
     productFlavors { register("libre") }
-
-    buildFeatures { compose = true }
 }
 
 dependencies {
     implementation(projects.data)
     implementation(projects.settings)
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.core)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
-    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.paging)
@@ -50,5 +44,4 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.slf4j.api)
     implementation(libs.slf4j.android)
-    implementation(libs.blurhash)
 }

@@ -28,6 +28,7 @@ android {
 
 dependencies {
     implementation(projects.core)
+    implementation(projects.core.ui)
     implementation(projects.data)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.timber)
