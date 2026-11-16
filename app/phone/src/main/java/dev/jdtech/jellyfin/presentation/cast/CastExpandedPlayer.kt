@@ -184,6 +184,8 @@ data class CastPlayerActions(
     val onSubtitleTrackSelected: (Track?) -> Unit,
     val onDeviceClick: () -> Unit,
     val onClose: () -> Unit,
+    val onDragCollapse: ((Float) -> Unit)? = null,
+    val onDragCollapseEnd: (() -> Unit)? = null,
 )
 
 /**
@@ -191,7 +193,7 @@ data class CastPlayerActions(
  * sheets and expanded side-sheets.
  */
 @Composable
-private fun CastExpandedPlayerLayout(
+internal fun CastExpandedPlayerLayout(
     isExpandedScreen: Boolean,
     uiState: CastPlayerViewModel.UiState,
     actions: CastPlayerActions,
@@ -278,6 +280,8 @@ private fun CastExpandedPlayerLayout(
                         onClose = actions.onClose,
                         onDeviceClick = actions.onDeviceClick,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onDragCollapse = actions.onDragCollapse,
+                        onDragCollapseEnd = actions.onDragCollapseEnd,
                     )
 
                     CastExpandedPlayerBottomSection(
@@ -306,6 +310,8 @@ private fun CastExpandedPlayerLayout(
                     onClose = actions.onClose,
                     onDeviceClick = actions.onDeviceClick,
                     modifier = Modifier.weight(1f),
+                    onDragCollapse = actions.onDragCollapse,
+                    onDragCollapseEnd = actions.onDragCollapseEnd,
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

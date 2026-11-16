@@ -88,6 +88,7 @@ import dev.jdtech.jellyfin.presentation.cast.CastExpandedPlayer
 import dev.jdtech.jellyfin.presentation.cast.CastMiniPlayer
 import dev.jdtech.jellyfin.presentation.cast.components.CastBottomSheet
 import dev.jdtech.jellyfin.presentation.cast.components.CastButton
+import dev.jdtech.jellyfin.presentation.cast.components.CastPlayerContainer
 import dev.jdtech.jellyfin.presentation.download.DownloadsScreen
 import dev.jdtech.jellyfin.presentation.download.ShowDownloadsScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
@@ -343,10 +344,9 @@ private fun MainNavigation(
     var castPlayerHeight by remember { mutableStateOf(MaterialTheme.spacings.default) }
     var showCastSheet by remember { mutableStateOf(false) }
     var showCastExpandedPlayer by remember { mutableStateOf(false) }
-    var isDismissingCastExpandedPlayer by remember { mutableStateOf(false) }
 
-    LaunchedEffect(showCastExpandedPlayer, isDismissingCastExpandedPlayer) {
-        mainViewModel.setCastPlayerOpen(showCastExpandedPlayer && !isDismissingCastExpandedPlayer)
+    LaunchedEffect(showCastExpandedPlayer) {
+        mainViewModel.setCastPlayerOpen(showCastExpandedPlayer)
     }
 
     val connectionState by castSessionViewModel.connectionState.collectAsStateWithLifecycle()
@@ -365,21 +365,32 @@ private fun MainNavigation(
     val showCastButton =
         isCastRoute && !isOfflineMode && castSessionViewModel.sessionManager.isSupported
 
+    val showCastPlayerPhone by
+        remember(showCastButton, connectionState, isExpandedScreen) {
+            derivedStateOf {
+                showCastButton &&
+                    connectionState == CastConnectionState.CONNECTED &&
+                    !isExpandedScreen
+            }
+        }
+
     val showCastMiniPlayer by
         remember(
             showCastButton,
             connectionState,
             showCastExpandedPlayer,
-            isDismissingCastExpandedPlayer,
+            isExpandedScreen,
         ) {
             derivedStateOf {
                 val connected = showCastButton && connectionState == CastConnectionState.CONNECTED
-                connected && (!showCastExpandedPlayer || isDismissingCastExpandedPlayer)
+                connected && isExpandedScreen && !showCastExpandedPlayer
             }
         }
 
-    LaunchedEffect(showCastMiniPlayer) {
-        if (!showCastMiniPlayer) castPlayerHeight = MaterialTheme.spacings.default
+    LaunchedEffect(showCastMiniPlayer, showCastPlayerPhone) {
+        if (!showCastMiniPlayer && !showCastPlayerPhone) {
+            castPlayerHeight = MaterialTheme.spacings.default
+        }
     }
 
     val nestedScrollConnection =
@@ -416,165 +427,163 @@ private fun MainNavigation(
     }
 
     CompositionLocalProvider(LocalCastPlayerHeight provides castPlayerHeight) {
-        AccountMenuWrapper(
-            isMenuOpen = isAccountMenuOpen,
-            onCloseMenu = { isAccountMenuOpen = false },
-            onNavigateToSettings = {
-                navigator.navigate(SettingsRoute(indexes = listOf(CoreR.string.title_settings)))
-                isAccountMenuOpen = false
-            },
-            onNavigateToAbout = {
-                navigator.navigate(AboutRoute)
-                isAccountMenuOpen = false
-            },
-            onAddUser = {
-                navigator.navigate(LoginRoute())
-                isAccountMenuOpen = false
-            },
-            onManageAccounts = {
-                navigator.navigate(UsersRoute)
-                isAccountMenuOpen = false
-            },
-            onSwitchUser = {
-                navigator.navigateHome()
-                isAccountMenuOpen = false
-            },
-        ) {
-            NavigationSuiteScaffold(
-                navigationItems = {
-                    val haptics = LocalHapticFeedback.current
-                    navigationItems.forEach { item ->
-                        NavigationSuiteItem(
-                            selected = topLevelRoute == item.route,
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (topLevelRoute == item.route) {
-                                    if (navigationState.currentBackStack().size > 1) {
-                                        navigationState.currentBackStack().truncateTo(1)
-                                    }
-                                    if (item.route == SearchRoute) {
-                                        searchViewModel.onAction(SearchAction.OnTabReselected)
-                                    }
-                                } else {
-                                    navigator.navigate(item.route)
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(item.icon),
-                                    contentDescription = stringResource(item.title),
-                                )
-                            },
-                            enabled = item.enabled,
-                            label = { Text(text = stringResource(item.title)) },
-                            navigationSuiteType = customNavSuiteType,
-                        )
-                    }
+        Box(modifier = Modifier.fillMaxSize()) {
+            AccountMenuWrapper(
+                isMenuOpen = isAccountMenuOpen,
+                onCloseMenu = { isAccountMenuOpen = false },
+                onNavigateToSettings = {
+                    navigator.navigate(SettingsRoute(indexes = listOf(CoreR.string.title_settings)))
+                    isAccountMenuOpen = false
                 },
-                navigationItemVerticalArrangement = Arrangement.Center,
-                navigationSuiteType = customNavSuiteType,
-                state = navigationSuiteScaffoldState,
+                onNavigateToAbout = {
+                    navigator.navigate(AboutRoute)
+                    isAccountMenuOpen = false
+                },
+                onAddUser = {
+                    navigator.navigate(LoginRoute())
+                    isAccountMenuOpen = false
+                },
+                onManageAccounts = {
+                    navigator.navigate(UsersRoute)
+                    isAccountMenuOpen = false
+                },
+                onSwitchUser = {
+                    navigator.navigateHome()
+                    isAccountMenuOpen = false
+                },
             ) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(modifier = Modifier.weight(1f).nestedScroll(nestedScrollConnection)) {
-                        NavDisplay(
-                            entries =
-                                navigationState.toDecoratedEntries(entryDecorators, entryProvider),
-                            onBack = { navigator.goBack() },
-                            transitionSpec = { GLOBAL_TRANSITION_SPEC },
-                            popTransitionSpec = { GLOBAL_TRANSITION_SPEC },
-                            predictivePopTransitionSpec = { _ -> GLOBAL_TRANSITION_SPEC },
-                        )
+                NavigationSuiteScaffold(
+                    navigationItems = {
+                        val haptics = LocalHapticFeedback.current
+                        navigationItems.forEach { item ->
+                            NavigationSuiteItem(
+                                selected = topLevelRoute == item.route,
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (topLevelRoute == item.route) {
+                                        if (navigationState.currentBackStack().size > 1) {
+                                            navigationState.currentBackStack().truncateTo(1)
+                                        }
+                                        if (item.route == SearchRoute) {
+                                            searchViewModel.onAction(SearchAction.OnTabReselected)
+                                        }
+                                    } else {
+                                        navigator.navigate(item.route)
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(item.icon),
+                                        contentDescription = stringResource(item.title),
+                                    )
+                                },
+                                enabled = item.enabled,
+                                label = { Text(text = stringResource(item.title)) },
+                                navigationSuiteType = customNavSuiteType,
+                            )
+                        }
+                    },
+                    navigationItemVerticalArrangement = Arrangement.Center,
+                    navigationSuiteType = customNavSuiteType,
+                    state = navigationSuiteScaffoldState,
+                ) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        Box(modifier = Modifier.weight(1f).nestedScroll(nestedScrollConnection)) {
+                            NavDisplay(
+                                entries =
+                                    navigationState.toDecoratedEntries(
+                                        entryDecorators,
+                                        entryProvider,
+                                    ),
+                                onBack = { navigator.goBack() },
+                                transitionSpec = { GLOBAL_TRANSITION_SPEC },
+                                popTransitionSpec = { GLOBAL_TRANSITION_SPEC },
+                                predictivePopTransitionSpec = { _ -> GLOBAL_TRANSITION_SPEC },
+                            )
 
-                        if (showCastButton && connectionState != CastConnectionState.CONNECTED) {
-                            CastButton(
-                                expanded = castExpanded,
-                                onClick = { showCastSheet = true },
-                                modifier = Modifier.align(Alignment.BottomEnd),
-                                handleBottomInsets = !showNavSuite,
+                            if (
+                                showCastButton && connectionState != CastConnectionState.CONNECTED
+                            ) {
+                                CastButton(
+                                    expanded = castExpanded,
+                                    onClick = { showCastSheet = true },
+                                    modifier = Modifier.align(Alignment.BottomEnd),
+                                    handleBottomInsets = !showNavSuite,
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = showCastExpandedPlayer && isExpandedScreen,
+                            enter =
+                                slideInHorizontally(initialOffsetX = { it }) +
+                                    expandHorizontally(expandFrom = Alignment.End) +
+                                    fadeIn(),
+                            exit =
+                                slideOutHorizontally(targetOffsetX = { it }) +
+                                    shrinkHorizontally(shrinkTowards = Alignment.End) +
+                                    fadeOut(),
+                        ) {
+                            CastExpandedPlayer(
+                                onDeviceClick = { showCastSheet = true },
+                                onClose = { showCastExpandedPlayer = false },
                             )
                         }
                     }
 
-                    AnimatedVisibility(
-                        visible = showCastExpandedPlayer && isExpandedScreen,
-                        enter =
-                            slideInHorizontally(initialOffsetX = { it }) +
-                                expandHorizontally(expandFrom = Alignment.End) +
-                                fadeIn(),
-                        exit =
-                            slideOutHorizontally(targetOffsetX = { it }) +
-                                shrinkHorizontally(shrinkTowards = Alignment.End) +
-                                fadeOut(),
-                    ) {
-                        CastExpandedPlayer(
-                            onDeviceClick = { showCastSheet = true },
-                            onClose = {
-                                showCastExpandedPlayer = false
-                                isDismissingCastExpandedPlayer = false
-                            },
-                        )
-                    }
-                }
-
-                // Cast Mini Player
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment =
-                        if (isMediumScreen) Alignment.BottomEnd else Alignment.BottomCenter,
-                ) {
-                    AnimatedVisibility(
-                        visible = showCastMiniPlayer,
-                        enter =
-                            (if (isExpandedScreen) {
-                                slideInHorizontally(initialOffsetX = { it })
-                            } else {
-                                slideInVertically(initialOffsetY = { it })
-                            }) + fadeIn(),
-                        exit =
-                            (if (isExpandedScreen) {
-                                slideOutHorizontally(targetOffsetX = { it })
-                            } else {
-                                slideOutVertically(targetOffsetY = { it })
-                            }) + fadeOut(),
-                    ) {
-                        CastMiniPlayer(
-                            onClick = {
-                                isDismissingCastExpandedPlayer = false
-                                showCastExpandedPlayer = true
-                            },
-                            modifier =
-                                Modifier.onSizeChanged { size ->
-                                    val measuredHeight = with(density) { size.height.toDp() }
-                                    castPlayerHeight =
-                                        if (!isMediumScreen) {
-                                            measuredHeight - safePadding.bottom
-                                        } else {
-                                            MaterialTheme.spacings.default
-                                        }
-                                },
-                            handleBottomInsets = !showNavSuite,
-                        )
+                    // Tablet Cast Mini Player
+                    if (isExpandedScreen) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.BottomEnd,
+                        ) {
+                            AnimatedVisibility(
+                                visible = showCastMiniPlayer,
+                                enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                                exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+                            ) {
+                                CastMiniPlayer(
+                                    onClick = { showCastExpandedPlayer = true },
+                                    modifier =
+                                        Modifier.onSizeChanged { _ ->
+                                            castPlayerHeight = MaterialTheme.spacings.default
+                                        },
+                                    handleBottomInsets = !showNavSuite,
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        if (showCastSheet) {
-            CastBottomSheet(onDismissRequest = { showCastSheet = false })
-        }
+            if (showCastSheet) {
+                CastBottomSheet(onDismissRequest = { showCastSheet = false })
+            }
 
-        // Cast Expanded Player
-        if (showCastExpandedPlayer && !isExpandedScreen) {
-            CastExpandedPlayer(
-                onDeviceClick = { showCastSheet = true },
-                onClose = {
-                    showCastExpandedPlayer = false
-                    isDismissingCastExpandedPlayer = false
-                },
-                onDismissStarted = { isDismissingCastExpandedPlayer = true },
-                onDismissCanceled = { isDismissingCastExpandedPlayer = false },
-            )
+            // Phone Cast Player (Morphing Shared Container Transform)
+            if (!isExpandedScreen) {
+                AnimatedVisibility(
+                    visible = showCastPlayerPhone,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                ) {
+                    CastPlayerContainer(
+                        isExpanded = showCastExpandedPlayer,
+                        onExpandedChange = { expanded -> showCastExpandedPlayer = expanded },
+                        onDeviceClick = { showCastSheet = true },
+                        showNavSuite = showNavSuite,
+                        isNavRail = isNavRail,
+                        onHeightChanged = { measuredHeight ->
+                            castPlayerHeight =
+                                if (!isMediumScreen) {
+                                    measuredHeight - safePadding.bottom
+                                } else {
+                                    MaterialTheme.spacings.default
+                                }
+                        },
+                    )
+                }
+            }
         }
     }
 }

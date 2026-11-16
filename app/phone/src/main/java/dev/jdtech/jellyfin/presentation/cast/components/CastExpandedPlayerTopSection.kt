@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -52,6 +54,8 @@ fun PlayerTopSection(
     onClose: () -> Unit,
     onDeviceClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onDragCollapse: ((Float) -> Unit)? = null,
+    onDragCollapseEnd: (() -> Unit)? = null,
 ) {
     val deviceName = uiState.connectedDevice?.name
     val itemTitle =
@@ -78,8 +82,22 @@ fun PlayerTopSection(
             16f / 10f
         }
 
+    val dragModifier =
+        if (onDragCollapse != null) {
+            Modifier.pointerInput(isScrubbing) {
+                if (!isScrubbing) {
+                    detectVerticalDragGestures(
+                        onDragEnd = { onDragCollapseEnd?.invoke() },
+                        onVerticalDrag = { _, dragAmount -> onDragCollapse(dragAmount) },
+                    )
+                }
+            }
+        } else {
+            Modifier
+        }
+
     Column(
-        modifier = modifier,
+        modifier = modifier.then(dragModifier),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CastExpandedPlayerHeader(

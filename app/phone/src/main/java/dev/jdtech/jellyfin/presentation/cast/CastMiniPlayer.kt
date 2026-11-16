@@ -121,57 +121,75 @@ fun CastMiniPlayerLayout(
                 ),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
     ) {
-        Box {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.small),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
-            ) {
-                if (uiState.fileLoaded) {
-                    MiniPlayerThumbnail(
-                        poster = uiState.currentItemPoster,
-                        defaultAspectRatio = uiState.defaultAspectRatio,
-                        isMediumScreen = isMediumScreen,
-                    )
+        MiniPlayerContent(
+            connectedDevice = connectedDevice,
+            uiState = uiState,
+            playbackState = playbackState,
+            onTogglePlayback = onTogglePlayback,
+            isMediumScreen = isMediumScreen,
+        )
+    }
+}
 
-                    MiniPlayerMediaInfo(
-                        titleInfo = uiState.currentItemTitle,
-                        deviceName = connectedDevice.name,
-                        modifier = Modifier.weight(1f),
-                    )
+@Composable
+fun MiniPlayerContent(
+    connectedDevice: Device,
+    uiState: CastPlayerViewModel.UiState,
+    playbackState: CastPlayerState,
+    onTogglePlayback: () -> Unit,
+    modifier: Modifier = Modifier,
+    isMediumScreen: Boolean = false,
+) {
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+        ) {
+            if (uiState.fileLoaded) {
+                MiniPlayerThumbnail(
+                    poster = uiState.currentItemPoster,
+                    defaultAspectRatio = uiState.defaultAspectRatio,
+                    isMediumScreen = isMediumScreen,
+                )
 
-                    val isPlaying = playbackState.status == CastPlaybackStatus.PLAYING
-                    MiniPlayerPlayPauseButton(
-                        isPlaying = isPlaying,
-                        onTogglePlayback = onTogglePlayback,
-                    )
-                } else {
-                    MiniPlayerIdleInfo(
-                        deviceName = connectedDevice.name,
-                        modifier = Modifier.weight(1f),
-                    )
+                MiniPlayerMediaInfo(
+                    titleInfo = uiState.currentItemTitle,
+                    deviceName = connectedDevice.name,
+                    modifier = Modifier.weight(1f),
+                )
 
-                    Box(
-                        modifier = Modifier.size(48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_cast),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                val isPlaying = playbackState.status == CastPlaybackStatus.PLAYING
+                MiniPlayerPlayPauseButton(
+                    isPlaying = isPlaying,
+                    onTogglePlayback = onTogglePlayback,
+                )
+            } else {
+                MiniPlayerIdleInfo(
+                    deviceName = connectedDevice.name,
+                    modifier = Modifier.weight(1f),
+                )
+
+                Box(
+                    modifier = Modifier.size(48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(CoreR.drawable.ic_cast),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
-
-            MiniPlayerProgressBar(
-                status = playbackState.status,
-                currentPosition = playbackState.currentPosition,
-                duration = playbackState.duration,
-                fileLoaded = uiState.fileLoaded,
-                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
-            )
         }
+
+        MiniPlayerProgressBar(
+            status = playbackState.status,
+            currentPosition = playbackState.currentPosition,
+            duration = playbackState.duration,
+            fileLoaded = uiState.fileLoaded,
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+        )
     }
 }
 
