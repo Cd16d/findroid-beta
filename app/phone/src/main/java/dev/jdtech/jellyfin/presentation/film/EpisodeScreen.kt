@@ -365,9 +365,7 @@ private fun EpisodeScreenLayout(
 
         ItemTopBar(
             hasBackButton = true,
-            hasHomeButton = true,
             onBackClick = { onAction(EpisodeAction.OnBackClick) },
-            onHomeClick = { onAction(EpisodeAction.OnHomeClick) },
         ) {
             Spacer(modifier = Modifier.width(4.dp))
             state.episode?.let { episode ->
