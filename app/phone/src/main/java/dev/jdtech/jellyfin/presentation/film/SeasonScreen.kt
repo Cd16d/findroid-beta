@@ -421,9 +421,7 @@ private fun SeasonScreenLayout(
 
         ItemTopBar(
             hasBackButton = true,
-            hasHomeButton = true,
             onBackClick = { onAction(SeasonAction.OnBackClick) },
-            onHomeClick = { onAction(SeasonAction.OnHomeClick) },
         ) {
             Spacer(modifier = Modifier.width(4.dp))
             state.season?.let { season ->

@@ -80,6 +80,7 @@ import dev.jdtech.jellyfin.models.VolumeKeyEvent
 import dev.jdtech.jellyfin.navigation.navigateOrReuse
 import dev.jdtech.jellyfin.navigation.resumedAction
 import dev.jdtech.jellyfin.navigation.setupEntries
+import dev.jdtech.jellyfin.navigation.truncateTo
 import dev.jdtech.jellyfin.player.cast.models.CastConnectionState
 import dev.jdtech.jellyfin.player.cast.presentation.CastSessionViewModel
 import dev.jdtech.jellyfin.presentation.account.AccountMenuWrapper
@@ -266,28 +267,6 @@ private fun MainNavigation(
             false -> listOf(homeTab, mediaTab, searchTab, downloadsTab)
             true -> listOf(homeTab, downloadsTab)
         }
-    val tabRoutes = navigationItems.map { it.route }
-
-    val topLevelRoute = navigationState.topLevelRoute
-    val atTabRoot = navigationState.currentBackStack().last() == topLevelRoute
-    val showBottomBar = atTabRoot && topLevelRoute in tabRoutes
-
-    val safePadding =
-        rememberSafePadding(
-            handleStartInsets = false,
-            handleBottomInsets = !showBottomBar,
-        )
-
-    val navigationSuiteScaffoldState = rememberNavigationSuiteScaffoldState()
-
-    LaunchedEffect(showBottomBar) {
-        if (showBottomBar) {
-            navigationSuiteScaffoldState.show()
-        } else {
-            navigationSuiteScaffoldState.hide()
-        }
-    }
-
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val isExpandedScreen =
         windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
@@ -318,6 +297,46 @@ private fun MainNavigation(
             }
         }
 
+    val isNavRail = customNavSuiteType == NavigationSuiteType.WideNavigationRailCollapsed
+
+    val tabRoutes = navigationItems.map { it.route }
+    val topLevelRoute = navigationState.topLevelRoute
+    val currentRoute = navigationState.currentBackStack().lastOrNull()
+    val isTabRoot = currentRoute == topLevelRoute && topLevelRoute in tabRoutes
+    val isExcluded = isExcludedFromNavigation(currentRoute)
+
+    var isBottomBarVisible by remember { mutableStateOf(true) }
+    var castExpanded by remember { mutableStateOf(true) }
+
+    LaunchedEffect(currentRoute) {
+        isBottomBarVisible = true
+        castExpanded = true
+    }
+
+    val showNavSuite =
+        when {
+            isExcluded -> false
+            isNavRail -> true
+            isTabRoot -> true
+            else -> isBottomBarVisible
+        }
+
+    val safePadding =
+        rememberSafePadding(
+            handleStartInsets = false,
+            handleBottomInsets = !showNavSuite,
+        )
+
+    val navigationSuiteScaffoldState = rememberNavigationSuiteScaffoldState()
+
+    LaunchedEffect(showNavSuite) {
+        if (showNavSuite) {
+            navigationSuiteScaffoldState.show()
+        } else {
+            navigationSuiteScaffoldState.hide()
+        }
+    }
+
     var isAccountMenuOpen by remember { mutableStateOf(false) }
 
     val density = LocalDensity.current
@@ -325,14 +344,12 @@ private fun MainNavigation(
     var showCastSheet by remember { mutableStateOf(false) }
     var showCastExpandedPlayer by remember { mutableStateOf(false) }
     var isDismissingCastExpandedPlayer by remember { mutableStateOf(false) }
-    var castExpanded by remember { mutableStateOf(true) }
 
     LaunchedEffect(showCastExpandedPlayer, isDismissingCastExpandedPlayer) {
         mainViewModel.setCastPlayerOpen(showCastExpandedPlayer && !isDismissingCastExpandedPlayer)
     }
 
     val connectionState by castSessionViewModel.connectionState.collectAsStateWithLifecycle()
-    val currentRoute = navigationState.currentBackStack().lastOrNull()
     val isCastRoute =
         when (currentRoute) {
             is HomeRoute,
@@ -365,22 +382,29 @@ private fun MainNavigation(
         if (!showCastMiniPlayer) castPlayerHeight = MaterialTheme.spacings.default
     }
 
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource,
-            ): Offset {
-                if (consumed.y < -15f) {
-                    castExpanded = false
-                } else if (consumed.y > 15f) {
-                    castExpanded = true
+    val nestedScrollConnection =
+        remember(isNavRail, isTabRoot) {
+            object : NestedScrollConnection {
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource,
+                ): Offset {
+                    if (consumed.y < -15f) {
+                        castExpanded = false
+                        if (!isNavRail && !isTabRoot) {
+                            isBottomBarVisible = false
+                        }
+                    } else if (consumed.y > 15f || available.y > 15f) {
+                        castExpanded = true
+                        if (!isNavRail) {
+                            isBottomBarVisible = true
+                        }
+                    }
+                    return Offset.Zero
                 }
-                return Offset.Zero
             }
         }
-    }
 
     val entryProvider = entryProvider {
         mainEntries(
@@ -425,6 +449,9 @@ private fun MainNavigation(
                             onClick = {
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (topLevelRoute == item.route) {
+                                    if (navigationState.currentBackStack().size > 1) {
+                                        navigationState.currentBackStack().truncateTo(1)
+                                    }
                                     if (item.route == SearchRoute) {
                                         searchViewModel.onAction(SearchAction.OnTabReselected)
                                     }
@@ -464,7 +491,7 @@ private fun MainNavigation(
                                 expanded = castExpanded,
                                 onClick = { showCastSheet = true },
                                 modifier = Modifier.align(Alignment.BottomEnd),
-                                handleBottomInsets = !showBottomBar,
+                                handleBottomInsets = !showNavSuite,
                             )
                         }
                     }
@@ -526,7 +553,7 @@ private fun MainNavigation(
                                             MaterialTheme.spacings.default
                                         }
                                 },
-                            handleBottomInsets = !showBottomBar,
+                            handleBottomInsets = !showNavSuite,
                         )
                     }
                 }
@@ -847,3 +874,24 @@ private fun navigateToItem(navigator: Navigator, item: FindroidItem) {
         else -> Unit
     }
 }
+
+private fun isExcludedFromNavigation(route: NavKey?): Boolean =
+    when (route) {
+        // Settings screens
+        is SettingsRoute,
+        is SettingsFileEditRoute,
+        is AboutRoute,
+        is DeviceRoute,
+        is SmartDownloadsRoute,
+        is DownloadPresetsRoute,
+        // Initial setup and server access screens
+        is WelcomeRoute,
+        is PermissionRoute,
+        is ServersRoute,
+        is AddServerRoute,
+        is ServerAddressesRoute,
+        is UsersRoute,
+        is LoginRoute -> true
+
+        else -> false
+    }

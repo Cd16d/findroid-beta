@@ -337,9 +337,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
 
         ItemTopBar(
             hasBackButton = true,
-            hasHomeButton = true,
             onBackClick = { onAction(ShowAction.OnBackClick) },
-            onHomeClick = { onAction(ShowAction.OnHomeClick) },
         )
     }
 }
