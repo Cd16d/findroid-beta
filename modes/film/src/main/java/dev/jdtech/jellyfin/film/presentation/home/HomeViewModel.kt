@@ -18,8 +18,10 @@ import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.toView
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -52,6 +54,7 @@ constructor(
     val state = _state.asStateFlow()
 
     private var activeUserId: UUID? = cachedUserId
+    private var loadDataJob: Job? = null
 
     private val uuidSuggestions = UUID.fromString("31e47044-9b79-4bb0-99d0-0e477ed65420")
     private val uuidContinueWatching = UUID.fromString("44845958-8326-4e83-beb4-c4f42e9eeb95")
@@ -90,6 +93,7 @@ constructor(
                                 activeUserId,
                                 newUserId,
                             )
+                            loadDataJob?.cancel()
                             activeUserId = newUserId
                             cachedHomeState = null
                             cachedUserId = newUserId
@@ -111,64 +115,85 @@ constructor(
 
     fun loadData(forceRefreshSuggestions: Boolean = false) {
         Timber.i("Loading data")
-        viewModelScope.launch(Dispatchers.Default) {
-            val hideEpisodeSpoilers = appPreferences.getValue(appPreferences.hideEpisodeSpoilers)
-            val showLogos = appPreferences.getValue(appPreferences.tvShowLogos)
-            _state.update {
-                it.copy(
-                    isLoading = true,
-                    error = null,
-                    hideEpisodeSpoilers = hideEpisodeSpoilers,
-                    showLogos = showLogos,
-                )
-            }
-            try {
-                appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
-                    val server = database.getServer(serverId)
-                    val user = database.getServerCurrentUser(serverId)
-                    activeUserId = user?.id
-                    val baseUrl = repository.getBaseUrl()
-                    val imageUrl = user?.getProfileImageModel(context, baseUrl)
-                    _state.update {
-                        it.copy(
-                            server = server ?: it.server,
-                            userName = user?.name ?: "",
-                            userImageUrl = imageUrl,
-                        )
-                    }
+        loadDataJob?.cancel()
+        loadDataJob =
+            viewModelScope.launch(Dispatchers.Default) {
+                val hideEpisodeSpoilers =
+                    appPreferences.getValue(appPreferences.hideEpisodeSpoilers)
+                val showLogos = appPreferences.getValue(appPreferences.tvShowLogos)
+                _state.update {
+                    it.copy(
+                        isLoading = true,
+                        error = null,
+                        hideEpisodeSpoilers = hideEpisodeSpoilers,
+                        showLogos = showLogos,
+                    )
                 }
-
-                coroutineScope {
-                    // Concurrently fetch each configured home screen section
-                    val suggestionsDeferred = async { fetchSuggestions(forceRefreshSuggestions) }
-                    val resumeDeferred = async { fetchResumeItems() }
-                    val nextUpDeferred = async { fetchNextUpItems() }
-                    val viewsDeferred = async { fetchViews() }
-
-                    val suggestions = suggestionsDeferred.await()
-                    val resume = resumeDeferred.await()
-                    val nextUp = nextUpDeferred.await()
-                    val views = viewsDeferred.await()
-
-                    // Map fetched section items into the unified HomeState
-                    _state.update {
-                        it.copy(
-                            suggestionsSection = suggestions,
-                            resumeSection = resume,
-                            nextUpSection = nextUp,
-                            views = views,
-                            isLoading = false,
-                            error = null,
-                        )
+                try {
+                    var targetUserId: UUID? = null
+                    appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
+                        val server = database.getServer(serverId)
+                        val user = database.getServerCurrentUser(serverId)
+                        targetUserId = user?.id
+                        activeUserId = user?.id
+                        val baseUrl = repository.getBaseUrl()
+                        val imageUrl = user?.getProfileImageModel(context, baseUrl)
+                        _state.update {
+                            it.copy(
+                                server = server ?: it.server,
+                                userName = user?.name ?: "",
+                                userImageUrl = imageUrl,
+                            )
+                        }
                     }
-                    cachedHomeState = _state.value
-                    cachedUserId = activeUserId
+
+                    coroutineScope {
+                        // Concurrently fetch each configured home screen section
+                        val suggestionsDeferred = async {
+                            fetchSuggestions(forceRefreshSuggestions)
+                        }
+                        val resumeDeferred = async { fetchResumeItems() }
+                        val nextUpDeferred = async { fetchNextUpItems() }
+                        val viewsDeferred = async { fetchViews() }
+
+                        val suggestions = suggestionsDeferred.await()
+                        val resume = resumeDeferred.await()
+                        val nextUp = nextUpDeferred.await()
+                        val views = viewsDeferred.await()
+
+                        // Ensure this load job still matches the current active user before
+                        // applying state
+                        if (targetUserId != null && activeUserId != targetUserId) {
+                            Timber.w(
+                                "Discarding stale home screen data for user %s (current active is %s)",
+                                targetUserId,
+                                activeUserId,
+                            )
+                            return@coroutineScope
+                        }
+
+                        // Map fetched section items into the unified HomeState
+                        _state.update {
+                            it.copy(
+                                suggestionsSection = suggestions,
+                                resumeSection = resume,
+                                nextUpSection = nextUp,
+                                views = views,
+                                isLoading = false,
+                                error = null,
+                            )
+                        }
+                        cachedHomeState = _state.value
+                        cachedUserId = activeUserId
+                    }
+                } catch (e: CancellationException) {
+                    Timber.d("Home data loading cancelled")
+                    throw e
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to load home data")
+                    _state.update { it.copy(error = e, isLoading = false) }
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to load home data")
-                _state.update { it.copy(error = e, isLoading = false) }
             }
-        }
     }
 
     private suspend fun fetchSuggestions(forceRefresh: Boolean = false): HomeItem.Suggestions? {
