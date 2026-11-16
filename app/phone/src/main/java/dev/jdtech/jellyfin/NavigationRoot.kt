@@ -448,13 +448,12 @@ private fun MainNavigation(
                             selected = topLevelRoute == item.route,
                             onClick = {
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (item.route == HomeRoute) {
-                                    navigator.navigateHome()
-                                } else if (topLevelRoute == item.route) {
+                                if (topLevelRoute == item.route) {
+                                    if (navigationState.currentBackStack().size > 1) {
+                                        navigationState.currentBackStack().truncateTo(1)
+                                    }
                                     if (item.route == SearchRoute) {
                                         searchViewModel.onAction(SearchAction.OnTabReselected)
-                                    } else {
-                                        navigationState.currentBackStack().truncateTo(1)
                                     }
                                 } else {
                                     navigator.navigate(item.route)
