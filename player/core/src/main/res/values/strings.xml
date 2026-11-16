@@ -162,4 +162,24 @@
     <string name="producer">Producer</string>
     <string name="unavailable">Unavailable</string>
     <string name="more_info">More info</string>
+    <string name="dialogue_boost">Dialogue boost</string>
+    <string name="subtitle_options">Subtitle options</string>
+    <string name="subtitle_synchronization">Subtitle synchronization</string>
+    <string name="subtitle_sync_active_format">Synchronization %1$s</string>
+    <string name="subtitle_delay">Subtitle delay</string>
+    <string name="reset">Reset</string>
+    <string name="click_to_reset">Click to reset</string>
+    <string name="load_external_subtitle">Load subtitle file</string>
+    <string name="load_external_subtitle_summary">Import .srt, .vtt, .ass, .sub from storage</string>
+    <string name="external_subtitle_loaded">External subtitle loaded</string>
+    <string name="decrease_delay">Decrease delay</string>
+    <string name="increase_delay">Increase delay</string>
+    <string name="delay_value_format">%1$+.2f s</string>
+    <string name="subtitle_delay_zero">0.00 s</string>
+    <string name="delay_label">Delay: %1$s</string>
+    <string name="delay_step_minus_one_second">-1.0s</string>
+    <string name="delay_step_minus_hundred_ms">-100 ms</string>
+    <string name="delay_step_plus_hundred_ms">+100 ms</string>
+    <string name="delay_step_plus_one_second">+1.0s</string>
+    <string name="delay_step_hint">±100 ms</string>
 </resources>

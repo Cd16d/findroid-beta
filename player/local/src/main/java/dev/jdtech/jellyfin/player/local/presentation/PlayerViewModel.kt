@@ -1,7 +1,12 @@
 package dev.jdtech.jellyfin.player.local.presentation
 
 import android.app.Application
+import android.content.Context
+import android.net.Uri
+import android.os.Looper
+import android.provider.OpenableColumns
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -15,9 +20,14 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.jdtech.jellyfin.api.JellyfinApi
@@ -53,6 +63,7 @@ import dev.jdtech.jellyfin.player.core.domain.utils.SegmentUtils.getSkipButtonTe
 import dev.jdtech.jellyfin.player.core.domain.utils.StreamUtils
 import dev.jdtech.jellyfin.player.core.domain.utils.TrackFormatter
 import dev.jdtech.jellyfin.player.core.domain.utils.fetchTrickplay
+import dev.jdtech.jellyfin.player.local.audio.DialogueAudioProcessor
 import dev.jdtech.jellyfin.player.local.mpv.MPVPlayer
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -61,8 +72,12 @@ import dev.jdtech.jellyfin.settings.domain.Constants.PlayerMediaSegmentsAutoSkip
 import dev.jdtech.jellyfin.settings.domain.Constants.PlayerMpvAo
 import dev.jdtech.jellyfin.utils.DeviceCodecCapabilities
 import dev.jdtech.jellyfin.utils.getTranslatablePartName
+import java.io.File
+import java.io.IOException
+import java.util.ArrayList
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
@@ -83,11 +98,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.PlayMethod
 import timber.log.Timber
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, UnstableApi::class)
 @HiltViewModel
 class PlayerViewModel
 @Inject
@@ -166,6 +182,9 @@ constructor(
         val isSeasonLoadError: Boolean = false,
         val isSeasonEpisodesError: Boolean = false,
         val maxTranscodeBitrateBps: Int = 120_000_000,
+        val isDialogueBoostEnabled: Boolean = false,
+        val subtitleDelayMs: Long = 0L,
+        val isExternalSubtitleLoaded: Boolean = false,
     )
 
     private var items: MutableList<PlayerItem> = mutableListOf()
@@ -186,6 +205,30 @@ constructor(
 
     private val trackSelector = DefaultTrackSelector(application)
     var playWhenReady = true
+    val subtitleOffsetUs = AtomicLong(0L)
+    private val itemDurationUs = AtomicLong(C.TIME_UNSET)
+    private val dialogueAudioProcessor = DialogueAudioProcessor()
+    private var pendingExternalSubtitleId: String? = null
+    private var pendingExternalSubtitleFileName: String? = null
+    private val externalSubtitleCacheFiles = mutableListOf<File>()
+
+    private data class LoadedExternalSubtitle(
+        val id: String,
+        val file: File,
+        val displayName: String,
+        val mimeType: String,
+        val sourceUri: Uri,
+    )
+
+    private val loadedExternalSubtitles = mutableListOf<LoadedExternalSubtitle>()
+    private var currentPlayingMediaId: String? = null
+    private var hasAttemptedDefaultSubtitleSelection = false
+
+    private fun updateItemDuration() {
+        val durationMs = player.duration
+        itemDurationUs.set(if (durationMs == C.TIME_UNSET) C.TIME_UNSET else durationMs * 1000)
+    }
+
     private var currentMediaItemIndex = savedStateHandle["mediaItemIndex"] ?: 0
     private var playbackPosition: Long = savedStateHandle["position"] ?: 0
     private var currentMediaItemSegments: List<FindroidSegment> = emptyList()
@@ -329,7 +372,46 @@ constructor(
             when (playerBackend) {
                 PlayerBackend.EXOPLAYER -> {
                     val renderersFactory =
-                        DefaultRenderersFactory(application)
+                        object : DefaultRenderersFactory(application) {
+                                override fun buildAudioSink(
+                                    context: Context,
+                                    enableFloatOutput: Boolean,
+                                    enableAudioTrackPlaybackParams: Boolean,
+                                ): AudioSink? {
+                                    return DefaultAudioSink.Builder(context)
+                                        .setEnableFloatOutput(enableFloatOutput)
+                                        .setEnableAudioTrackPlaybackParams(
+                                            enableAudioTrackPlaybackParams
+                                        )
+                                        .setAudioProcessors(arrayOf(dialogueAudioProcessor))
+                                        .build()
+                                }
+
+                                override fun buildTextRenderers(
+                                    context: Context,
+                                    output: TextOutput,
+                                    outputLooper: Looper,
+                                    extensionRendererMode: Int,
+                                    out: ArrayList<Renderer>,
+                                ) {
+                                    val startIndex = out.size
+                                    super.buildTextRenderers(
+                                        context,
+                                        output,
+                                        outputLooper,
+                                        extensionRendererMode,
+                                        out,
+                                    )
+                                    for (index in startIndex until out.size) {
+                                        out[index] =
+                                            SubtitleOffsetRenderer(
+                                                baseRenderer = out[index],
+                                                subtitleDelayUsProvider = subtitleOffsetUs::get,
+                                                itemDurationUsProvider = itemDurationUs::get,
+                                            )
+                                    }
+                                }
+                            }
                             .setExtensionRendererMode(
                                 DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
                             )
@@ -393,6 +475,11 @@ constructor(
         currentSource = null
         selectedAudioStreamIndex = null
         player.addListener(this)
+
+        val initialDialogueBoost =
+            appPreferences.getValue(appPreferences.playerDialogueClarityDefault)
+        dialogueAudioProcessor.isEnabled = initialDialogueBoost
+        _uiState.update { it.copy(isDialogueBoostEnabled = initialDialogueBoost) }
 
         if (appPreferences.getValue(appPreferences.playerPlaybackSpeedRemember)) {
             val savedSpeed = appPreferences.getValue(appPreferences.playerPlaybackSpeed)
@@ -645,6 +732,7 @@ constructor(
                 )
             }
             updateAvailableAudioTracks()
+            autoSelectDefaultSubtitleIfNeeded(player.currentTracks)
 
             items = listOf(updatedStartItem).toMutableList()
             currentMediaItemIndex = 0
@@ -657,6 +745,7 @@ constructor(
                 }
 
             player.setMediaItems(listOf(updatedStartItem.toMediaItem()), 0, startPosition)
+            currentPlayingMediaId = updatedStartItem.itemId.toString()
             player.prepare()
             player.play()
         }
@@ -827,6 +916,7 @@ constructor(
                         )
                     }
                     updateAvailableAudioTracks()
+                    autoSelectDefaultSubtitleIfNeeded(player.currentTracks)
                 }
             } catch (e: Exception) {
                 if (e !is CancellationException) {
@@ -947,6 +1037,7 @@ constructor(
             selectedAudioStreamIndex = streamIndex
             switchToTrack(C.TRACK_TYPE_AUDIO, targetInternalIndex)
             updateAvailableAudioTracks()
+            autoSelectDefaultSubtitleIfNeeded(player.currentTracks)
         } else {
             selectedAudioStreamIndex = streamIndex
             _uiState.update {
@@ -1040,6 +1131,61 @@ constructor(
 
     override fun onTracksChanged(tracks: Tracks) {
         updateAvailableAudioTracks()
+        val pendingId = pendingExternalSubtitleId
+        val pendingName = pendingExternalSubtitleFileName
+        if (pendingId != null || pendingName != null) {
+            val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT && it.isSupported }
+            val targetIndex = textGroups.indexOfFirst { group ->
+                val format = group.mediaTrackGroup.getFormat(0)
+                (pendingId != null && format.id == pendingId) ||
+                    (pendingName != null && format.label == pendingName)
+            }
+            if (targetIndex != -1) {
+                pendingExternalSubtitleId = null
+                pendingExternalSubtitleFileName = null
+                Timber.i("Selecting newly loaded external subtitle track at index $targetIndex")
+                switchToTrack(C.TRACK_TYPE_TEXT, targetIndex)
+                return
+            }
+        }
+        autoSelectDefaultSubtitleIfNeeded(tracks)
+    }
+
+    private fun autoSelectDefaultSubtitleIfNeeded(tracks: Tracks) {
+        if (hasAttemptedDefaultSubtitleSelection) return
+
+        val textGroups = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT && it.isSupported }
+        if (textGroups.isEmpty()) return
+
+        if (textGroups.any { it.isSelected }) {
+            hasAttemptedDefaultSubtitleSelection = true
+            return
+        }
+
+        val subtitleStreams =
+            _uiState.value.mediaStreams.filter {
+                it.type == org.jellyfin.sdk.model.api.MediaStreamType.SUBTITLE
+            }
+
+        val defaultIndex =
+            textGroups
+                .indexOfFirst { group ->
+                    val format = group.mediaTrackGroup.getFormat(0)
+                    val isExoDefault = (format.selectionFlags and C.SELECTION_FLAG_DEFAULT) != 0
+                    val isExoForced = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0
+                    isExoDefault || isExoForced
+                }
+                .takeIf { it != -1 }
+                ?: textGroups.indices.firstOrNull { idx ->
+                    val matchedStream = subtitleStreams.getOrNull(idx)
+                    matchedStream?.isDefault == true || matchedStream?.isForced == true
+                }
+
+        if (defaultIndex != null && defaultIndex in textGroups.indices) {
+            hasAttemptedDefaultSubtitleSelection = true
+            Timber.i("Auto-selecting default subtitle track at index $defaultIndex")
+            switchToTrack(C.TRACK_TYPE_TEXT, defaultIndex)
+        }
     }
 
     private fun reloadMediaStream(targetInternalTrackIndex: Int? = null) {
@@ -1175,6 +1321,7 @@ constructor(
                     )
                 }
                 updateAvailableAudioTracks()
+                autoSelectDefaultSubtitleIfNeeded(player.currentTracks)
 
                 val currentItemObj = items.firstOrNull { it.itemId == itemId } ?: return@launch
                 val updatedSubtitles =
@@ -1224,7 +1371,40 @@ constructor(
                 }
                 currentItem.value = updatedItem
 
-                player.setMediaItem(updatedItem.toMediaItem(), currentPositionMs)
+                // Preserve currently active subtitle track across stream reload
+                val currentTextGroups =
+                    player.currentTracks.groups.filter {
+                        it.type == C.TRACK_TYPE_TEXT && it.isSupported
+                    }
+                val selectedTextGroup = currentTextGroups.firstOrNull { it.isSelected }
+                val selectedSubFormat = selectedTextGroup?.mediaTrackGroup?.getFormat(0)
+                if (selectedSubFormat != null) {
+                    pendingExternalSubtitleId = selectedSubFormat.id
+                    pendingExternalSubtitleFileName = selectedSubFormat.label
+                }
+
+                val baseMediaItem = updatedItem.toMediaItem()
+                val finalMediaItem =
+                    if (loadedExternalSubtitles.isNotEmpty()) {
+                        val currentConfigs =
+                            baseMediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
+                        val externalConfigs = loadedExternalSubtitles.map { sub ->
+                            MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(sub.file))
+                                .setId(sub.id)
+                                .setMimeType(sub.mimeType)
+                                .setLabel(sub.displayName)
+                                .setLanguage("und")
+                                .build()
+                        }
+                        baseMediaItem
+                            .buildUpon()
+                            .setSubtitleConfigurations(currentConfigs + externalConfigs)
+                            .build()
+                    } else {
+                        baseMediaItem
+                    }
+
+                player.setMediaItem(finalMediaItem, currentPositionMs)
                 player.prepare()
                 if (playWhenReady) player.play()
 
@@ -1961,6 +2141,20 @@ constructor(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        updateItemDuration()
+        val newMediaId = mediaItem?.mediaId
+        if (newMediaId != null && newMediaId != currentPlayingMediaId) {
+            currentPlayingMediaId = newMediaId
+            setSubtitleDelay(0L)
+            externalSubtitleCacheFiles.forEach { runCatching { it.delete() } }
+            externalSubtitleCacheFiles.clear()
+            loadedExternalSubtitles.clear()
+            _uiState.update { it.copy(isExternalSubtitleLoaded = false) }
+            hasAttemptedDefaultSubtitleSelection = false
+        }
+        if (_uiState.value.isDialogueBoostEnabled) {
+            setDialogueBoost(true)
+        }
         val currentSleepMode = _uiState.value.sleepTimerStatus.mode
         if (currentSleepMode is SleepTimerMode.EndOfMedia) {
             player.pause()
@@ -2110,7 +2304,10 @@ constructor(
 
     override fun onPlaybackStateChanged(state: Int) {
         when (state) {
-            ExoPlayer.STATE_READY -> _uiState.update { it.copy(fileLoaded = true) }
+            ExoPlayer.STATE_READY -> {
+                updateItemDuration()
+                _uiState.update { it.copy(fileLoaded = true) }
+            }
             Player.STATE_BUFFERING -> {}
             Player.STATE_IDLE -> {}
             ExoPlayer.STATE_ENDED -> {
@@ -2135,9 +2332,14 @@ constructor(
         }
     }
 
+    override fun onAudioSessionIdChanged(audioSessionId: Int) {}
+
     override fun onCleared() {
         stopPlaybackProgressJob()
         Timber.d("Clearing Player ViewModel")
+        externalSubtitleCacheFiles.forEach { runCatching { it.delete() } }
+        externalSubtitleCacheFiles.clear()
+        loadedExternalSubtitles.clear()
         releasePlayer()
     }
 
@@ -2165,6 +2367,169 @@ constructor(
                     )
                     .setTrackTypeDisabled(trackType, false)
                     .build()
+        }
+    }
+
+    fun setDialogueBoost(enabled: Boolean) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDialogueBoostEnabled = enabled) }
+            dialogueAudioProcessor.isEnabled = enabled
+            if (isMpv) {
+                (player as? MPVPlayer)?.setDialogueBoost(enabled)
+            }
+            appPreferences.setValue(appPreferences.playerDialogueClarityDefault, enabled)
+        }
+    }
+
+    fun setSubtitleDelay(delayMs: Long) {
+        if (isMpv) {
+            (player as? MPVPlayer)?.setSubtitleDelayMs(delayMs.toInt())
+        } else {
+            subtitleOffsetUs.set(delayMs * 1000L)
+            if (!player.isPlaying && player.playbackState == Player.STATE_READY) {
+                val currentPos = player.currentPosition
+                player.seekTo(currentPos)
+            }
+        }
+        _uiState.update { it.copy(subtitleDelayMs = delayMs) }
+    }
+
+    fun loadExternalSubtitle(uri: Uri, context: Context) {
+        val targetMediaId = player.currentMediaItem?.mediaId
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val rawFileName =
+                    runCatching {
+                        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (cursor.moveToFirst() && nameIndex >= 0) cursor.getString(nameIndex)
+                            else null
+                        }
+                    }
+                        .getOrNull() ?: uri.lastPathSegment ?: "External Subtitle"
+
+                val displayName = File(rawFileName).nameWithoutExtension.ifEmpty { rawFileName }
+
+                // Check if this subtitle file is already loaded to prevent duplicate tracks
+                val existing = loadedExternalSubtitles.firstOrNull {
+                    it.sourceUri == uri || it.displayName == displayName
+                }
+                if (existing != null) {
+                    withContext(Dispatchers.Main) {
+                        val textGroups =
+                            player.currentTracks.groups.filter {
+                                it.type == C.TRACK_TYPE_TEXT && it.isSupported
+                            }
+                        val existingIndex = textGroups.indexOfFirst { group ->
+                            val format = group.mediaTrackGroup.getFormat(0)
+                            format.id == existing.id || format.label == existing.displayName
+                        }
+                        if (existingIndex != -1) {
+                            Timber.i(
+                                "External subtitle already loaded, selecting track at index $existingIndex"
+                            )
+                            switchToTrack(C.TRACK_TYPE_TEXT, existingIndex)
+                        }
+                    }
+                    return@launch
+                }
+
+                val safeFileName = File(rawFileName).name.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+                val cacheFile =
+                    File(
+                        context.cacheDir,
+                        "external_sub_${System.currentTimeMillis()}_$safeFileName",
+                    )
+                if (!cacheFile.canonicalPath.startsWith(context.cacheDir.canonicalPath)) {
+                    throw SecurityException("Invalid subtitle destination path")
+                }
+
+                val maxBytes = 10L * 1024 * 1024
+                var totalBytes = 0L
+                val buffer = ByteArray(8192)
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    cacheFile.outputStream().use { output ->
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read == -1) break
+                            totalBytes += read
+                            if (totalBytes > maxBytes) {
+                                cacheFile.delete()
+                                throw IOException(
+                                    "Subtitle file exceeds maximum allowed size (10MB)"
+                                )
+                            }
+                            output.write(buffer, 0, read)
+                        }
+                    }
+                } ?: throw IOException("Could not open input stream for $uri")
+
+                externalSubtitleCacheFiles.add(cacheFile)
+
+                val mimeType =
+                    when {
+                        rawFileName.endsWith(".vtt", ignoreCase = true) -> MimeTypes.TEXT_VTT
+                        rawFileName.endsWith(".ass", ignoreCase = true) ||
+                            rawFileName.endsWith(".ssa", ignoreCase = true) -> MimeTypes.TEXT_SSA
+                        rawFileName.endsWith(".sub", ignoreCase = true) ->
+                            MimeTypes.APPLICATION_SUBRIP
+                        else -> MimeTypes.APPLICATION_SUBRIP
+                    }
+                val externalId = "external_${cacheFile.name}"
+
+                val loadedTrack =
+                    LoadedExternalSubtitle(
+                        id = externalId,
+                        file = cacheFile,
+                        displayName = displayName,
+                        mimeType = mimeType,
+                        sourceUri = uri,
+                    )
+                loadedExternalSubtitles.add(loadedTrack)
+
+                withContext(Dispatchers.Main) {
+                    pendingExternalSubtitleId = externalId
+                    pendingExternalSubtitleFileName = displayName
+                    if (isMpv) {
+                        (player as? MPVPlayer)?.addSubtitle(
+                            cacheFile.absolutePath,
+                            displayName,
+                            "und",
+                            true,
+                        )
+                    } else {
+                        val subConfig =
+                            MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(cacheFile))
+                                .setId(externalId)
+                                .setMimeType(mimeType)
+                                .setLabel(displayName)
+                                .setLanguage("und")
+                                .build()
+                        val currentItem = player.currentMediaItem
+                        if (currentItem != null && currentItem.mediaId == targetMediaId) {
+                            val currentSubs =
+                                currentItem.localConfiguration?.subtitleConfigurations
+                                    ?: emptyList()
+                            val updatedConfigs =
+                                currentSubs.filterNot { it.id == externalId } + subConfig
+                            val updatedMediaItem =
+                                currentItem
+                                    .buildUpon()
+                                    .setSubtitleConfigurations(updatedConfigs)
+                                    .build()
+                            val currentPos = player.currentPosition
+                            val playWhenReady = player.playWhenReady
+                            player.replaceMediaItem(player.currentMediaItemIndex, updatedMediaItem)
+                            player.seekTo(player.currentMediaItemIndex, currentPos)
+                            player.prepare()
+                            player.playWhenReady = playWhenReady
+                        }
+                    }
+                    _uiState.update { it.copy(isExternalSubtitleLoaded = true) }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load external subtitle from $uri")
+            }
         }
     }
 

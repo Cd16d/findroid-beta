@@ -60,7 +60,7 @@ import org.jellyfin.sdk.model.api.MediaStreamType
 
 /** Scaled switch component for player navigation items with fixed 39dp x 24dp layout bounds. */
 @Composable
-private fun PlayerSwitch(
+internal fun PlayerSwitch(
     checked: Boolean,
     modifier: Modifier = Modifier,
 ) {
