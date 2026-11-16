@@ -23,6 +23,7 @@ android {
 
 dependencies {
     implementation(projects.core)
+    implementation(projects.core.ui)
     implementation(projects.data)
     implementation(projects.settings)
     implementation(libs.okhttp)

@@ -123,6 +123,7 @@ androidComponents {
 
 dependencies {
     implementation(projects.core)
+    implementation(projects.core.ui)
     implementation(projects.data)
     implementation(projects.player.core)
     implementation(projects.player.cast)

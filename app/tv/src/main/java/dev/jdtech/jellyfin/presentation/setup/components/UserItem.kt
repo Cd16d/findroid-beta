@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -13,19 +12,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import coil3.compose.AsyncImage
-import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.UserAvatar
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyUser
 import dev.jdtech.jellyfin.models.User
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -57,17 +52,10 @@ fun UserItem(
             shape = ClickableSurfaceDefaults.shape(shape = CircleShape, focusedShape = CircleShape),
             modifier = Modifier.fillMaxWidth().aspectRatio(1f),
         ) {
-            Icon(
-                painter = painterResource(id = CoreR.drawable.ic_user),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.width(48.dp).height(48.dp).align(Alignment.Center),
-            )
-            AsyncImage(
-                model = "$baseUrl/users/${user.id}/Images/${ImageType.PRIMARY}",
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+            UserAvatar(
+                name = user.name,
+                imageUrl = "$baseUrl/users/${user.id}/Images/${ImageType.PRIMARY}",
+                size = 120.dp,
             )
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.medium))

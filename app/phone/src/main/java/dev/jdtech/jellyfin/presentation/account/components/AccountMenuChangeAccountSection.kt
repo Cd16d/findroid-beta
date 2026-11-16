@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,8 +33,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.UserAvatar
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyUsers
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.models.User
@@ -75,26 +74,11 @@ fun AccountMenuChangeAccountSection(
                             otherUsers.take(2).forEachIndexed { index, user ->
                                 val userImageUrl =
                                     user.getProfileImageModel(LocalContext.current, baseUrl)
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(24.dp),
-                                ) {
-                                    if (userImageUrl != null) {
-                                        AsyncImage(
-                                            model = userImageUrl,
-                                            contentDescription = null,
-                                            modifier = Modifier.fillMaxSize(),
-                                        )
-                                    } else {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Text(
-                                                text = user.name.take(1).uppercase(),
-                                                style = MaterialTheme.typography.labelSmall,
-                                            )
-                                        }
-                                    }
-                                }
+                                UserAvatar(
+                                    name = user.name,
+                                    imageUrl = userImageUrl,
+                                    size = 24.dp,
+                                )
                                 if (index == 0 && otherUsers.size > 1) {
                                     Spacer(Modifier.width(4.dp))
                                 }
@@ -163,28 +147,13 @@ fun AccountMenuChangeAccountSection(
                         ListItem(
                             headlineContent = { Text(user.name) },
                             leadingContent = {
-                                Surface(
-                                    shape = CircleShape,
-                                    modifier = Modifier.size(32.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                ) {
-                                    val userImageUrl =
-                                        user.getProfileImageModel(LocalContext.current, baseUrl)
-                                    if (userImageUrl != null) {
-                                        AsyncImage(
-                                            model = userImageUrl,
-                                            contentDescription = null,
-                                            modifier = Modifier.fillMaxSize(),
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector =
-                                                ImageVector.vectorResource(CoreR.drawable.ic_user),
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(4.dp),
-                                        )
-                                    }
-                                }
+                                val userImageUrl =
+                                    user.getProfileImageModel(LocalContext.current, baseUrl)
+                                UserAvatar(
+                                    name = user.name,
+                                    imageUrl = userImageUrl,
+                                    size = 32.dp,
+                                )
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         )

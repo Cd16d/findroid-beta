@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -67,8 +66,8 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
-import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.components.UserAvatar
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyUser
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyUsers
 import dev.jdtech.jellyfin.film.presentation.account.AccountAction
@@ -425,26 +424,11 @@ fun AccountMenuContent(
             ) {
                 if (showButtonBackground && isTablet) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            modifier = Modifier.size(32.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                        ) {
-                            if (userImageUrl != null) {
-                                AsyncImage(
-                                    model = userImageUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            } else {
-                                Icon(
-                                    imageVector =
-                                        ImageVector.vectorResource(CoreR.drawable.ic_user),
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(4.dp),
-                                )
-                            }
-                        }
+                        UserAvatar(
+                            name = userName,
+                            imageUrl = userImageUrl,
+                            size = 32.dp,
+                        )
 
                         Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
 

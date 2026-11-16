@@ -19,11 +19,15 @@ import dev.jdtech.jellyfin.utils.toView
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -33,6 +37,7 @@ import timber.log.Timber
  * Fetches media sections (suggestions, continue watching, next up, and library views) concurrently
  * based on user preferences and Jellyfin server capabilities.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel
 @Inject
@@ -45,6 +50,8 @@ constructor(
     private val _state =
         MutableStateFlow(cachedHomeState?.copy(isLoading = true) ?: HomeState(isLoading = true))
     val state = _state.asStateFlow()
+
+    private var activeUserId: UUID? = cachedUserId
 
     private val uuidSuggestions = UUID.fromString("31e47044-9b79-4bb0-99d0-0e477ed65420")
     private val uuidContinueWatching = UUID.fromString("44845958-8326-4e83-beb4-c4f42e9eeb95")
@@ -63,6 +70,42 @@ constructor(
             appPreferences.observe(appPreferences.tvShowLogos).collect { showLogos ->
                 _state.update { it.copy(showLogos = showLogos) }
             }
+        }
+        viewModelScope.launch {
+            appPreferences
+                .observe(appPreferences.currentServer)
+                .flatMapLatest { serverId ->
+                    if (serverId != null) {
+                        database.observeServerCurrentUserId(serverId)
+                    } else {
+                        flowOf(null)
+                    }
+                }
+                .distinctUntilChanged()
+                .collect { newUserId ->
+                    if (newUserId != null) {
+                        if (activeUserId != null && activeUserId != newUserId) {
+                            Timber.i(
+                                "Active user changed from %s to %s, reloading home screen",
+                                activeUserId,
+                                newUserId,
+                            )
+                            activeUserId = newUserId
+                            cachedHomeState = null
+                            cachedUserId = newUserId
+                            _state.update {
+                                HomeState(
+                                    isLoading = true,
+                                    hideEpisodeSpoilers = it.hideEpisodeSpoilers,
+                                    showLogos = it.showLogos,
+                                )
+                            }
+                            loadData(forceRefreshSuggestions = true)
+                        } else {
+                            activeUserId = newUserId
+                        }
+                    }
+                }
         }
     }
 
@@ -83,12 +126,14 @@ constructor(
                 appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
                     val server = database.getServer(serverId)
                     val user = database.getServerCurrentUser(serverId)
+                    activeUserId = user?.id
                     val baseUrl = repository.getBaseUrl()
                     val imageUrl = user?.getProfileImageModel(context, baseUrl)
                     _state.update {
                         it.copy(
                             server = server ?: it.server,
-                            userImageUrl = imageUrl ?: it.userImageUrl,
+                            userName = user?.name ?: "",
+                            userImageUrl = imageUrl,
                         )
                     }
                 }
@@ -117,6 +162,7 @@ constructor(
                         )
                     }
                     cachedHomeState = _state.value
+                    cachedUserId = activeUserId
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load home data")
@@ -199,8 +245,10 @@ constructor(
 
     fun onAction(action: HomeAction) {
         when (action) {
-            is HomeAction.OnRetryClick -> {
-                loadData()
+            is HomeAction.OnRetryClick,
+            is HomeAction.Refresh -> {
+                cachedHomeState = null
+                loadData(forceRefreshSuggestions = true)
             }
             else -> Unit
         }
@@ -210,5 +258,11 @@ constructor(
 
     companion object {
         private var cachedHomeState: HomeState? = null
+        private var cachedUserId: UUID? = null
+
+        fun clearCache() {
+            cachedHomeState = null
+            cachedUserId = null
+        }
     }
 }

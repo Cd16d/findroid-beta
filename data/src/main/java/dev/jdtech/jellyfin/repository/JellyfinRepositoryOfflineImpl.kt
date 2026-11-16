@@ -526,10 +526,11 @@ class JellyfinRepositoryOfflineImpl(
     override suspend fun setCurrentUser(userId: UUID) {
         val server = getCurrentServer() ?: return
         val user = database.getUser(userId) ?: return
-        server.currentUserId = user.id
-        database.updateServer(server)
 
         jellyfinApi.apply { this.userId = user.id }
+
+        server.currentUserId = user.id
+        database.updateServer(server)
     }
 
     override suspend fun canTranscode(): Boolean = false

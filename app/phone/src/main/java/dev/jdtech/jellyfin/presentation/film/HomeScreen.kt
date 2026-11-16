@@ -103,7 +103,7 @@ private fun HomeScreenLayout(
     var showServerSelectionBottomSheet by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
-        PullToRefreshBox(isRefreshing = false, onRefresh = { onAction(HomeAction.OnRetryClick) }) {
+        PullToRefreshBox(isRefreshing = false, onRefresh = { onAction(HomeAction.Refresh) }) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
@@ -174,6 +174,7 @@ private fun HomeScreenLayout(
         ) {
             HomeHeader(
                 serverName = state.server?.name ?: "",
+                userName = state.userName,
                 userImageUrl = state.userImageUrl,
                 isLoading = state.isLoading,
                 isError = state.error != null,
