@@ -26,7 +26,7 @@
     <string name="player_controls_play">Riproduci</string>
     <string name="player_controls_pause">Pausa</string>
     <string name="forced">Forzati</string>
-    <string name="hearing_impaired">Non udenti (SDH)</string>
+    <string name="hearing_impaired">Non udenti</string>
     <string name="track_index">Traccia %1$d</string>
     <string name="playback_speed">Velocità di riproduzione</string>
     <string name="normal_speed">Normale</string>
