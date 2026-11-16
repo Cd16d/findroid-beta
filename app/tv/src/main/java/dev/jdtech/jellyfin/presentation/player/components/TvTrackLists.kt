@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -298,7 +298,7 @@ internal fun TvSubtitleSyncCard(
         colors = colors,
         scale = ClickableSurfaceScale.None,
         modifier =
-            modifier.fillMaxWidth().heightIn(min = 52.dp).onPreviewKeyEvent { event ->
+            modifier.fillMaxWidth().onPreviewKeyEvent { event ->
                 val nativeEvent = event.nativeKeyEvent
                 val keyCode = nativeEvent.keyCode
                 if (
@@ -320,48 +320,55 @@ internal fun TvSubtitleSyncCard(
                 }
             },
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            // Row 1: Header (Wrench icon + Title + Click to reset when offset != 0)
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(
-                    painter = painterResource(id = CoreR.drawable.ic_wrench),
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(modifier = Modifier.width(14.dp))
-                Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_wrench),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = stringResource(id = PlayerR.string.subtitle_synchronization),
                         style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (subtitleDelayMs != 0L) {
-                        Text(
-                            text = stringResource(id = PlayerR.string.reset),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = LocalContentColor.current.copy(alpha = 0.7f),
-                        )
-                    }
+                }
+                if (subtitleDelayMs != 0L) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(id = PlayerR.string.click_to_reset),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalContentColor.current.copy(alpha = 0.7f),
+                        maxLines = 1,
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
+            // Row 2: Stepper controls (Left chevron with -100 ms, Delay value, Right chevron with
+            // +100 ms)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier =
-                            Modifier.size(28.dp)
+                            Modifier.size(32.dp)
                                 .clip(CircleShape)
                                 .repeatingClickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -372,22 +379,41 @@ internal fun TvSubtitleSyncCard(
                         Icon(
                             painter = painterResource(id = CoreR.drawable.ic_chevron_left),
                             contentDescription = stringResource(id = PlayerR.string.decrease_delay),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
-
                     Text(
-                        text = formatSubtitleDelay(subtitleDelayMs),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color =
-                            if (subtitleDelayMs != 0L) MaterialTheme.colorScheme.primary
-                            else LocalContentColor.current,
+                        text = stringResource(id = PlayerR.string.delay_step_minus_hundred_ms),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalContentColor.current.copy(alpha = 0.7f),
                     )
+                }
 
+                Spacer(modifier = Modifier.width(24.dp))
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier.height(32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = formatSubtitleDelay(subtitleDelayMs),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color =
+                                if (subtitleDelayMs != 0L) MaterialTheme.colorScheme.primary
+                                else LocalContentColor.current,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
+                Spacer(modifier = Modifier.width(24.dp))
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier =
-                            Modifier.size(28.dp)
+                            Modifier.size(32.dp)
                                 .clip(CircleShape)
                                 .repeatingClickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -398,16 +424,15 @@ internal fun TvSubtitleSyncCard(
                         Icon(
                             painter = painterResource(id = CoreR.drawable.ic_chevron_right),
                             contentDescription = stringResource(id = PlayerR.string.increase_delay),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
+                    Text(
+                        text = stringResource(id = PlayerR.string.delay_step_plus_hundred_ms),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LocalContentColor.current.copy(alpha = 0.7f),
+                    )
                 }
-
-                Text(
-                    text = stringResource(id = PlayerR.string.delay_step_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = LocalContentColor.current.copy(alpha = 0.7f),
-                )
             }
         }
     }

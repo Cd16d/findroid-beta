@@ -168,6 +168,7 @@
     <string name="subtitle_sync_active_format">Synchronization %1$s</string>
     <string name="subtitle_delay">Subtitle delay</string>
     <string name="reset">Reset</string>
+    <string name="click_to_reset">Click to reset</string>
     <string name="load_external_subtitle">Load subtitle file</string>
     <string name="load_external_subtitle_summary">Import .srt, .vtt, .ass, .sub from storage</string>
     <string name="external_subtitle_loaded">External subtitle loaded</string>
