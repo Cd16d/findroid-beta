@@ -39,6 +39,8 @@ import dev.jdtech.jellyfin.settings.domain.Constants.PlayerMpvHwdec
 import dev.jdtech.jellyfin.settings.domain.Constants.PlayerMpvVo
 import dev.jdtech.jellyfin.settings.domain.Constants.PlayerResizeMode
 import dev.jdtech.mpv.MPVLib
+import dev.jdtech.mpv.MPVLib.MpvEndFileReason
+import dev.jdtech.mpv.MPVLib.MpvError
 import dev.jdtech.mpv.MPVLib.MpvEvent
 import dev.jdtech.mpv.MPVLib.MpvFormat
 import java.io.File
@@ -155,6 +157,10 @@ class MPVPlayer(
         mpvLib =
             MPVLib.create(context) ?: throw IllegalStateException("MPVLib.create() returned null")
 
+        // Only deliver warning and error messages to logcat to keep sensitive session tokens
+        // private
+        mpvLib.requestLogMessages("warn")
+
         // General
         mpvLib.setOptionString("config", "yes")
         mpvLib.setOptionString("config-dir", configDir.path)
@@ -174,6 +180,9 @@ class MPVPlayer(
 
         // TLS
         mpvLib.setOptionString("tls-verify", "no")
+
+        // Network through ffmpeg, not mpv 0.42 libcurl backend
+        mpvLib.setOptionString("curl-enabled", "no")
 
         // Cache
         mpvLib.setOptionString("cache", "yes")
@@ -335,6 +344,7 @@ class MPVPlayer(
     private var initialSeekTo: Long = 0L
     private var oldMediaItem: MediaItem? = null
     private var currentResizeMode: PlayerResizeMode = PlayerResizeMode.FIT
+    private var playerError: PlaybackException? = null
     private val commandExecutor = newSingleThreadExecutor()
 
     // mpv events
@@ -453,6 +463,64 @@ class MPVPlayer(
                 "demuxer-cache-duration" -> {
                     currentDemuxerCacheDurationMs =
                         (value * C.MILLIS_PER_SECOND).toLong().coerceAtLeast(0L)
+                }
+            }
+        }
+    }
+
+    override fun eventEndFile(reason: Int, error: Int) {
+        handler.post {
+            when (reason) {
+                MpvEndFileReason.MPV_END_FILE_REASON_ERROR -> {
+                    val errorCode =
+                        when (error) {
+                            MpvError.MPV_ERROR_LOADING_FAILED ->
+                                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+                            MpvError.MPV_ERROR_AO_INIT_FAILED ->
+                                PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED
+                            MpvError.MPV_ERROR_VO_INIT_FAILED ->
+                                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
+                            MpvError.MPV_ERROR_UNKNOWN_FORMAT,
+                            MpvError.MPV_ERROR_UNSUPPORTED ->
+                                PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
+                            else -> PlaybackException.ERROR_CODE_UNSPECIFIED
+                        }
+                    val exception =
+                        PlaybackException(
+                            "mpv end file error: reason=$reason, error=$error",
+                            null,
+                            errorCode,
+                        )
+                    playerError = exception
+                    listeners.sendEvent(EVENT_PLAYER_ERROR) { listener ->
+                        listener.onPlayerError(exception)
+                    }
+                    setPlayerStateAndNotifyIfChanged(playbackState = STATE_IDLE)
+                }
+                MpvEndFileReason.MPV_END_FILE_REASON_EOF -> {
+                    if (isPlayerReady) {
+                        if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
+                            if (pauseAtEndOfMediaItems) {
+                                setPlayerStateAndNotifyIfChanged(
+                                    playWhenReady = false,
+                                    playWhenReadyChangeReason =
+                                        PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
+                                    playbackState = STATE_READY,
+                                )
+                            } else {
+                                prepareMediaItem(currentMediaItemIndex + 1)
+                                play()
+                            }
+                        } else {
+                            setPlayerStateAndNotifyIfChanged(
+                                playWhenReady = false,
+                                playWhenReadyChangeReason =
+                                    PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
+                                playbackState = STATE_ENDED,
+                            )
+                            resetInternalState()
+                        }
+                    }
                 }
             }
         }
@@ -876,6 +944,7 @@ class MPVPlayer(
     private fun resetInternalState() {
         isPlayerReady = false
         isSeekable = false
+        playerError = null
         playbackState = STATE_IDLE
         currentPositionMs = null
         currentDurationMs = null
@@ -888,6 +957,7 @@ class MPVPlayer(
 
     /** Prepares the player. */
     override fun prepare() {
+        playerError = null
         internalMediaItems.forEachIndexed { index, mediaItem ->
             mpvLib.command(
                 arrayOf(
@@ -932,7 +1002,7 @@ class MPVPlayer(
      * @see Player.Listener.onPlayerError
      */
     override fun getPlayerError(): PlaybackException? {
-        return null
+        return playerError
     }
 
     /**
