@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -142,7 +143,14 @@ fun MiniPlayerContent(
 ) {
     Box(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.spacings.small),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(
+                        start = if (isMediumScreen) 16.dp else 12.dp,
+                        end = if (isMediumScreen) 16.dp else 12.dp,
+                        top = 8.dp,
+                        bottom = 8.dp,
+                    ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
         ) {
@@ -163,6 +171,7 @@ fun MiniPlayerContent(
                 MiniPlayerPlayPauseButton(
                     isPlaying = isPlaying,
                     onTogglePlayback = onTogglePlayback,
+                    isMediumScreen = isMediumScreen,
                 )
             } else {
                 MiniPlayerIdleInfo(
@@ -171,7 +180,7 @@ fun MiniPlayerContent(
                 )
 
                 Box(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(if (isMediumScreen) 48.dp else 40.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -205,7 +214,7 @@ private fun MiniPlayerThumbnail(
     BoxWithConstraints(
         modifier =
             modifier
-                .height(if (isMediumScreen) 80.dp else 64.dp)
+                .height(if (isMediumScreen) 80.dp else 48.dp)
                 .aspectRatio(defaultAspectRatio)
                 .clip(MaterialTheme.shapes.medium),
     ) {
@@ -277,9 +286,10 @@ private fun MiniPlayerPlayPauseButton(
     isPlaying: Boolean,
     onTogglePlayback: () -> Unit,
     modifier: Modifier = Modifier,
+    isMediumScreen: Boolean = false,
 ) {
     Box(
-        modifier = modifier.size(64.dp),
+        modifier = modifier.size(if (isMediumScreen) 64.dp else 48.dp),
         contentAlignment = Alignment.Center,
     ) {
         IconButton(
@@ -289,8 +299,8 @@ private fun MiniPlayerPlayPauseButton(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.size(48.dp),
+            shape = CircleShape,
+            modifier = Modifier.size(if (isMediumScreen) 48.dp else 40.dp),
         ) {
             Icon(
                 painter =
@@ -320,7 +330,7 @@ private fun MiniPlayerIdleInfo(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = "Connected",
+            text = stringResource(CoreR.string.cast_connected),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

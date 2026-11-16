@@ -3,18 +3,15 @@ package dev.jdtech.jellyfin.presentation.cast.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -22,13 +19,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,11 +52,86 @@ import dev.jdtech.jellyfin.presentation.cast.MiniPlayerContent
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
+import kotlin.math.abs
 import kotlinx.coroutines.launch
 
 /**
+ * Controller class managing the smooth expansion, drag gestures, and state synchronization of the
+ * shared phone player container between collapsed pill and full-screen expanded views.
+ */
+class CastPlayerSheetState(
+    initialExpanded: Boolean,
+    private val onExpandedChange: (Boolean) -> Unit,
+    private val screenHeightPx: () -> Float,
+) {
+    val animatable = Animatable(if (initialExpanded) 1f else 0f)
+
+    val progress: Float
+        get() = animatable.value
+
+    suspend fun snapTo(target: Float) {
+        animatable.snapTo(target.coerceIn(0f, 1f))
+    }
+
+    suspend fun drag(dragAmountY: Float) {
+        val totalPx = screenHeightPx().coerceAtLeast(1f)
+        val deltaFraction = -dragAmountY / totalPx
+        val newProgress = (animatable.value + deltaFraction).coerceIn(0f, 1f)
+        animatable.snapTo(newProgress)
+    }
+
+    suspend fun settle(velocity: Float) {
+        val target =
+            when {
+                velocity < -500f -> 1f // Flicked UP -> expand
+                velocity > 500f -> 0f // Flicked DOWN -> collapse
+                animatable.value > 0.5f -> 1f
+                else -> 0f
+            }
+        if (target == 1f) {
+            onExpandedChange(true)
+            animatable.animateTo(1f, tween(durationMillis = 280, easing = FastOutSlowInEasing))
+            animatable.snapTo(1f)
+        } else {
+            onExpandedChange(false)
+            animatable.animateTo(0f, tween(durationMillis = 250, easing = FastOutSlowInEasing))
+            animatable.snapTo(0f)
+        }
+    }
+
+    suspend fun expand() {
+        onExpandedChange(true)
+        animatable.animateTo(1f, tween(durationMillis = 300, easing = FastOutSlowInEasing))
+        animatable.snapTo(1f)
+    }
+
+    suspend fun collapse() {
+        onExpandedChange(false)
+        animatable.animateTo(0f, tween(durationMillis = 250, easing = FastOutSlowInEasing))
+        animatable.snapTo(0f)
+    }
+}
+
+@Composable
+fun rememberCastPlayerSheetState(
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    screenHeightPx: () -> Float,
+): CastPlayerSheetState {
+    val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
+    val currentScreenHeightPx by rememberUpdatedState(screenHeightPx)
+    return remember {
+        CastPlayerSheetState(
+            initialExpanded = isExpanded,
+            onExpandedChange = { currentOnExpandedChange(it) },
+            screenHeightPx = { currentScreenHeightPx() },
+        )
+    }
+}
+
+/**
  * Shared container transform container for Google Cast playback on phone devices. Seamlessly morphs
- * between a floating docked [MiniPlayerContent] card and a full-screen [CastExpandedPlayerLayout]
+ * between a floating docked [MiniPlayerContent] pill and a full-screen [CastExpandedPlayerLayout]
  * on a single continuous [Surface], eliminating modal scrims, dialog recreation, and visual
  * flicker.
  */
@@ -76,45 +153,25 @@ fun CastPlayerContainer(
     val onTogglePlayback = remember(viewModel) { { viewModel.togglePlayPause() } }
 
     val coroutineScope = rememberCoroutineScope()
-    val expansionProgress = remember { Animatable(if (isExpanded) 1f else 0f) }
+    var screenHeightPx by remember { mutableFloatStateOf(1000f) }
+
+    val sheetState =
+        rememberCastPlayerSheetState(
+            isExpanded = isExpanded,
+            onExpandedChange = onExpandedChange,
+            screenHeightPx = { screenHeightPx },
+        )
 
     LaunchedEffect(isExpanded) {
-        val target = if (isExpanded) 1f else 0f
-        if (expansionProgress.targetValue != target) {
-            expansionProgress.animateTo(
-                targetValue = target,
-                animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
-            )
-        }
-    }
-
-    val onDragCollapse: (Float) -> Unit = { dragAmount ->
-        coroutineScope.launch {
-            val totalPx = 800f
-            val deltaFraction = dragAmount / totalPx
-            expansionProgress.snapTo((expansionProgress.value - deltaFraction).coerceIn(0f, 1f))
-        }
-    }
-
-    val onDragCollapseEnd: () -> Unit = {
-        coroutineScope.launch {
-            if (expansionProgress.value < 0.75f) {
-                onExpandedChange(false)
-                expansionProgress.animateTo(
-                    0f,
-                    tween(durationMillis = 250, easing = FastOutSlowInEasing),
-                )
-            } else {
-                expansionProgress.animateTo(
-                    1f,
-                    tween(durationMillis = 250, easing = FastOutSlowInEasing),
-                )
-            }
+        if (isExpanded && sheetState.progress < 0.99f) {
+            sheetState.expand()
+        } else if (!isExpanded && sheetState.progress > 0.01f) {
+            sheetState.collapse()
         }
     }
 
     val actions =
-        remember(viewModel, onDeviceClick, onExpandedChange) {
+        remember(viewModel, onDeviceClick, sheetState) {
             CastPlayerActions(
                 onPlay = { viewModel.play() },
                 onPause = { viewModel.pause() },
@@ -126,9 +183,11 @@ fun CastPlayerContainer(
                 onAudioTrackSelected = { viewModel.onAudioTrackSelected(it) },
                 onSubtitleTrackSelected = { viewModel.onSubtitleTrackSelected(it) },
                 onDeviceClick = onDeviceClick,
-                onClose = { onExpandedChange(false) },
-                onDragCollapse = onDragCollapse,
-                onDragCollapseEnd = onDragCollapseEnd,
+                onClose = { coroutineScope.launch { sheetState.collapse() } },
+                onDragCollapse = { dragY -> coroutineScope.launch { sheetState.drag(dragY) } },
+                onDragCollapseEnd = { velocity ->
+                    coroutineScope.launch { sheetState.settle(velocity) }
+                },
             )
         }
 
@@ -136,21 +195,15 @@ fun CastPlayerContainer(
         uiState = uiState,
         connectedDevice = connectedDevice,
         playbackState = playbackState,
-        expansionFraction = expansionProgress.value,
+        expansionFraction = sheetState.progress,
         actions = actions,
         onTogglePlayback = onTogglePlayback,
         onExpandedChange = onExpandedChange,
-        onSnapExpansion = { fraction ->
-            coroutineScope.launch { expansionProgress.snapTo(fraction) }
-        },
-        onAnimateExpansion = { target ->
-            coroutineScope.launch {
-                expansionProgress.animateTo(
-                    target,
-                    tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                )
-            }
-        },
+        onDrag = { dragY -> coroutineScope.launch { sheetState.drag(dragY) } },
+        onSettle = { velocity -> coroutineScope.launch { sheetState.settle(velocity) } },
+        onExpand = { coroutineScope.launch { sheetState.expand() } },
+        onCollapse = { coroutineScope.launch { sheetState.collapse() } },
+        onReportScreenHeightPx = { screenHeightPx = it },
         showNavSuite = showNavSuite,
         isNavRail = isNavRail,
         onHeightChanged = onHeightChanged,
@@ -167,43 +220,44 @@ fun CastPlayerContainerLayout(
     actions: CastPlayerActions,
     onTogglePlayback: () -> Unit,
     onExpandedChange: (Boolean) -> Unit,
-    onSnapExpansion: (Float) -> Unit,
-    onAnimateExpansion: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    onDrag: (Float) -> Unit = {},
+    onSettle: (Float) -> Unit = {},
+    onExpand: () -> Unit = {},
+    onCollapse: () -> Unit = {},
+    onReportScreenHeightPx: (Float) -> Unit = {},
     showNavSuite: Boolean = true,
     isNavRail: Boolean = false,
     onHeightChanged: (Dp) -> Unit = {},
 ) {
-    BackHandler(enabled = expansionFraction > 0.05f) { onExpandedChange(false) }
+    val fraction = expansionFraction.coerceIn(0f, 1f)
+
+    BackHandler(enabled = fraction > 0.05f) { onCollapse() }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val screenHeight = maxHeight
         val density = LocalDensity.current
 
-        val safePadding = rememberSafePadding(handleBottomInsets = false)
-        val systemBottomPadding =
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val currentScreenHeightPx = with(density) { screenHeight.toPx() }
+        LaunchedEffect(currentScreenHeightPx) { onReportScreenHeightPx(currentScreenHeightPx) }
 
-        val navBarHeight = if (showNavSuite && !isNavRail) 80.dp else 0.dp
+        val safePadding = rememberSafePadding(handleBottomInsets = !showNavSuite)
+
+        val collapsedHeight = 64.dp
         val collapsedBottomOffset =
-            systemBottomPadding + navBarHeight + MaterialTheme.spacings.medium
-        val animatedCollapsedBottomOffset by
-            animateDpAsState(
-                targetValue = collapsedBottomOffset,
-                animationSpec = tween(durationMillis = 250),
-                label = "collapsedBottomOffset",
-            )
+            if (showNavSuite && !isNavRail) {
+                MaterialTheme.spacings.medium
+            } else {
+                safePadding.bottom + MaterialTheme.spacings.medium
+            }
 
         val collapsedHorizontalPadding = safePadding.start + MaterialTheme.spacings.medium
-        val collapsedHeight = 80.dp
-
-        val fraction = expansionFraction.coerceIn(0f, 1f)
 
         val currentHeight = lerp(collapsedHeight, screenHeight, fraction)
-        val currentBottomPadding = lerp(animatedCollapsedBottomOffset, 0.dp, fraction)
+        val currentBottomPadding = lerp(collapsedBottomOffset, 0.dp, fraction)
         val currentStartPadding = lerp(collapsedHorizontalPadding, 0.dp, fraction)
         val currentEndPadding = lerp(collapsedHorizontalPadding, 0.dp, fraction)
-        val currentCornerRadius = lerp(16.dp, 0.dp, fraction)
+        val currentCornerRadius = lerp(32.dp, 0.dp, fraction)
         val currentElevation = lerp(8.dp, 0.dp, fraction)
         val currentContainerColor =
             lerp(
@@ -231,41 +285,87 @@ fun CastPlayerContainerLayout(
             shape = RoundedCornerShape(currentCornerRadius),
             color = currentContainerColor,
             shadowElevation = currentElevation,
+            border =
+                if (fraction < 0.5f) {
+                    BorderStroke(
+                        width = 1.dp,
+                        color =
+                            MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.25f * (1f - fraction * 2f),
+                            ),
+                    )
+                } else {
+                    null
+                },
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Collapsed Mini Player Content
-                if (fraction < 0.35f) {
+            Box(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .then(
+                            if (fraction < 0.2f) {
+                                Modifier.pointerInput(Unit) {
+                                    val velocityTracker = VelocityTracker()
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(requireUnconsumed = false)
+                                        velocityTracker.resetTracking()
+                                        velocityTracker.addPosition(
+                                            down.uptimeMillis,
+                                            down.position,
+                                        )
+                                        var totalDrag = 0f
+                                        var isDragging = false
+
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val change =
+                                                event.changes.firstOrNull { it.id == down.id }
+                                                    ?: break
+
+                                            if (change.changedToUp()) {
+                                                if (!isDragging) {
+                                                    onExpand()
+                                                } else {
+                                                    val velocity =
+                                                        velocityTracker.calculateVelocity().y
+                                                    onSettle(velocity)
+                                                }
+                                                break
+                                            }
+
+                                            if (change.isConsumed) break
+
+                                            val dragY =
+                                                change.position.y - change.previousPosition.y
+                                            totalDrag += dragY
+                                            velocityTracker.addPosition(
+                                                change.uptimeMillis,
+                                                change.position,
+                                            )
+
+                                            if (
+                                                !isDragging &&
+                                                    abs(totalDrag) > viewConfiguration.touchSlop
+                                            ) {
+                                                isDragging = true
+                                            }
+
+                                            if (isDragging) {
+                                                change.consume()
+                                                onDrag(dragY)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Modifier
+                            },
+                        ),
+            ) {
+                // Collapsed Mini Player Pill Content
+                if (fraction < 0.4f) {
                     val miniAlpha = (1f - (fraction / 0.25f)).coerceIn(0f, 1f)
                     Box(
-                        modifier =
-                            Modifier.fillMaxSize()
-                                .graphicsLayer { alpha = miniAlpha }
-                                .then(
-                                    if (fraction == 0f) {
-                                        Modifier.clickable { onExpandedChange(true) }
-                                    } else {
-                                        Modifier
-                                    },
-                                )
-                                .pointerInput(Unit) {
-                                    detectVerticalDragGestures(
-                                        onDragEnd = {
-                                            if (fraction > 0.25f) {
-                                                onExpandedChange(true)
-                                                onAnimateExpansion(1f)
-                                            } else {
-                                                onAnimateExpansion(0f)
-                                            }
-                                        },
-                                        onVerticalDrag = { _, dragAmount ->
-                                            val totalPx = with(density) { screenHeight.toPx() }
-                                            val deltaFraction = -dragAmount / totalPx
-                                            onSnapExpansion(
-                                                (fraction + deltaFraction).coerceIn(0f, 1f),
-                                            )
-                                        },
-                                    )
-                                },
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = miniAlpha },
                     ) {
                         MiniPlayerContent(
                             connectedDevice = connectedDevice,
@@ -279,10 +379,10 @@ fun CastPlayerContainerLayout(
                 }
 
                 // Expanded Player Content
-                if (fraction > 0.15f) {
-                    val expandedAlpha = ((fraction - 0.2f) / 0.8f).coerceIn(0f, 1f)
-                    val translationYPx = with(density) { ((1f - fraction) * 50.dp.toPx()) }
-                    val contentScale = 0.92f + 0.08f * fraction
+                if (fraction > 0.1f) {
+                    val expandedAlpha = ((fraction - 0.15f) / 0.85f).coerceIn(0f, 1f)
+                    val translationYPx = with(density) { ((1f - fraction) * 40.dp.toPx()) }
+                    val contentScale = 0.94f + 0.06f * fraction
 
                     Box(
                         modifier =
@@ -357,7 +457,7 @@ private fun mockActions() =
         onClose = {},
     )
 
-@Preview(name = "Collapsed - Light", showBackground = true)
+@Preview(name = "Pill Collapsed - Light", showBackground = true)
 @Composable
 private fun CastPlayerContainerCollapsedLightPreview() {
     FindroidTheme(darkTheme = false) {
@@ -369,13 +469,11 @@ private fun CastPlayerContainerCollapsedLightPreview() {
             actions = mockActions(),
             onTogglePlayback = {},
             onExpandedChange = {},
-            onSnapExpansion = {},
-            onAnimateExpansion = {},
         )
     }
 }
 
-@Preview(name = "Collapsed - Dark", showBackground = true)
+@Preview(name = "Pill Collapsed - Dark", showBackground = true)
 @Composable
 private fun CastPlayerContainerCollapsedDarkPreview() {
     FindroidTheme(darkTheme = true) {
@@ -387,8 +485,6 @@ private fun CastPlayerContainerCollapsedDarkPreview() {
             actions = mockActions(),
             onTogglePlayback = {},
             onExpandedChange = {},
-            onSnapExpansion = {},
-            onAnimateExpansion = {},
         )
     }
 }
@@ -405,8 +501,6 @@ private fun CastPlayerContainerExpandedLightPreview() {
             actions = mockActions(),
             onTogglePlayback = {},
             onExpandedChange = {},
-            onSnapExpansion = {},
-            onAnimateExpansion = {},
         )
     }
 }
@@ -423,8 +517,6 @@ private fun CastPlayerContainerExpandedDarkPreview() {
             actions = mockActions(),
             onTogglePlayback = {},
             onExpandedChange = {},
-            onSnapExpansion = {},
-            onAnimateExpansion = {},
         )
     }
 }

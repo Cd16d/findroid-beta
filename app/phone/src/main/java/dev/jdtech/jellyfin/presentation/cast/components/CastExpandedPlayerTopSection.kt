@@ -1,7 +1,8 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,6 +38,7 @@ import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.toBlurHashPainter
 import dev.jdtech.jellyfin.utils.toOptimizedImageUri
+import kotlin.math.abs
 
 /**
  * Top artwork and header section of expanded Google Cast player.
@@ -55,7 +59,7 @@ fun PlayerTopSection(
     onDeviceClick: () -> Unit,
     modifier: Modifier = Modifier,
     onDragCollapse: ((Float) -> Unit)? = null,
-    onDragCollapseEnd: (() -> Unit)? = null,
+    onDragCollapseEnd: ((Float) -> Unit)? = null,
 ) {
     val deviceName = uiState.connectedDevice?.name
     val itemTitle =
@@ -86,10 +90,36 @@ fun PlayerTopSection(
         if (onDragCollapse != null) {
             Modifier.pointerInput(isScrubbing) {
                 if (!isScrubbing) {
-                    detectVerticalDragGestures(
-                        onDragEnd = { onDragCollapseEnd?.invoke() },
-                        onVerticalDrag = { _, dragAmount -> onDragCollapse(dragAmount) },
-                    )
+                    val velocityTracker = VelocityTracker()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        velocityTracker.resetTracking()
+                        velocityTracker.addPosition(down.uptimeMillis, down.position)
+                        var isDragging = false
+                        var totalDrag = 0f
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (change.changedToUp()) {
+                                if (isDragging) {
+                                    val velocity = velocityTracker.calculateVelocity().y
+                                    onDragCollapseEnd?.invoke(velocity)
+                                }
+                                break
+                            }
+                            if (change.isConsumed) break
+                            val dragY = change.position.y - change.previousPosition.y
+                            totalDrag += dragY
+                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+                            if (!isDragging && abs(totalDrag) > viewConfiguration.touchSlop) {
+                                isDragging = true
+                            }
+                            if (isDragging) {
+                                change.consume()
+                                onDragCollapse(dragY)
+                            }
+                        }
+                    }
                 }
             }
         } else {

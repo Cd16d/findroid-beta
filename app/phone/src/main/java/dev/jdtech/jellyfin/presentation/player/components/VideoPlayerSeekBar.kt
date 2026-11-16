@@ -102,7 +102,7 @@ fun VideoPlayerSeekBar(
     isBuffering: Boolean = false,
     enabled: Boolean = true,
     inactiveTrackColor: Color = Color.White.copy(alpha = 0.20f),
-    disabledThumbColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+    disabledThumbColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     trackHeight: Dp = 10.dp,
     highlightTrackHeight: Dp = 10.dp,
     thumbWidth: Dp = 3.dp,

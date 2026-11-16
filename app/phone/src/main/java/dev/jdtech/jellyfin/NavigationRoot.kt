@@ -552,37 +552,37 @@ private fun MainNavigation(
                                 )
                             }
                         }
+                    } else {
+                        // Phone Cast Player (Morphing Shared Container Transform)
+                        AnimatedVisibility(
+                            visible = showCastPlayerPhone,
+                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                        ) {
+                            CastPlayerContainer(
+                                isExpanded = showCastExpandedPlayer,
+                                onExpandedChange = { expanded ->
+                                    showCastExpandedPlayer = expanded
+                                },
+                                onDeviceClick = { showCastSheet = true },
+                                showNavSuite = showNavSuite,
+                                isNavRail = isNavRail,
+                                onHeightChanged = { measuredHeight ->
+                                    castPlayerHeight =
+                                        if (!isMediumScreen) {
+                                            measuredHeight
+                                        } else {
+                                            MaterialTheme.spacings.default
+                                        }
+                                },
+                            )
+                        }
                     }
                 }
             }
 
             if (showCastSheet) {
                 CastBottomSheet(onDismissRequest = { showCastSheet = false })
-            }
-
-            // Phone Cast Player (Morphing Shared Container Transform)
-            if (!isExpandedScreen) {
-                AnimatedVisibility(
-                    visible = showCastPlayerPhone,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                ) {
-                    CastPlayerContainer(
-                        isExpanded = showCastExpandedPlayer,
-                        onExpandedChange = { expanded -> showCastExpandedPlayer = expanded },
-                        onDeviceClick = { showCastSheet = true },
-                        showNavSuite = showNavSuite,
-                        isNavRail = isNavRail,
-                        onHeightChanged = { measuredHeight ->
-                            castPlayerHeight =
-                                if (!isMediumScreen) {
-                                    measuredHeight - safePadding.bottom
-                                } else {
-                                    MaterialTheme.spacings.default
-                                }
-                        },
-                    )
-                }
             }
         }
     }

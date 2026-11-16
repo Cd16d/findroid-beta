@@ -185,7 +185,7 @@ data class CastPlayerActions(
     val onDeviceClick: () -> Unit,
     val onClose: () -> Unit,
     val onDragCollapse: ((Float) -> Unit)? = null,
-    val onDragCollapseEnd: (() -> Unit)? = null,
+    val onDragCollapseEnd: ((Float) -> Unit)? = null,
 )
 
 /**

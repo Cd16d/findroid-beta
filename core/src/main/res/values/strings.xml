@@ -175,6 +175,7 @@
     <string name="cast_available_devices">Available devices</string>
     <string name="cast_wifi_instruction">To connect via Wi-Fi, make sure this device and your TV are connected to the same Wi-Fi network.</string>
     <string name="cast_connect_tv">Connect TV</string>
+    <string name="cast_connected">Connected</string>
     <string name="hi_user">Hi %1$s!</string>
     <string name="quick_connect">Quick Connect</string>
     <string name="quick_connect_description">Enter the code to pair the new device.</string>

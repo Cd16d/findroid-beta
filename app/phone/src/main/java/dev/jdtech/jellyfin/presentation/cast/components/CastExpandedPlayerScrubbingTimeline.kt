@@ -264,7 +264,7 @@ fun CastScrubbingTimeline(
             isBuffering = isBuffering,
             enabled = enabled,
             inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
             trackHeight = 16.dp,
             highlightTrackHeight = 16.dp,
             thumbWidth = 4.dp,
