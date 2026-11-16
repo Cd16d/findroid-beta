@@ -77,6 +77,10 @@ private data class ChapterSlice(
  * @param onScrubbingChanged Callback reporting scrub status, scrub timestamp in ms, and touch X
  *   offset.
  * @param isBuffering Whether media is buffering, showing an animated shimmer along the track.
+ * @param enabled Whether the seek bar accepts touch interactions. Defaults to true.
+ * @param inactiveTrackColor Color used for unplayed track portions. Defaults to translucent white.
+ * @param disabledThumbColor Color used for scrubber thumb when [enabled] is false. Defaults to
+ *   muted onSurface.
  * @param trackHeight Resting thickness of the progress bar track.
  * @param highlightTrackHeight Active thickness when scrubbing or focused.
  * @param thumbWidth Width of the scrubber thumb indicator.
@@ -96,6 +100,9 @@ fun VideoPlayerSeekBar(
         { _, _, _ ->
         },
     isBuffering: Boolean = false,
+    enabled: Boolean = true,
+    inactiveTrackColor: Color = Color.White.copy(alpha = 0.20f),
+    disabledThumbColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
     trackHeight: Dp = 10.dp,
     highlightTrackHeight: Dp = 10.dp,
     thumbWidth: Dp = 3.dp,
@@ -212,7 +219,9 @@ fun VideoPlayerSeekBar(
         modifier =
             modifier.fillMaxWidth().height(canvasHeight).padding(horizontal = 4.dp).pointerInput(
                 safeDurationMs,
+                enabled,
             ) {
+                if (!enabled) return@pointerInput
                 val touchSlop = viewConfiguration.touchSlop
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -425,7 +434,7 @@ fun VideoPlayerSeekBar(
                     if (isBuffering) {
                         // 1. Base unplayed chapter track background
                         drawCustomRoundRect(
-                            color = Color.White.copy(alpha = 0.20f),
+                            color = inactiveTrackColor,
                             topLeft = Offset(sliceStartX, yOffset - trackHeightPx / 2f),
                             size = Size(sliceWidth, trackHeightPx),
                             topLeftRadius = leftRadius,
@@ -504,7 +513,7 @@ fun VideoPlayerSeekBar(
 
                             // 1. Base unplayed chapter track (runs continuously under buffer)
                             drawCustomRoundRect(
-                                color = Color.White.copy(alpha = 0.20f),
+                                color = inactiveTrackColor,
                                 topLeft = Offset(inactiveStart, yOffset - trackHeightPx / 2f),
                                 size = Size(sliceEndX - inactiveStart, trackHeightPx),
                                 topLeftRadius = inactLeftRad,
@@ -743,7 +752,7 @@ fun VideoPlayerSeekBar(
             clipPath(slicePath) {
                 if (isBuffering) {
                     drawCustomRoundRect(
-                        color = Color.White.copy(alpha = 0.20f),
+                        color = inactiveTrackColor,
                         topLeft = Offset(0f, yOffset - trackHeightPx / 2f),
                         size = Size(size.width, trackHeightPx),
                         topLeftRadius = fullCornerRadius,
@@ -771,7 +780,7 @@ fun VideoPlayerSeekBar(
                 } else {
                     if (inactiveLimit < size.width) {
                         drawCustomRoundRect(
-                            color = Color.White.copy(alpha = 0.20f),
+                            color = inactiveTrackColor,
                             topLeft = Offset(inactiveLimit, yOffset - trackHeightPx / 2f),
                             size = Size(size.width - inactiveLimit, trackHeightPx),
                             topLeftRadius = innerCornerRadius,
@@ -819,8 +828,14 @@ fun VideoPlayerSeekBar(
 
         // Draw Thumb cursor bar (hidden during buffering)
         if (thumbAlpha > 0.01f) {
+            val thumbColor =
+                if (enabled) {
+                    primaryColor.copy(alpha = thumbAlpha)
+                } else {
+                    disabledThumbColor.copy(alpha = thumbAlpha)
+                }
             drawRoundRect(
-                color = primaryColor.copy(alpha = thumbAlpha),
+                color = thumbColor,
                 topLeft = Offset(thumbLeft, yOffset - thumbHeight / 2f),
                 size = Size(thumbWidthPx, thumbHeight),
                 cornerRadius = CornerRadius(thumbWidthPx / 2f, thumbWidthPx / 2f),
@@ -874,6 +889,19 @@ private fun VideoPlayerSeekBarWithSegmentsPreview() {
                         endTicks = 1_800_000L,
                     ),
                 ),
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+private fun VideoPlayerSeekBarDisabledPreview() {
+    FindroidTheme {
+        VideoPlayerSeekBar(
+            progress = 0f,
+            onSeek = {},
+            enabled = false,
+            durationMs = 0L,
         )
     }
 }

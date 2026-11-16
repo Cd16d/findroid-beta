@@ -35,7 +35,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
 val TrackItemShape = CentralShapes.GroupSingle
@@ -63,19 +62,19 @@ fun SelectableTrackItem(
 ) {
     val containerColor =
         if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
         } else {
-            PlayerCardBackground
+            MaterialTheme.colorScheme.surfaceContainerLow
         }
     val borderColor =
         if (isSelected) {
             MaterialTheme.colorScheme.primary
         } else {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
         }
     val contentColor =
         if (isSelected) {
-            MaterialTheme.colorScheme.onPrimaryContainer
+            MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.onSurface
         }
@@ -177,7 +176,12 @@ fun SelectableTrackItem(
     }
 }
 
-@Preview(name = "Phone List", showBackground = true, backgroundColor = 0xFF141416, widthDp = 360)
+@Preview(
+    name = "Phone List Dark",
+    showBackground = true,
+    backgroundColor = 0xFF141416,
+    widthDp = 360,
+)
 @Preview(
     name = "Tablet Side Panel",
     showBackground = true,
@@ -187,6 +191,41 @@ fun SelectableTrackItem(
 @Composable
 private fun SelectableTrackItemPreview() {
     FindroidTheme(darkTheme = true) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SelectableTrackItem(
+                title = "None",
+                chips = emptyList(),
+                isSelected = false,
+                onClick = {},
+            )
+            SelectableTrackItem(
+                title = "English (AAC 5.1)",
+                chips = listOf("Default", "5.1"),
+                isSelected = true,
+                onClick = {},
+            )
+            SelectableTrackItem(
+                title = "Italian (AC3 5.1)",
+                chips = listOf("5.1"),
+                isSelected = false,
+                onClick = {},
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Phone List Light",
+    showBackground = true,
+    backgroundColor = 0xFFFFFFFF,
+    widthDp = 360,
+)
+@Composable
+private fun SelectableTrackItemLightPreview() {
+    FindroidTheme(darkTheme = false) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),

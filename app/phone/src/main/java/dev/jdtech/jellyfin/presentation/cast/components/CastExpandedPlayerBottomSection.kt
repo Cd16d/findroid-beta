@@ -65,6 +65,19 @@ fun CastExpandedPlayerBottomSection(
     val duration = playerState.duration.toFloat()
     val volume = playerState.volume
 
+    val isItemLoaded =
+        remember(
+            uiState.fileLoaded,
+            uiState.currentItemTitle.title,
+            playerState.duration,
+            playerState.status,
+        ) {
+            uiState.fileLoaded ||
+                uiState.currentItemTitle.title.isNotBlank() ||
+                playerState.duration > 0L ||
+                playerState.status != CastPlaybackStatus.IDLE
+        }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -84,6 +97,8 @@ fun CastExpandedPlayerBottomSection(
             segments =
                 uiState.segments.ifEmpty { if (segment != null) listOf(segment) else emptyList() },
             onOpenChapters = onOpenChapters,
+            isItemLoaded = isItemLoaded,
+            enabled = isItemLoaded && duration > 0f,
         )
 
         Spacer(modifier = Modifier.height(16.dp))

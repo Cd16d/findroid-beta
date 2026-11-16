@@ -57,6 +57,10 @@ import java.util.Date
  * @param modifier Modifier applied to the timeline layout. Defaults to [Modifier].
  * @param segments List of media segments (e.g. intros, credits). Defaults to empty list.
  * @param onOpenChapters Optional callback when chapter badge is tapped to open chapter selector.
+ * @param isItemLoaded Whether media item metadata is loaded and ready. Defaults to true if
+ *   duration > 0 or not idle.
+ * @param enabled Whether seek bar is enabled for scrubbing. Defaults to true when item is loaded
+ *   with valid duration.
  */
 @Composable
 fun CastScrubbingTimeline(
@@ -69,6 +73,8 @@ fun CastScrubbingTimeline(
     modifier: Modifier = Modifier,
     segments: List<FindroidSegment> = emptyList(),
     onOpenChapters: (() -> Unit)? = null,
+    isItemLoaded: Boolean = duration > 0f || playerStatus != CastPlaybackStatus.IDLE,
+    enabled: Boolean = isItemLoaded && duration > 0f,
 ) {
     val safeDuration = if (duration.isFinite() && duration > 0f) duration else 0f
     val safeProgress =
@@ -107,7 +113,7 @@ fun CastScrubbingTimeline(
 
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
         // Badges row: Chapter pill & Progress • Duration pill on left, Ends at pill on right
-        Box(modifier = Modifier.fillMaxWidth().alpha(if (safeDuration > 0f) 1f else 0f)) {
+        Box(modifier = Modifier.fillMaxWidth().alpha(if (isItemLoaded) 1f else 0f)) {
             Column(
                 modifier =
                     Modifier.align(Alignment.CenterStart)
@@ -116,7 +122,13 @@ fun CastScrubbingTimeline(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 // Pill 1: Chapter Title (clickable if chapters are available)
-                if (!sectionTitle.isNullOrBlank()) {
+                val displayedSectionTitle =
+                    when {
+                        !sectionTitle.isNullOrBlank() -> sectionTitle
+                        chapters.isNotEmpty() -> stringResource(R.string.chapters)
+                        else -> null
+                    }
+                if (!displayedSectionTitle.isNullOrBlank()) {
                     if (chapters.isNotEmpty() && onOpenChapters != null) {
                         Box(
                             modifier =
@@ -132,7 +144,7 @@ fun CastScrubbingTimeline(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(
-                                    text = sectionTitle,
+                                    text = displayedSectionTitle,
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
@@ -157,7 +169,7 @@ fun CastScrubbingTimeline(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = sectionTitle,
+                                text = displayedSectionTitle,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White.copy(alpha = 0.85f),
@@ -194,7 +206,7 @@ fun CastScrubbingTimeline(
                                     .background(Color.White.copy(alpha = 0.6f)),
                         )
                         Text(
-                            text = contentDurationString,
+                            text = if (durationMs > 0L) contentDurationString else "--:--",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White.copy(alpha = 0.85f),
@@ -250,6 +262,9 @@ fun CastScrubbingTimeline(
                 }
             },
             isBuffering = isBuffering,
+            enabled = enabled,
+            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             trackHeight = 16.dp,
             highlightTrackHeight = 16.dp,
             thumbWidth = 4.dp,
@@ -292,6 +307,24 @@ private fun CastScrubbingTimelineBufferingPreview() {
             chapters = emptyList(),
             onScrubStart = {},
             onScrubStop = {},
+            isItemLoaded = true,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CastScrubbingTimelineIdlePreview() {
+    FindroidTheme {
+        CastScrubbingTimeline(
+            playerStatus = CastPlaybackStatus.IDLE,
+            currentProgress = 0f,
+            duration = 0f,
+            chapters = emptyList(),
+            onScrubStart = {},
+            onScrubStop = {},
+            isItemLoaded = false,
+            enabled = false,
         )
     }
 }
