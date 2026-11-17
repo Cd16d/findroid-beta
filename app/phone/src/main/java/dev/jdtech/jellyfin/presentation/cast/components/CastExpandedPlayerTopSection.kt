@@ -1,6 +1,9 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -16,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,9 +84,21 @@ fun PlayerTopSection(
         }
 
     val trickplay = uiState.currentTrickplay
+    val stateAspect = uiState.trickplayAspectRatio
+    val trickplayRatio =
+        when {
+            trickplay != null && trickplay.height > 0 -> {
+                trickplay.width.toFloat() / trickplay.height.toFloat()
+            }
+            stateAspect != null && stateAspect > 0f -> {
+                stateAspect
+            }
+            else -> null
+        }
+
     val computedAspectRatio =
-        if (isScrubbing && trickplay != null) {
-            uiState.trickplayAspectRatio ?: uiState.defaultAspectRatio
+        if (isScrubbing && trickplayRatio != null) {
+            trickplayRatio
         } else {
             uiState.defaultAspectRatio
         }
@@ -90,7 +106,7 @@ fun PlayerTopSection(
         if (computedAspectRatio.isFinite() && computedAspectRatio > 0f) {
             computedAspectRatio
         } else {
-            16f / 10f
+            16f / 9f
         }
 
     val dragModifier =
@@ -159,11 +175,13 @@ fun PlayerTopSection(
                     .padding(bottom = bottomArtworkPadding),
             contentAlignment = Alignment.Center,
         ) {
-            val targetAspect = safeAspectRatio.coerceIn(0.66f, 1.85f)
+            val minAspect = if (isScrubbing && trickplayRatio != null) 0.75f else 0.5f
+            val maxAspect = 2.75f
+            val targetAspect = safeAspectRatio.coerceIn(minAspect, maxAspect)
             val (artworkWidth, artworkHeight) =
                 if (isLandscapePhone) {
                     val maxAllowedHeight = maxHeight * 0.92f
-                    val maxAllowedWidth = maxWidth * 0.94f
+                    val maxAllowedWidth = maxWidth * 0.98f
                     val candidateWidth = maxAllowedHeight * targetAspect
                     if (candidateWidth <= maxAllowedWidth) {
                         candidateWidth to maxAllowedHeight
@@ -172,7 +190,7 @@ fun PlayerTopSection(
                     }
                 } else {
                     val maxAllowedHeight = (maxHeight * 0.78f).coerceAtMost(320.dp)
-                    val maxAllowedWidth = maxWidth * 0.88f
+                    val maxAllowedWidth = maxWidth * 0.98f
                     val candidateWidth = maxAllowedHeight * targetAspect
                     if (candidateWidth <= maxAllowedWidth) {
                         candidateWidth to maxAllowedHeight
@@ -180,7 +198,19 @@ fun PlayerTopSection(
                         maxAllowedWidth to (maxAllowedWidth / targetAspect)
                     }
                 }
-            val artworkModifier = Modifier.size(width = artworkWidth, height = artworkHeight)
+            val animatedWidth by
+                animateDpAsState(
+                    targetValue = artworkWidth,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                    label = "artworkWidth",
+                )
+            val animatedHeight by
+                animateDpAsState(
+                    targetValue = artworkHeight,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                    label = "artworkHeight",
+                )
+            val artworkModifier = Modifier.size(width = animatedWidth, height = animatedHeight)
 
             Box(contentAlignment = Alignment.Center) {
                 CastPlayerArtwork(
