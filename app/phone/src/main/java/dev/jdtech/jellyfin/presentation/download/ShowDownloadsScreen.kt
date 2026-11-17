@@ -139,7 +139,7 @@ private fun ShowDownloadsScreenLayout(
 ) {
     val context = LocalContext.current
 
-    val safePadding = rememberSafePadding()
+    val safePadding = rememberSafePadding(handleStartInsets = false)
     val castPadding = LocalCastPlayerHeight.current
     val paddingStart = safePadding.start + 16.dp
     val paddingEnd = safePadding.end + 16.dp

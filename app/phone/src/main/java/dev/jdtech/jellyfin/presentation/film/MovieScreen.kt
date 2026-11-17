@@ -166,7 +166,7 @@ private fun MovieScreenLayout(
     presets: List<DownloadQualityPreset> = emptyList(),
     navigateToDownloadPresets: () -> Unit = {},
 ) {
-    val safePadding = rememberSafePadding()
+    val safePadding = rememberSafePadding(handleStartInsets = false)
     val castPadding = LocalCastPlayerHeight.current
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default

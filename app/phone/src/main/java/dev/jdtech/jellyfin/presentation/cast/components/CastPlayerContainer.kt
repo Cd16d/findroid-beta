@@ -190,11 +190,12 @@ fun rememberCastPlayerSheetState(
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     screenHeightPx: () -> Float,
+    deviceId: String? = null,
 ): CastPlayerSheetState {
     val coroutineScope = rememberCoroutineScope()
     val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
     val currentScreenHeightPx by rememberUpdatedState(screenHeightPx)
-    return remember {
+    return remember(deviceId) {
         CastPlayerSheetState(
             initialExpanded = isExpanded,
             onExpandedChange = { currentOnExpandedChange(it) },
@@ -234,7 +235,14 @@ fun CastPlayerContainer(
             isExpanded = isExpanded,
             onExpandedChange = onExpandedChange,
             screenHeightPx = { screenHeightPx },
+            deviceId = connectedDevice.id,
         )
+
+    LaunchedEffect(connectedDevice.id) {
+        if (sheetState.progress > 0.01f) {
+            sheetState.collapseSoft()
+        }
+    }
 
     LaunchedEffect(isExpanded) {
         if (!sheetState.isDragging) {
@@ -362,7 +370,7 @@ fun CastPlayerContainerLayout(
         val currentTopPx = floatLerp(collapsedTopPx, 0f, fraction)
         val currentBottomPx = floatLerp(collapsedBottomPx, screenHeightPx, fraction)
         val currentRadiusPx = with(density) { (36.dp * (1f - fraction)).toPx() }
-        val elevationDp = 8.dp * (1f - fraction)
+        val elevationDp = 10.dp * (1f - fraction)
         val borderAlpha = (1f - fraction).coerceIn(0f, 1f)
 
         val currentTopDp = with(density) { currentTopPx.toDp() }
@@ -424,11 +432,19 @@ fun CastPlayerContainerLayout(
                     .graphicsLayer {
                         shape = morphShape
                         shadowElevation = with(density) { elevationDp.toPx() }
-                        clip = true
+                        ambientShadowColor = Color.Black
+                        spotShadowColor = Color.Black
+                        clip = false
                     }
                     .drawWithContent {
                         val outline = morphShape.createOutline(size, layoutDirection, this)
-                        drawOutline(outline, themeColors.containerColor)
+                        val effectiveContainerColor =
+                            androidx.compose.ui.graphics.lerp(
+                                themeColors.colorScheme.surfaceContainerHigh,
+                                themeColors.containerColor,
+                                fraction,
+                            )
+                        drawOutline(outline, effectiveContainerColor)
                         drawContent()
                         if (borderAlpha > 0.01f) {
                             drawOutline(
@@ -437,6 +453,10 @@ fun CastPlayerContainerLayout(
                                 style = Stroke(width = with(density) { 1.dp.toPx() * 2f }),
                             )
                         }
+                    }
+                    .graphicsLayer {
+                        shape = morphShape
+                        clip = true
                     }
                     .then(dragGestureModifier),
         ) {

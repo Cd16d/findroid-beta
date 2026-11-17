@@ -345,45 +345,57 @@ private fun MainNavigation(
     }
 
     val connectionState by castSessionViewModel.connectionState.collectAsStateWithLifecycle()
-    val isCastRoute =
+    val connectedDevice by
+        castSessionViewModel.sessionManager.connectedDevice.collectAsStateWithLifecycle()
+
+    LaunchedEffect(connectedDevice?.id) { showCastExpandedPlayer = false }
+
+    LaunchedEffect(connectionState) {
+        if (connectionState != CastConnectionState.CONNECTED) {
+            showCastExpandedPlayer = false
+        }
+    }
+    val isCastSupportedRoute =
         when (currentRoute) {
             is HomeRoute,
-            is ShowRoute,
             is MovieRoute,
-            is LibraryRoute,
-            is EpisodeRoute,
+            is ShowRoute,
             is SeasonRoute,
-            is FavoritesRoute,
+            is EpisodeRoute,
+            is PersonRoute,
+            is LibraryRoute,
             is CollectionRoute,
-            is MediaRoute,
-            is SearchRoute,
-            is DownloadsRoute,
-            is ShowDownloadsRoute,
-            is PersonRoute -> true
+            is FavoritesRoute -> true
             else -> false
         }
+
     val showCastButton =
-        isCastRoute && !isOfflineMode && castSessionViewModel.sessionManager.isSupported
+        isCastSupportedRoute && !isOfflineMode && castSessionViewModel.sessionManager.isSupported
 
     val showCastPlayerPhone by
-        remember(showCastButton, connectionState, isExpandedScreen) {
+        remember(
+            connectionState,
+            isExpandedScreen,
+            isCastSupportedRoute,
+            showCastExpandedPlayer,
+        ) {
             derivedStateOf {
-                showCastButton &&
-                    connectionState == CastConnectionState.CONNECTED &&
-                    !isExpandedScreen
+                connectionState == CastConnectionState.CONNECTED &&
+                    !isExpandedScreen &&
+                    (isCastSupportedRoute || showCastExpandedPlayer)
             }
         }
 
     val showCastMiniPlayer by
         remember(
-            showCastButton,
             connectionState,
             showCastExpandedPlayer,
             isExpandedScreen,
+            isCastSupportedRoute,
         ) {
             derivedStateOf {
-                val connected = showCastButton && connectionState == CastConnectionState.CONNECTED
-                connected && isExpandedScreen && !showCastExpandedPlayer
+                val connected = connectionState == CastConnectionState.CONNECTED
+                connected && isExpandedScreen && !showCastExpandedPlayer && isCastSupportedRoute
             }
         }
 
@@ -547,8 +559,8 @@ private fun MainNavigation(
                         ) {
                             AnimatedVisibility(
                                 visible = showCastMiniPlayer,
-                                enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-                                exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 200)),
                             ) {
                                 CastMiniPlayer(
                                     onClick = { showCastExpandedPlayer = true },

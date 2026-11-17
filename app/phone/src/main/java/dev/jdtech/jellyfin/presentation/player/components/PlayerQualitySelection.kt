@@ -40,7 +40,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.models.ResolutionTier
 import dev.jdtech.jellyfin.player.core.domain.models.VideoQualityOption
@@ -170,7 +169,7 @@ internal fun AutoQualityCard(
         if (isSelected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
         } else {
-            PlayerCardBackground
+            MaterialTheme.colorScheme.surfaceVariant
         }
     val borderColor =
         if (isSelected) {
@@ -335,7 +334,7 @@ private fun ResolutionQualityCard(
         if (isSelected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
         } else {
-            PlayerCardBackground
+            MaterialTheme.colorScheme.surfaceVariant
         }
     val borderColor =
         if (isSelected) {

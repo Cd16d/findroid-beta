@@ -64,7 +64,7 @@ fun SelectableTrackItem(
         if (isSelected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
         } else {
-            MaterialTheme.colorScheme.surfaceContainerLow
+            MaterialTheme.colorScheme.surfaceVariant
         }
     val borderColor =
         if (isSelected) {

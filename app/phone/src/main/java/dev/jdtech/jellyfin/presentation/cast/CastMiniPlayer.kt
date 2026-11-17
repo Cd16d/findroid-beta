@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,7 +63,12 @@ data class MiniPlayerThemeColors(
     val colorScheme: ColorScheme,
     val containerColor: Color = colorScheme.surfaceContainer,
     val subtleContainerColor: Color = colorScheme.surfaceVariant,
-    val progressColor: Color = colorScheme.primary.copy(alpha = 0.40f),
+    val progressColor: Color =
+        if (colorScheme.surface.luminance() < 0.5f) {
+            colorScheme.primary.copy(alpha = 0.40f)
+        } else {
+            colorScheme.primary.copy(alpha = 0.22f)
+        },
     val playButtonContainerColor: Color = colorScheme.primary,
     val playButtonContentColor: Color = colorScheme.onPrimary,
     val secondaryButtonContainerColor: Color = colorScheme.surfaceVariant,
@@ -73,10 +80,15 @@ data class MiniPlayerThemeColors(
 )
 
 /**
- * Derives a full Material 3 dark color scheme from an extracted cover art color. If baseColor is
- * null or nearly monochromatic, falls back to the app's standard scheme.
+ * Derives a full Material 3 color scheme from an extracted cover art color. Adapts to day (light)
+ * or night (dark) mode dynamically. If baseColor is null or nearly monochromatic, falls back to the
+ * app's standard scheme.
  */
-fun generatePlayerColorScheme(baseColor: Color?, fallback: ColorScheme): ColorScheme {
+fun generatePlayerColorScheme(
+    baseColor: Color?,
+    fallback: ColorScheme,
+    isDarkTheme: Boolean = fallback.surface.luminance() < 0.5f,
+): ColorScheme {
     if (baseColor == null) return fallback
     val hsv = FloatArray(3)
     android.graphics.Color.colorToHSV(baseColor.toArgb(), hsv)
@@ -97,96 +109,188 @@ fun generatePlayerColorScheme(baseColor: Color?, fallback: ColorScheme): ColorSc
         return Color(intColor)
     }
 
-    // Calibrate saturation and value for elegant, modern Material 3 dark theme
-    // Green hues (65°..165°) have naturally high perceived luminosity, so we tone down their
-    // brightness and saturation to avoid fluorescent/neon looks
     val isGreenHue = hue in 65f..165f
-    val primarySat = if (isGreenHue) sat.coerceIn(0.35f, 0.58f) else sat.coerceIn(0.45f, 0.70f)
-    val primaryVal = if (isGreenHue) 0.72f else 0.78f
 
-    val primary = hsvColor(hue, primarySat, primaryVal)
-    val onPrimary = hsvColor(hue, 0.70f, 0.08f)
-    val primaryContainer = hsvColor(hue, primarySat, 0.28f)
-    val onPrimaryContainer = hsvColor(hue, 0.20f, 0.92f)
+    return if (isDarkTheme) {
+        // Calibrate saturation and value for elegant, modern Material 3 dark theme
+        // Green hues (65°..165°) have naturally high perceived luminosity, so we tone down their
+        // brightness and saturation to avoid fluorescent/neon looks
+        val primarySat = if (isGreenHue) sat.coerceIn(0.35f, 0.58f) else sat.coerceIn(0.45f, 0.70f)
+        val primaryVal = if (isGreenHue) 0.72f else 0.78f
 
-    // Secondary: muted tonal variant for secondary container actions (Skip Intro / Outro)
-    val secondarySat = (sat * 0.35f).coerceIn(0.18f, 0.35f)
-    val secondary = hsvColor(hue, secondarySat, 0.75f)
-    val onSecondary = hsvColor(hue, secondarySat, 0.10f)
-    val secondaryContainer = hsvColor(hue, (sat * 0.40f).coerceIn(0.20f, 0.38f), 0.28f)
-    val onSecondaryContainer = hsvColor(hue, 0.18f, 0.92f)
+        val primary = hsvColor(hue, primarySat, primaryVal)
+        val onPrimary = hsvColor(hue, 0.70f, 0.08f)
+        val primaryContainer = hsvColor(hue, primarySat, 0.28f)
+        val onPrimaryContainer = hsvColor(hue, 0.20f, 0.92f)
 
-    // Tertiary: complementary/analogous harmonic hue offset (+60 deg)
-    val tertHue = (hue + 60f) % 360f
-    val tertSat = (sat * 0.45f).coerceIn(0.22f, 0.45f)
-    val tertiary = hsvColor(tertHue, tertSat, 0.75f)
-    val onTertiary = hsvColor(tertHue, tertSat, 0.10f)
-    val tertiaryContainer = hsvColor(tertHue, tertSat, 0.28f)
-    val onTertiaryContainer = hsvColor(tertHue, 0.18f, 0.92f)
+        // Secondary: muted tonal variant for secondary container actions (Skip Intro / Outro)
+        val secondarySat = (sat * 0.35f).coerceIn(0.18f, 0.35f)
+        val secondary = hsvColor(hue, secondarySat, 0.75f)
+        val onSecondary = hsvColor(hue, secondarySat, 0.10f)
+        val secondaryContainer = hsvColor(hue, (sat * 0.40f).coerceIn(0.20f, 0.38f), 0.28f)
+        val onSecondaryContainer = hsvColor(hue, 0.18f, 0.92f)
 
-    // Neutral Surfaces: dark ambient canvas
-    val background = hsvColor(hue, 0.08f, 0.08f)
-    val surface = background
-    val surfaceContainerLowest = hsvColor(hue, 0.07f, 0.05f)
-    val surfaceContainerLow = hsvColor(hue, 0.08f, 0.09f)
-    val surfaceContainer = hsvColor(hue, 0.10f, 0.13f)
-    val surfaceContainerHigh = hsvColor(hue, 0.11f, 0.17f)
-    val surfaceContainerHighest = hsvColor(hue, 0.12f, 0.21f)
+        // Tertiary: complementary/analogous harmonic hue offset (+60 deg)
+        val tertHue = (hue + 60f) % 360f
+        val tertSat = (sat * 0.45f).coerceIn(0.22f, 0.45f)
+        val tertiary = hsvColor(tertHue, tertSat, 0.75f)
+        val onTertiary = hsvColor(tertHue, tertSat, 0.10f)
+        val tertiaryContainer = hsvColor(tertHue, tertSat, 0.28f)
+        val onTertiaryContainer = hsvColor(tertHue, 0.18f, 0.92f)
 
-    // Neutral Variant: Secondary buttons (skip back, forward, chevron) & Inactive Tracks
-    val surfaceVariant = hsvColor(hue, 0.18f, 0.27f)
-    val onSurfaceVariant = hsvColor(hue, 0.12f, 0.82f)
-    val onSurface = hsvColor(hue, 0.05f, 0.94f)
+        // Neutral Surfaces: dark ambient canvas
+        val background = hsvColor(hue, 0.08f, 0.08f)
+        val surface = background
+        val surfaceContainerLowest = hsvColor(hue, 0.07f, 0.05f)
+        val surfaceContainerLow = hsvColor(hue, 0.08f, 0.09f)
+        val surfaceContainer = hsvColor(hue, 0.10f, 0.13f)
+        val surfaceContainerHigh = hsvColor(hue, 0.11f, 0.17f)
+        val surfaceContainerHighest = hsvColor(hue, 0.12f, 0.21f)
 
-    val outline = hsvColor(hue, 0.15f, 0.40f)
-    val outlineVariant = hsvColor(hue, 0.12f, 0.25f)
+        // Neutral Variant: Secondary buttons (skip back, forward, chevron) & Inactive Tracks
+        val surfaceVariant = hsvColor(hue, 0.18f, 0.27f)
+        val onSurfaceVariant = hsvColor(hue, 0.12f, 0.82f)
+        val onSurface = hsvColor(hue, 0.05f, 0.94f)
 
-    return darkColorScheme(
-        primary = primary,
-        onPrimary = onPrimary,
-        primaryContainer = primaryContainer,
-        onPrimaryContainer = onPrimaryContainer,
-        secondary = secondary,
-        onSecondary = onSecondary,
-        secondaryContainer = secondaryContainer,
-        onSecondaryContainer = onSecondaryContainer,
-        tertiary = tertiary,
-        onTertiary = onTertiary,
-        tertiaryContainer = tertiaryContainer,
-        onTertiaryContainer = onTertiaryContainer,
-        error = fallback.error,
-        onError = fallback.onError,
-        errorContainer = fallback.errorContainer,
-        onErrorContainer = fallback.onErrorContainer,
-        background = background,
-        onBackground = onSurface,
-        surface = surface,
-        onSurface = onSurface,
-        surfaceVariant = surfaceVariant,
-        onSurfaceVariant = onSurfaceVariant,
-        outline = outline,
-        outlineVariant = outlineVariant,
-        scrim = Color.Black,
-        inverseSurface = onSurface,
-        inverseOnSurface = surface,
-        inversePrimary = primaryContainer,
-        surfaceDim = surfaceContainerLow,
-        surfaceBright = surfaceContainerHigh,
-        surfaceContainerLowest = surfaceContainerLowest,
-        surfaceContainerLow = surfaceContainerLow,
-        surfaceContainer = surfaceContainer,
-        surfaceContainerHigh = surfaceContainerHigh,
-        surfaceContainerHighest = surfaceContainerHighest,
-    )
+        val outline = hsvColor(hue, 0.15f, 0.40f)
+        val outlineVariant = hsvColor(hue, 0.12f, 0.25f)
+
+        darkColorScheme(
+            primary = primary,
+            onPrimary = onPrimary,
+            primaryContainer = primaryContainer,
+            onPrimaryContainer = onPrimaryContainer,
+            secondary = secondary,
+            onSecondary = onSecondary,
+            secondaryContainer = secondaryContainer,
+            onSecondaryContainer = onSecondaryContainer,
+            tertiary = tertiary,
+            onTertiary = onTertiary,
+            tertiaryContainer = tertiaryContainer,
+            onTertiaryContainer = onTertiaryContainer,
+            error = fallback.error,
+            onError = fallback.onError,
+            errorContainer = fallback.errorContainer,
+            onErrorContainer = fallback.onErrorContainer,
+            background = background,
+            onBackground = onSurface,
+            surface = surface,
+            onSurface = onSurface,
+            surfaceVariant = surfaceVariant,
+            onSurfaceVariant = onSurfaceVariant,
+            outline = outline,
+            outlineVariant = outlineVariant,
+            scrim = Color.Black,
+            inverseSurface = onSurface,
+            inverseOnSurface = surface,
+            inversePrimary = primaryContainer,
+            surfaceDim = surfaceContainerLow,
+            surfaceBright = surfaceContainerHigh,
+            surfaceContainerLowest = surfaceContainerLowest,
+            surfaceContainerLow = surfaceContainerLow,
+            surfaceContainer = surfaceContainer,
+            surfaceContainerHigh = surfaceContainerHigh,
+            surfaceContainerHighest = surfaceContainerHighest,
+        )
+    } else {
+        // Calibrate saturation and value for elegant, modern Material 3 light theme
+        // In light theme, primary is deep and rich (tone 40) so it contrasts well against light
+        // backgrounds
+        val primarySat = if (isGreenHue) sat.coerceIn(0.50f, 0.72f) else sat.coerceIn(0.55f, 0.80f)
+        val primaryVal = if (isGreenHue) 0.38f else 0.44f
+
+        val primary = hsvColor(hue, primarySat, primaryVal)
+        val onPrimary = Color.White
+        val primaryContainer = hsvColor(hue, (primarySat * 0.35f).coerceIn(0.12f, 0.28f), 0.90f)
+        val onPrimaryContainer = hsvColor(hue, primarySat, 0.18f)
+
+        // Secondary: muted tonal variant for secondary container actions (Skip Intro / Outro)
+        val secondarySat = (sat * 0.40f).coerceIn(0.25f, 0.45f)
+        val secondary = hsvColor(hue, secondarySat, 0.42f)
+        val onSecondary = Color.White
+        val secondaryContainer = hsvColor(hue, (secondarySat * 0.35f).coerceIn(0.10f, 0.24f), 0.92f)
+        val onSecondaryContainer = hsvColor(hue, secondarySat, 0.18f)
+
+        // Tertiary: complementary/analogous harmonic hue offset (+60 deg)
+        val tertHue = (hue + 60f) % 360f
+        val tertSat = (sat * 0.45f).coerceIn(0.25f, 0.45f)
+        val tertiary = hsvColor(tertHue, tertSat, 0.42f)
+        val onTertiary = Color.White
+        val tertiaryContainer = hsvColor(tertHue, (tertSat * 0.35f).coerceIn(0.10f, 0.24f), 0.92f)
+        val onTertiaryContainer = hsvColor(tertHue, tertSat, 0.18f)
+
+        // Neutral Surfaces: light ambient canvas tinted subtly with cover hue
+        val background = hsvColor(hue, 0.03f, 0.98f)
+        val surface = background
+        val surfaceContainerLowest = Color.White
+        val surfaceContainerLow = hsvColor(hue, 0.04f, 0.96f)
+        val surfaceContainer = hsvColor(hue, 0.05f, 0.94f)
+        val surfaceContainerHigh = hsvColor(hue, 0.07f, 0.91f)
+        val surfaceContainerHighest = hsvColor(hue, 0.09f, 0.88f)
+
+        // Neutral Variant: Secondary buttons (skip back, forward, chevron) & Inactive Tracks
+        val surfaceVariant = hsvColor(hue, 0.08f, 0.90f)
+        val onSurfaceVariant = hsvColor(hue, 0.12f, 0.32f)
+        val onSurface = hsvColor(hue, 0.08f, 0.10f)
+
+        val outline = hsvColor(hue, 0.15f, 0.55f)
+        val outlineVariant = hsvColor(hue, 0.10f, 0.82f)
+
+        lightColorScheme(
+            primary = primary,
+            onPrimary = onPrimary,
+            primaryContainer = primaryContainer,
+            onPrimaryContainer = onPrimaryContainer,
+            secondary = secondary,
+            onSecondary = onSecondary,
+            secondaryContainer = secondaryContainer,
+            onSecondaryContainer = onSecondaryContainer,
+            tertiary = tertiary,
+            onTertiary = onTertiary,
+            tertiaryContainer = tertiaryContainer,
+            onTertiaryContainer = onTertiaryContainer,
+            error = fallback.error,
+            onError = fallback.onError,
+            errorContainer = fallback.errorContainer,
+            onErrorContainer = fallback.onErrorContainer,
+            background = background,
+            onBackground = onSurface,
+            surface = surface,
+            onSurface = onSurface,
+            surfaceVariant = surfaceVariant,
+            onSurfaceVariant = onSurfaceVariant,
+            outline = outline,
+            outlineVariant = outlineVariant,
+            scrim = Color.Black,
+            inverseSurface = onSurface,
+            inverseOnSurface = surface,
+            inversePrimary = primaryContainer,
+            surfaceDim = surfaceContainerLow,
+            surfaceBright = surfaceContainerLowest,
+            surfaceContainerLowest = surfaceContainerLowest,
+            surfaceContainerLow = surfaceContainerLow,
+            surfaceContainer = surfaceContainer,
+            surfaceContainerHigh = surfaceContainerHigh,
+            surfaceContainerHighest = surfaceContainerHighest,
+        )
+    }
 }
 
 @Composable
-fun rememberMiniPlayerThemeColors(blurHash: String?): MiniPlayerThemeColors {
+fun rememberMiniPlayerThemeColors(
+    blurHash: String?,
+    isDarkTheme: Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f,
+): MiniPlayerThemeColors {
     val currentColorScheme = MaterialTheme.colorScheme
 
-    return remember(blurHash, currentColorScheme) {
+    return remember(blurHash, currentColorScheme, isDarkTheme) {
         val baseColor = blurHash.toBlurHashColor()
-        val playerColorScheme = generatePlayerColorScheme(baseColor, currentColorScheme)
+        val playerColorScheme =
+            generatePlayerColorScheme(
+                baseColor = baseColor,
+                fallback = currentColorScheme,
+                isDarkTheme = isDarkTheme,
+            )
         MiniPlayerThemeColors(colorScheme = playerColorScheme)
     }
 }
@@ -627,6 +731,35 @@ private fun CastMiniPlayerEpisodeTabletPreview() {
                     CastPlayerState(
                         status = CastPlaybackStatus.PAUSED,
                         currentPosition = 5000L,
+                        duration = 10000L,
+                    ),
+                onTogglePlayback = {},
+                onClick = {},
+            )
+        }
+    }
+}
+
+@Preview(name = "Light Mode", showBackground = true)
+@Composable
+private fun CastMiniPlayerPlayingLightPhonePreview() {
+    FindroidTheme(darkTheme = false) {
+        Box(modifier = Modifier.padding(16.dp)) {
+            CastMiniPlayerLayout(
+                connectedDevice = Device("1", "Living Room TV"),
+                uiState =
+                    previewUiState(
+                        title = "Pilot",
+                        seriesName = "Breaking Bad",
+                        episodeInfo = "S01:E01",
+                        isMovie = false,
+                        aspectRatio = 16f / 9f,
+                        fileLoaded = true,
+                    ),
+                playbackState =
+                    CastPlayerState(
+                        status = CastPlaybackStatus.PLAYING,
+                        currentPosition = 2500L,
                         duration = 10000L,
                     ),
                 onTogglePlayback = {},

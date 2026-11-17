@@ -85,7 +85,7 @@ fun PersonScreen(
 
 @Composable
 private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> Unit) {
-    val safePadding = rememberSafePadding()
+    val safePadding = rememberSafePadding(handleStartInsets = false)
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default

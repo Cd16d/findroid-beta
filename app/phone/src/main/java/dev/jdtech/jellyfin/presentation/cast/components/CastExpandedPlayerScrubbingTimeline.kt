@@ -22,13 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerOverlayBackground
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.player.cast.models.CastPlaybackStatus
 import dev.jdtech.jellyfin.player.core.R
@@ -98,8 +96,16 @@ fun CastScrubbingTimeline(
         }
     val endsAtText = formattedEndTime?.let { stringResource(R.string.ends_at, it) }
 
-    val pillBackground = PlayerOverlayBackground.copy(alpha = 0.75f)
-    val pillBorder = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+    val pillBackground =
+        themeColors?.subtleContainerColor ?: MaterialTheme.colorScheme.surfaceVariant
+    val pillTextColor =
+        themeColors?.colorScheme?.onSurfaceVariant ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val pillBorder =
+        BorderStroke(
+            1.dp,
+            (themeColors?.colorScheme?.outlineVariant ?: MaterialTheme.colorScheme.outlineVariant)
+                .copy(alpha = 0.35f),
+        )
 
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
         // Badges row: Progress • Duration pill on left, Ends at pill on right
@@ -122,19 +128,19 @@ fun CastScrubbingTimeline(
                         text = contentProgressString,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = pillTextColor,
                     )
                     Box(
                         modifier =
                             Modifier.size(4.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.6f)),
+                                .background(pillTextColor.copy(alpha = 0.6f)),
                     )
                     Text(
                         text = if (durationMs > 0L) contentDurationString else "--:--",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = pillTextColor.copy(alpha = 0.85f),
                     )
                 }
             }
@@ -154,7 +160,7 @@ fun CastScrubbingTimeline(
                         text = endsAtText,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = pillTextColor.copy(alpha = 0.85f),
                     )
                 }
             }

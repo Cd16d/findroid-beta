@@ -54,7 +54,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerOverlayBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.presentation.drawCustomRoundRect
@@ -130,7 +129,7 @@ fun PlaybackSpeedPicker(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CentralShapes.GroupSingle,
-                color = PlayerCardBackground,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 border =
                     BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
             ) {
@@ -546,7 +545,7 @@ private fun PlaybackSpeedPickerPreview() {
 @Composable
 private fun PlaybackSpeedPickerTabletPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(24.dp)) {
                 PlaybackSpeedPicker(
                     currentSpeed = 1.25f,

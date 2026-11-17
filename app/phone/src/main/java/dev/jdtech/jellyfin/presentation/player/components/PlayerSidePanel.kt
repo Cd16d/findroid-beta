@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import dev.jdtech.jellyfin.core.R as CoreR
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerSheetBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerSidePanelType
@@ -309,7 +308,7 @@ private fun SidePanelHeader(
 @Composable
 private fun TabletHeaderSettingsPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(24.dp)) {
                 SidePanelHeader(
                     panelType = PlayerSidePanelType.SETTINGS,
@@ -330,7 +329,7 @@ private fun TabletHeaderSettingsPreview() {
 @Composable
 private fun TabletHeaderSubmenuPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(24.dp)) {
                 SidePanelHeader(
                     panelType = PlayerSidePanelType.AUDIO,
@@ -351,7 +350,7 @@ private fun TabletHeaderSubmenuPreview() {
 @Composable
 private fun TabletSelectableItemPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(24.dp)) {
                 SelectableTrackItem(
                     title = "English - Stereo",
@@ -374,7 +373,7 @@ private fun TabletSelectableItemPreview() {
 @Composable
 private fun TabletSpeedListPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(24.dp)) {
                 PlaybackSpeedPicker(
                     currentSpeed = 1.25f,

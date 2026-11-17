@@ -76,7 +76,7 @@ fun ChapterCard(
         shape = CentralShapes.GroupSingle,
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-            else MaterialTheme.colorScheme.surfaceContainerLow,
+            else MaterialTheme.colorScheme.surfaceVariant,
         border =
             if (isCurrent) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
             else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),

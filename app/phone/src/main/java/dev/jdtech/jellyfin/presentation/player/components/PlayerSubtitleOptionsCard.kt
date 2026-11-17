@@ -68,7 +68,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerOverlayBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.presentation.drawCustomRoundRect
@@ -184,7 +183,7 @@ fun PlayerSubtitleOptionsCard(
     Surface(
         modifier = modifier.fillMaxWidth().animateContentSize(),
         shape = shape,
-        color = PlayerCardBackground,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -255,7 +254,7 @@ fun PlayerSubtitleOptionsCard(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = PlayerCardBackground,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         border =
                             BorderStroke(
                                 1.dp,
@@ -277,7 +276,7 @@ fun PlayerSubtitleOptionsCard(
                     Surface(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = PlayerCardBackground,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         border =
                             BorderStroke(
                                 1.dp,

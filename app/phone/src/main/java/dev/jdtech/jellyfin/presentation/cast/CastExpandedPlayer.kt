@@ -394,6 +394,18 @@ private fun CastExpandedPlayerPhoneVerticalPreview() {
     }
 }
 
+@Preview(name = "Vertical Light", showBackground = true)
+@Composable
+private fun CastExpandedPlayerPhoneVerticalLightPreview() {
+    FindroidTheme(darkTheme = false) {
+        CastExpandedPlayerLayout(
+            isExpandedScreen = false,
+            uiState = mockUiStateEpisode(),
+            actions = mockActions(),
+        )
+    }
+}
+
 @Preview(name = "Horizontal", showBackground = true, widthDp = 800, heightDp = 400)
 @Composable
 private fun CastExpandedPlayerPhoneHorizontalPreview() {

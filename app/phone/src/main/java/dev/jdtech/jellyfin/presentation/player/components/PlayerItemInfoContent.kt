@@ -62,7 +62,6 @@ import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyPersonDetail
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.core.presentation.theme.Yellow
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.models.FindroidItem
@@ -269,7 +268,7 @@ private fun PlayerItemInfoLayout(
         // Top Info Card (Poster, Title, Ratings, Providers, Synopsis)
         Surface(
             shape = CentralShapes.GroupSingle,
-            color = PlayerCardBackground,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -567,7 +566,7 @@ private fun PlayerPeopleSectionCard(
 
     Surface(
         shape = CentralShapes.GroupSingle,
-        color = PlayerCardBackground,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -774,7 +773,7 @@ private fun PlayerPersonDetailContent(
         // 2. Profile Card
         Surface(
             shape = CentralShapes.GroupSingle,
-            color = PlayerCardBackground,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -920,7 +919,7 @@ private fun PlayerPersonDetailContent(
 
         Surface(
             shape = CentralShapes.GroupSingle,
-            color = PlayerCardBackground,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -1124,7 +1123,7 @@ private val dummyPreviewCrew =
 @Composable
 private fun PlayerItemInfoMoviePreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerItemInfoLayout(
                     title = "Inception",
@@ -1157,7 +1156,7 @@ private fun PlayerItemInfoMoviePreview() {
 @Composable
 private fun PlayerItemInfoEpisodePreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerItemInfoLayout(
                     title = "Ozymandias",
@@ -1190,7 +1189,7 @@ private fun PlayerItemInfoEpisodePreview() {
 @Composable
 private fun PlayerPersonDetailContentPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerPersonDetailContent(
                     person =
@@ -1221,7 +1220,7 @@ private fun PlayerPersonDetailContentPreview() {
 @Composable
 private fun PlayerPeopleSectionCardCastPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerPeopleSectionCard(
                     title = "Cast",
@@ -1243,7 +1242,7 @@ private fun PlayerPeopleSectionCardCastPreview() {
 @Composable
 private fun PlayerPeopleSectionCardCrewPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerPeopleSectionCard(
                     title = "Crew",
@@ -1264,7 +1263,7 @@ private fun PlayerPeopleSectionCardCrewPreview() {
 @Composable
 private fun PlayerRatingPillsRowPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),

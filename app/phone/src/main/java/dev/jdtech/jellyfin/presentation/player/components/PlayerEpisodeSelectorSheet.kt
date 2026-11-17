@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyEpisode
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.models.FindroidEpisode
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.local.presentation.PlayerViewModel
@@ -357,7 +356,7 @@ fun PlayerEpisodeCard(
         shape = CentralShapes.GroupSingle,
         color =
             if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-            else MaterialTheme.colorScheme.surfaceContainerLow,
+            else MaterialTheme.colorScheme.surfaceVariant,
         border =
             if (isCurrent) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
             else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
@@ -508,7 +507,7 @@ fun PlayerEpisodeCard(
 @Composable
 private fun PlayerEpisodeCardPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerEpisodeCard(
                     episode = dummyEpisode,
@@ -525,7 +524,7 @@ private fun PlayerEpisodeCardPreview() {
 @Composable
 private fun PlayerEpisodeCardUnavailablePreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerEpisodeCard(
                     episode = dummyEpisode.copy(missing = true, canPlay = false),
@@ -546,7 +545,7 @@ private fun PlayerEpisodeCardUnavailablePreview() {
 @Composable
 private fun PlayerNavigationHeaderSelectorSeriesPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerNavigationHeaderSelector(
                     selectedTab = PlayerNavTab.EPISODES,
@@ -566,7 +565,7 @@ private fun PlayerNavigationHeaderSelectorSeriesPreview() {
 @Composable
 private fun PlayerNavigationHeaderSelectorMoviePreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Box(modifier = Modifier.padding(16.dp)) {
                 PlayerNavigationHeaderSelector(
                     selectedTab = PlayerNavTab.INFO,
@@ -582,7 +581,7 @@ private fun PlayerNavigationHeaderSelectorMoviePreview() {
 @Composable
 private fun PlayerSeasonChipsRailPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             Row(
                 modifier = Modifier.padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

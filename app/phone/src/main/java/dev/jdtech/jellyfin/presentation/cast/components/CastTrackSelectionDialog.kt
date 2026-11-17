@@ -43,9 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -283,8 +281,6 @@ fun CastTrackSelectionDialog(
                     }
 
                     Box(modifier = Modifier.weight(1f, fill = false)) {
-                        val scrollbarColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                         LazyColumn(
                             state = listState,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -321,62 +317,6 @@ fun CastTrackSelectionDialog(
                                                     ),
                                                 blendMode = BlendMode.DstIn,
                                             )
-                                        }
-
-                                        // Scrollbar drawing
-                                        val layoutInfo = listState.layoutInfo
-                                        val visibleItems = layoutInfo.visibleItemsInfo
-                                        if (
-                                            visibleItems.isNotEmpty() &&
-                                                layoutInfo.totalItemsCount > visibleItems.size
-                                        ) {
-                                            val totalItems = layoutInfo.totalItemsCount
-                                            val viewportHeight =
-                                                layoutInfo.viewportEndOffset -
-                                                    layoutInfo.viewportStartOffset
-
-                                            if (viewportHeight > 0) {
-                                                // Use average item size for a much more stable
-                                                // thumb height
-                                                val avgItemSize =
-                                                    visibleItems.map { it.size }.average().toFloat()
-                                                val estimatedTotalHeight = avgItemSize * totalItems
-
-                                                val thumbHeight =
-                                                    (viewportHeight.toFloat() /
-                                                            estimatedTotalHeight * viewportHeight)
-                                                        .coerceIn(
-                                                            32.dp.toPx(),
-                                                            viewportHeight.toFloat(),
-                                                        )
-
-                                                // Calculate exact scroll offset in pixels
-                                                val firstItem = visibleItems.first()
-                                                val scrollOffset =
-                                                    firstItem.index * avgItemSize - firstItem.offset
-                                                val maxScrollOffset =
-                                                    estimatedTotalHeight - viewportHeight
-
-                                                if (maxScrollOffset > 0) {
-                                                    val thumbOffset =
-                                                        (scrollOffset / maxScrollOffset) *
-                                                            (viewportHeight - thumbHeight)
-
-                                                    drawRoundRect(
-                                                        color = scrollbarColor,
-                                                        topLeft =
-                                                            Offset(
-                                                                size.width - 4.dp.toPx(),
-                                                                thumbOffset.coerceIn(
-                                                                    0f,
-                                                                    viewportHeight - thumbHeight,
-                                                                ),
-                                                            ),
-                                                        size = Size(3.dp.toPx(), thumbHeight),
-                                                        cornerRadius = CornerRadius(2.dp.toPx()),
-                                                    )
-                                                }
-                                            }
                                         }
                                     },
                         ) {

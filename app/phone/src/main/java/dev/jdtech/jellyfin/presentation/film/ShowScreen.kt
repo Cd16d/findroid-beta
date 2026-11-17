@@ -128,7 +128,7 @@ fun ShowScreen(
 
 @Composable
 private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
-    val safePadding = rememberSafePadding()
+    val safePadding = rememberSafePadding(handleStartInsets = false)
     val castPadding = LocalCastPlayerHeight.current
 
     val paddingStart = safePadding.start + MaterialTheme.spacings.default

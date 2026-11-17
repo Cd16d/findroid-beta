@@ -33,7 +33,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
@@ -71,7 +70,7 @@ fun PlayerNavigationItem(
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
     val alpha = if (enabled) 1f else 0.38f
-    val backgroundColor = PlayerCardBackground
+    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
     val arrangementSpacing = 12.dp
     val iconSize = 20.dp
     val titleStyle = MaterialTheme.typography.bodyMedium

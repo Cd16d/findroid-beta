@@ -7,8 +7,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -161,19 +159,28 @@ fun PlayerTopSection(
                     .padding(bottom = bottomArtworkPadding),
             contentAlignment = Alignment.Center,
         ) {
-            val artworkModifier =
+            val targetAspect = safeAspectRatio.coerceIn(0.66f, 1.85f)
+            val (artworkWidth, artworkHeight) =
                 if (isLandscapePhone) {
-                    val targetAspect = safeAspectRatio.coerceIn(0.66f, 1.85f)
-                    val widthBasedOnHeight = maxHeight * targetAspect
-                    if (widthBasedOnHeight <= maxWidth * 0.96f) {
-                        Modifier.fillMaxHeight(0.94f).aspectRatio(targetAspect)
+                    val maxAllowedHeight = maxHeight * 0.92f
+                    val maxAllowedWidth = maxWidth * 0.94f
+                    val candidateWidth = maxAllowedHeight * targetAspect
+                    if (candidateWidth <= maxAllowedWidth) {
+                        candidateWidth to maxAllowedHeight
                     } else {
-                        Modifier.fillMaxWidth(0.96f).aspectRatio(targetAspect)
+                        maxAllowedWidth to (maxAllowedWidth / targetAspect)
                     }
                 } else {
-                    val squareSize = minOf(maxWidth, maxHeight).coerceAtLeast(0.dp)
-                    Modifier.size(squareSize).aspectRatio(safeAspectRatio)
+                    val maxAllowedHeight = (maxHeight * 0.78f).coerceAtMost(320.dp)
+                    val maxAllowedWidth = maxWidth * 0.88f
+                    val candidateWidth = maxAllowedHeight * targetAspect
+                    if (candidateWidth <= maxAllowedWidth) {
+                        candidateWidth to maxAllowedHeight
+                    } else {
+                        maxAllowedWidth to (maxAllowedWidth / targetAspect)
+                    }
                 }
+            val artworkModifier = Modifier.size(width = artworkWidth, height = artworkHeight)
 
             Box(contentAlignment = Alignment.Center) {
                 CastPlayerArtwork(
