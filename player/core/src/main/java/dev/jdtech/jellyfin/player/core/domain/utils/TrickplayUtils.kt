@@ -4,14 +4,13 @@ import dev.jdtech.jellyfin.player.core.domain.models.PlayerItem
 import dev.jdtech.jellyfin.player.core.domain.models.Trickplay
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import java.io.File
-import kotlin.math.ceil
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 /**
- * Initializes trickplay thumbnail metadata for scrubbing previews and starts background prefetching
- * of all sprite sheets into memory.
+ * Initializes trickplay thumbnail metadata for scrubbing previews and starts a bounded sliding
+ * cache window.
  */
 suspend fun fetchTrickplay(
     repository: JellyfinRepository,
@@ -30,10 +29,14 @@ suspend fun fetchTrickplay(
         return null
     }
 
-    val tilesPerSheet = trickplayInfo.tileWidth * trickplayInfo.tileHeight
-    if (tilesPerSheet <= 0) return null
-    val sheetCount = ceil(trickplayInfo.thumbnailCount.toDouble() / tilesPerSheet).toInt()
-    if (sheetCount !in 1..500) return null
+    val tilesPerSheet =
+        (trickplayInfo.tileWidth.toLong() * trickplayInfo.tileHeight.toLong())
+            .coerceIn(1L, Int.MAX_VALUE.toLong())
+            .toInt()
+    val sheetCount =
+        (trickplayInfo.thumbnailCount / tilesPerSheet) +
+            if (trickplayInfo.thumbnailCount % tilesPerSheet == 0) 0 else 1
+    if (sheetCount <= 0) return null
 
     return Trickplay(
         itemId = item.itemId,

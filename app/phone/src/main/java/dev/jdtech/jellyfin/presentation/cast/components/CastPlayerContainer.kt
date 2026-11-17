@@ -458,7 +458,7 @@ fun CastPlayerContainerLayout(
                         shape = morphShape
                         clip = true
                     }
-                    .then(dragGestureModifier),
+                    .then(if (fraction > 0.05f) dragGestureModifier else Modifier),
         ) {
             // Expanded Player Content (reveals smoothly as container expands)
             if (fraction > 0.05f) {
@@ -498,6 +498,7 @@ fun CastPlayerContainerLayout(
                                 .height(collapsedHeight)
                                 .clip(CircleShape)
                                 .graphicsLayer { alpha = miniAlpha }
+                                .then(if (fraction <= 0.05f) dragGestureModifier else Modifier)
                                 .clickable(
                                     enabled = fraction <= 0.05f,
                                     indication = null,

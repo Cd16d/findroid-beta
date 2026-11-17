@@ -389,16 +389,7 @@ constructor(
         try {
             val tilesPerSheet = trickplayInfo.tileWidth * trickplayInfo.tileHeight
             if (tilesPerSheet <= 0) return
-            // Some servers mistakenly report total sheet count instead of total thumbnail count.
-            val isSheetCountBug =
-                trickplayInfo.thumbnailCount in 1..60 &&
-                    trickplayInfo.thumbnailCount < tilesPerSheet
-            val sheetCount =
-                if (isSheetCountBug) {
-                    trickplayInfo.thumbnailCount
-                } else {
-                    ceil(trickplayInfo.thumbnailCount.toDouble().div(tilesPerSheet)).toInt()
-                }
+            val sheetCount = ceil(trickplayInfo.thumbnailCount.toDouble() / tilesPerSheet).toInt()
             val basePath = "trickplay/${item.id}/$sourceId"
             val dir = File(appContext.filesDir, basePath)
             dir.mkdirs()
@@ -442,14 +433,7 @@ constructor(
                 }
             }
             if (tileCount == sheetCount) {
-                // Store the corrected thumbnailCount so playback can correctly compute frameIndex.
-                val infoToStore =
-                    if (isSheetCountBug) {
-                        trickplayInfo.copy(thumbnailCount = sheetCount * tilesPerSheet)
-                    } else {
-                        trickplayInfo
-                    }
-                database.insertTrickplayInfo(infoToStore.toFindroidTrickplayInfoDto(sourceId))
+                database.insertTrickplayInfo(trickplayInfo.toFindroidTrickplayInfoDto(sourceId))
                 Timber.i(
                     "Trickplay data downloaded and verified successfully for item ${item.id} ($tileCount/$sheetCount sheets)",
                 )
