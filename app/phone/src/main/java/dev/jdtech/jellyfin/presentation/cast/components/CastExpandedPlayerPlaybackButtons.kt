@@ -35,6 +35,7 @@ import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.models.FindroidSegmentType
 import dev.jdtech.jellyfin.player.cast.presentation.CastPlayerViewModel
 import dev.jdtech.jellyfin.player.core.R
+import dev.jdtech.jellyfin.presentation.cast.MiniPlayerThemeColors
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
 @Composable
@@ -46,6 +47,7 @@ fun PlaybackButtons(
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onSkipSegment: () -> Unit,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
     val playerState = uiState.playerState
     val skippableSegment = uiState.currentSegment != null
@@ -119,8 +121,12 @@ fun PlaybackButtons(
             interactionSource = backInteractionSource,
             colors =
                 IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    containerColor =
+                        themeColors?.secondaryButtonContainerColor
+                            ?: MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor =
+                        themeColors?.secondaryButtonContentColor
+                            ?: MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             modifier = Modifier.height(68.dp).weight(backButtonWeight),
         ) {
@@ -140,8 +146,10 @@ fun PlaybackButtons(
             interactionSource = playPauseInteractionSource,
             colors =
                 IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    containerColor =
+                        themeColors?.playButtonContainerColor ?: MaterialTheme.colorScheme.primary,
+                    contentColor =
+                        themeColors?.playButtonContentColor ?: MaterialTheme.colorScheme.onPrimary,
                 ),
             modifier = Modifier.height(68.dp).weight(playPauseWeight),
         ) {
@@ -185,11 +193,21 @@ fun PlaybackButtons(
             colors =
                 IconButtonDefaults.filledIconButtonColors(
                     containerColor =
-                        if (skippableSegment) MaterialTheme.colorScheme.secondaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant,
+                        if (skippableSegment) {
+                            themeColors?.skipSegmentContainerColor
+                                ?: MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            themeColors?.secondaryButtonContainerColor
+                                ?: MaterialTheme.colorScheme.surfaceVariant
+                        },
                     contentColor =
-                        if (skippableSegment) MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        if (skippableSegment) {
+                            themeColors?.skipSegmentContentColor
+                                ?: MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            themeColors?.secondaryButtonContentColor
+                                ?: MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 ),
             modifier = Modifier.height(68.dp).weight(nextButtonWeight),
         ) {

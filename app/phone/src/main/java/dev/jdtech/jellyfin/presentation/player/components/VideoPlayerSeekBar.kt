@@ -102,7 +102,9 @@ fun VideoPlayerSeekBar(
     isBuffering: Boolean = false,
     enabled: Boolean = true,
     inactiveTrackColor: Color = Color.White.copy(alpha = 0.20f),
-    disabledThumbColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    activeTrackColor: Color? = null,
+    thumbColor: Color? = null,
+    disabledThumbColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
     trackHeight: Dp = 10.dp,
     highlightTrackHeight: Dp = 10.dp,
     thumbWidth: Dp = 3.dp,
@@ -114,6 +116,7 @@ fun VideoPlayerSeekBar(
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
     val primaryColor = MaterialTheme.colorScheme.primary
+    val resolvedActiveTrackColor = activeTrackColor ?: primaryColor
 
     val currentOnSeek by rememberUpdatedState(onSeek)
     val currentOnScrubbingChanged by rememberUpdatedState(onScrubbingChanged)
@@ -241,7 +244,6 @@ fun VideoPlayerSeekBar(
 
                     var lastChapterIdx = getChapterIndex(scrubPos)
                     var isScrubbingEngaged = false
-                    var isAborted = false
                     var releasedNormally = false
 
                     try {
@@ -256,7 +258,6 @@ fun VideoPlayerSeekBar(
                                     // If moving upward or primarily vertical -> swipe up (e.g.
                                     // system Home/PiP gesture), abort seek immediately
                                     if (abs(totalDy) > touchSlop && abs(totalDy) > abs(totalDx)) {
-                                        isAborted = true
                                         break
                                     } else if (
                                         abs(totalDx) > touchSlop && abs(totalDx) > abs(totalDy)
@@ -288,36 +289,34 @@ fun VideoPlayerSeekBar(
                                 }
                             } else {
                                 // Pointer lifted (UP)
-                                if (!isAborted) {
-                                    val totalDx = change.position.x - startX
-                                    val totalDy = change.position.y - startY
-                                    // Valid if dragging was engaged or if it was an intentional
-                                    // stationary tap
-                                    if (
-                                        isScrubbingEngaged ||
-                                            (abs(totalDx) <= touchSlop && abs(totalDy) <= touchSlop)
-                                    ) {
-                                        change.consume()
-                                        releasedNormally = true
-                                        currentState?.resetTimeout()
-                                        if (isScrubbingEngaged) {
-                                            currentHaptics.gestureEnd()
-                                        } else {
-                                            currentHaptics.tick()
-                                        }
-                                        currentFraction =
-                                            calculateProgressFromX(
-                                                change.position.x,
-                                                size.width.toFloat(),
-                                            )
-                                        currentOnSeek(currentFraction)
-                                        scrubPos = (currentFraction * safeDurationMs).toLong()
-                                        currentOnScrubbingChanged(
-                                            false,
-                                            scrubPos,
-                                            change.position.x,
-                                        )
+                                val totalDx = change.position.x - startX
+                                val totalDy = change.position.y - startY
+                                // Valid if dragging was engaged or if it was an intentional
+                                // stationary tap
+                                if (
+                                    isScrubbingEngaged ||
+                                        (abs(totalDx) <= touchSlop && abs(totalDy) <= touchSlop)
+                                ) {
+                                    change.consume()
+                                    releasedNormally = true
+                                    currentState?.resetTimeout()
+                                    if (isScrubbingEngaged) {
+                                        currentHaptics.gestureEnd()
+                                    } else {
+                                        currentHaptics.tick()
                                     }
+                                    currentFraction =
+                                        calculateProgressFromX(
+                                            change.position.x,
+                                            size.width.toFloat(),
+                                        )
+                                    currentOnSeek(currentFraction)
+                                    scrubPos = (currentFraction * safeDurationMs).toLong()
+                                    currentOnScrubbingChanged(
+                                        false,
+                                        scrubPos,
+                                        change.position.x,
+                                    )
                                 }
                                 break
                             }
@@ -490,7 +489,7 @@ fun VideoPlayerSeekBar(
                             val activeEnd = minOf(sliceEndX, segEndX)
                             if (activeEnd > activeStart) {
                                 drawCustomRoundRect(
-                                    color = primaryColor,
+                                    color = resolvedActiveTrackColor,
                                     topLeft = Offset(activeStart, yOffset - trackHeightPx / 2f),
                                     size = Size(activeEnd - activeStart, trackHeightPx),
                                     topLeftRadius = innerCornerRadius,
@@ -668,7 +667,7 @@ fun VideoPlayerSeekBar(
                                 else innerCornerRadius
 
                             drawCustomRoundRect(
-                                color = primaryColor,
+                                color = resolvedActiveTrackColor,
                                 topLeft = Offset(activeStart, yOffset - trackHeightPx / 2f),
                                 size = Size(activeEnd - activeStart, trackHeightPx),
                                 topLeftRadius = leftRadius,
@@ -767,7 +766,7 @@ fun VideoPlayerSeekBar(
                         val segEndX = head * size.width
                         if (segEndX > segStartX) {
                             drawCustomRoundRect(
-                                color = primaryColor,
+                                color = resolvedActiveTrackColor,
                                 topLeft = Offset(segStartX, yOffset - trackHeightPx / 2f),
                                 size = Size(segEndX - segStartX, trackHeightPx),
                                 topLeftRadius = innerCornerRadius,
@@ -813,7 +812,7 @@ fun VideoPlayerSeekBar(
 
                     if (activeLimit > 0f) {
                         drawCustomRoundRect(
-                            color = primaryColor,
+                            color = resolvedActiveTrackColor,
                             topLeft = Offset(0f, yOffset - trackHeightPx / 2f),
                             size = Size(activeLimit, trackHeightPx),
                             topLeftRadius = fullCornerRadius,
@@ -828,14 +827,14 @@ fun VideoPlayerSeekBar(
 
         // Draw Thumb cursor bar (hidden during buffering)
         if (thumbAlpha > 0.01f) {
-            val thumbColor =
+            val resolvedThumbColor =
                 if (enabled) {
-                    primaryColor.copy(alpha = thumbAlpha)
+                    (thumbColor ?: primaryColor).copy(alpha = thumbAlpha)
                 } else {
-                    disabledThumbColor.copy(alpha = thumbAlpha)
+                    disabledThumbColor.copy(alpha = disabledThumbColor.alpha * thumbAlpha)
                 }
             drawRoundRect(
-                color = thumbColor,
+                color = resolvedThumbColor,
                 topLeft = Offset(thumbLeft, yOffset - thumbHeight / 2f),
                 size = Size(thumbWidthPx, thumbHeight),
                 cornerRadius = CornerRadius(thumbWidthPx / 2f, thumbWidthPx / 2f),

@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -24,8 +26,12 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -34,6 +40,7 @@ import dev.jdtech.jellyfin.player.cast.models.Device
 import dev.jdtech.jellyfin.player.cast.presentation.CastPlayerViewModel
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerImage
 import dev.jdtech.jellyfin.player.core.domain.models.Trickplay
+import dev.jdtech.jellyfin.presentation.cast.MiniPlayerThemeColors
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.toBlurHashPainter
@@ -60,6 +67,8 @@ fun PlayerTopSection(
     modifier: Modifier = Modifier,
     onDragCollapse: ((Float) -> Unit)? = null,
     onDragCollapseEnd: ((Float) -> Unit)? = null,
+    isExpandedScreen: Boolean = false,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
     val deviceName = uiState.connectedDevice?.name
     val itemTitle =
@@ -126,6 +135,12 @@ fun PlayerTopSection(
             Modifier
         }
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscapePhone = isLandscape && !isExpandedScreen
+    val hasSeriesName = uiState.currentItemTitle.seriesName != null
+    val bottomArtworkPadding = if (isLandscapePhone && !hasSeriesName) 24.dp else 4.dp
+
     Column(
         modifier = modifier.then(dragModifier),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -134,22 +149,70 @@ fun PlayerTopSection(
             deviceName = deviceName,
             onClose = onClose,
             onDeviceClick = onDeviceClick,
+            isExpandedScreen = isExpandedScreen,
+            themeColors = themeColors,
         )
 
-        Box(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+        BoxWithConstraints(
+            modifier =
+                Modifier.weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacings.default)
+                    .padding(bottom = bottomArtworkPadding),
             contentAlignment = Alignment.Center,
         ) {
-            CastPlayerArtwork(
-                poster = uiState.currentItemPoster,
-                itemTitle = itemTitle,
-                isScrubbing = isScrubbing,
-                scrubPosition = scrubPosition,
-                trickplay = trickplay,
-                hasValidDuration = uiState.playerState.duration > 0,
-                aspectRatio = safeAspectRatio,
-                modifier = Modifier.fillMaxHeight(),
-            )
+            val artworkModifier =
+                if (isLandscapePhone) {
+                    val targetAspect = safeAspectRatio.coerceIn(0.66f, 1.85f)
+                    val widthBasedOnHeight = maxHeight * targetAspect
+                    if (widthBasedOnHeight <= maxWidth * 0.96f) {
+                        Modifier.fillMaxHeight(0.94f).aspectRatio(targetAspect)
+                    } else {
+                        Modifier.fillMaxWidth(0.96f).aspectRatio(targetAspect)
+                    }
+                } else {
+                    val squareSize = minOf(maxWidth, maxHeight).coerceAtLeast(0.dp)
+                    Modifier.size(squareSize).aspectRatio(safeAspectRatio)
+                }
+
+            Box(contentAlignment = Alignment.Center) {
+                CastPlayerArtwork(
+                    poster = uiState.currentItemPoster,
+                    itemTitle = itemTitle,
+                    isScrubbing = isScrubbing,
+                    scrubPosition = scrubPosition,
+                    trickplay = trickplay,
+                    hasValidDuration = uiState.playerState.duration > 0,
+                    modifier = artworkModifier,
+                )
+            }
+        }
+
+        if (isLandscapePhone && hasSeriesName) {
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp, bottom = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = uiState.currentItemTitle.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!uiState.currentItemTitle.episodeInfo.isNullOrBlank()) {
+                    Text(
+                        text = uiState.currentItemTitle.episodeInfo!!,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
         }
     }
 }
@@ -184,15 +247,11 @@ private fun CastPlayerArtwork(
     scrubPosition: Float,
     trickplay: Trickplay?,
     hasValidDuration: Boolean,
-    aspectRatio: Float,
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(
+    Box(
         modifier =
             modifier
-                .padding(horizontal = MaterialTheme.spacings.default)
-                .padding(bottom = MaterialTheme.spacings.default)
-                .aspectRatio(aspectRatio)
                 .clip(RoundedCornerShape(24.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
@@ -206,8 +265,11 @@ private fun CastPlayerArtwork(
         } else if (poster != null) {
             val blurPlaceholder = remember(poster.blurHash) { poster.blurHash.toBlurHashPainter() }
 
+            val configuration = LocalConfiguration.current
+            val stableWidthDp = configuration.screenWidthDp.dp
+            val stableHeightDp = configuration.screenHeightDp.dp
             val optimizedUri =
-                poster.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+                poster.uri.toOptimizedImageUri(widthDp = stableWidthDp, heightDp = stableHeightDp)
 
             val contentDescription =
                 if (itemTitle.isNotBlank()) {

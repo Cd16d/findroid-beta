@@ -4,7 +4,6 @@ import android.text.format.DateFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,20 +24,17 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerOverlayBackground
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.player.cast.models.CastPlaybackStatus
 import dev.jdtech.jellyfin.player.core.R
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.presentation.formatDuration
-import dev.jdtech.jellyfin.player.core.presentation.getSectionTitle
+import dev.jdtech.jellyfin.presentation.cast.MiniPlayerThemeColors
 import dev.jdtech.jellyfin.presentation.player.components.VideoPlayerSeekBar
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import java.util.Date
@@ -72,9 +67,9 @@ fun CastScrubbingTimeline(
     onScrubStop: () -> Unit,
     modifier: Modifier = Modifier,
     segments: List<FindroidSegment> = emptyList(),
-    onOpenChapters: (() -> Unit)? = null,
     isItemLoaded: Boolean = duration > 0f || playerStatus != CastPlaybackStatus.IDLE,
     enabled: Boolean = isItemLoaded && duration > 0f,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
     val safeDuration = if (duration.isFinite() && duration > 0f) duration else 0f
     val safeProgress =
@@ -90,11 +85,6 @@ fun CastScrubbingTimeline(
     val context = LocalContext.current
     val contentProgressString = formatDuration(progressMs)
     val contentDurationString = formatDuration(durationMs)
-
-    val sectionTitle =
-        remember(progressMs, chapters, segments) {
-            getSectionTitle(progressMs, chapters, segments, context)
-        }
 
     val remainingMs = if (durationMs > 0L) (durationMs - progressMs).coerceAtLeast(0L) else 0L
     val formattedEndTime =
@@ -112,114 +102,48 @@ fun CastScrubbingTimeline(
     val pillBorder = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
 
     Column(modifier = modifier.padding(horizontal = 24.dp)) {
-        // Badges row: Chapter pill & Progress • Duration pill on left, Ends at pill on right
+        // Badges row: Progress • Duration pill on left, Ends at pill on right
         Box(modifier = Modifier.fillMaxWidth().alpha(if (isItemLoaded) 1f else 0f)) {
-            Column(
+            // Pill: Current progress • Content duration (right above seekbar)
+            Box(
                 modifier =
                     Modifier.align(Alignment.CenterStart)
-                        .fillMaxWidth()
-                        .padding(end = if (endsAtText != null) 90.dp else 0.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                        .clip(CircleShape)
+                        .background(pillBackground)
+                        .border(pillBorder, CircleShape)
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                // Pill 1: Chapter Title (clickable if chapters are available)
-                val displayedSectionTitle =
-                    when {
-                        !sectionTitle.isNullOrBlank() -> sectionTitle
-                        chapters.isNotEmpty() -> stringResource(R.string.chapters)
-                        else -> null
-                    }
-                if (!displayedSectionTitle.isNullOrBlank()) {
-                    if (chapters.isNotEmpty() && onOpenChapters != null) {
-                        Box(
-                            modifier =
-                                Modifier.clip(CircleShape)
-                                    .background(pillBackground)
-                                    .border(pillBorder, CircleShape)
-                                    .clickable(onClick = onOpenChapters)
-                                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                Text(
-                                    text = displayedSectionTitle,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Icon(
-                                    painter = painterResource(id = CoreR.drawable.ic_arrow_right),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = Color.White.copy(alpha = 0.85f),
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier =
-                                Modifier.clip(CircleShape)
-                                    .background(pillBackground)
-                                    .border(pillBorder, CircleShape)
-                                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = displayedSectionTitle,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White.copy(alpha = 0.85f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-
-                // Pill 2: Current progress • Content duration (right above seekbar)
-                Box(
-                    modifier =
-                        Modifier.clip(CircleShape)
-                            .background(pillBackground)
-                            .border(pillBorder, CircleShape)
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(
-                            text = contentProgressString,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                        )
-                        Box(
-                            modifier =
-                                Modifier.size(4.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.6f)),
-                        )
-                        Text(
-                            text = if (durationMs > 0L) contentDurationString else "--:--",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White.copy(alpha = 0.85f),
-                        )
-                    }
+                    Text(
+                        text = contentProgressString,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                    Box(
+                        modifier =
+                            Modifier.size(4.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.6f)),
+                    )
+                    Text(
+                        text = if (durationMs > 0L) contentDurationString else "--:--",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.85f),
+                    )
                 }
             }
 
-            // Pill 3: Ends at HH:mm
+            // Ends at HH:mm
             if (endsAtText != null) {
                 Box(
                     modifier =
-                        Modifier.align(Alignment.BottomEnd)
+                        Modifier.align(Alignment.CenterEnd)
                             .clip(CircleShape)
                             .background(pillBackground)
                             .border(pillBorder, CircleShape)
@@ -263,8 +187,11 @@ fun CastScrubbingTimeline(
             },
             isBuffering = isBuffering,
             enabled = enabled,
-            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-            disabledThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            inactiveTrackColor =
+                themeColors?.subtleContainerColor ?: MaterialTheme.colorScheme.surfaceVariant,
+            activeTrackColor = themeColors?.accentColor,
+            thumbColor = themeColors?.accentColor ?: MaterialTheme.colorScheme.primary,
+            disabledThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             trackHeight = 16.dp,
             highlightTrackHeight = 16.dp,
             thumbWidth = 4.dp,

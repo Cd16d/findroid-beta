@@ -10,9 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,13 +41,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -340,8 +337,6 @@ private fun MainNavigation(
 
     var isAccountMenuOpen by remember { mutableStateOf(false) }
 
-    val density = LocalDensity.current
-    var castPlayerHeight by remember { mutableStateOf(MaterialTheme.spacings.default) }
     var showCastSheet by remember { mutableStateOf(false) }
     var showCastExpandedPlayer by remember { mutableStateOf(false) }
 
@@ -359,7 +354,12 @@ private fun MainNavigation(
             is EpisodeRoute,
             is SeasonRoute,
             is FavoritesRoute,
-            is CollectionRoute -> true
+            is CollectionRoute,
+            is MediaRoute,
+            is SearchRoute,
+            is DownloadsRoute,
+            is ShowDownloadsRoute,
+            is PersonRoute -> true
             else -> false
         }
     val showCastButton =
@@ -387,11 +387,18 @@ private fun MainNavigation(
             }
         }
 
-    LaunchedEffect(showCastMiniPlayer, showCastPlayerPhone) {
-        if (!showCastMiniPlayer && !showCastPlayerPhone) {
-            castPlayerHeight = MaterialTheme.spacings.default
+    val castPlayerHeight by
+        remember(showCastPlayerPhone, showCastExpandedPlayer, isMediumScreen) {
+            derivedStateOf {
+                if (showCastPlayerPhone && !showCastExpandedPlayer && !isMediumScreen) {
+                    // Collapsed pill (72.dp) + bottom spacing (16.dp) + matching top spacing
+                    // (16.dp)
+                    104.dp
+                } else {
+                    MaterialTheme.spacings.default
+                }
+            }
         }
-    }
 
     val nestedScrollConnection =
         remember(isNavRail, isTabRoot) {
@@ -451,6 +458,7 @@ private fun MainNavigation(
                     navigator.navigateHome()
                     isAccountMenuOpen = false
                 },
+                modifier = Modifier.zIndex(if (isAccountMenuOpen) 10f else 0f),
             ) {
                 NavigationSuiteScaffold(
                     navigationItems = {
@@ -544,45 +552,35 @@ private fun MainNavigation(
                             ) {
                                 CastMiniPlayer(
                                     onClick = { showCastExpandedPlayer = true },
-                                    modifier =
-                                        Modifier.onSizeChanged { _ ->
-                                            castPlayerHeight = MaterialTheme.spacings.default
-                                        },
                                     handleBottomInsets = !showNavSuite,
                                 )
                             }
                         }
-                    } else {
-                        // Phone Cast Player (Morphing Shared Container Transform)
-                        AnimatedVisibility(
-                            visible = showCastPlayerPhone,
-                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                        ) {
-                            CastPlayerContainer(
-                                isExpanded = showCastExpandedPlayer,
-                                onExpandedChange = { expanded ->
-                                    showCastExpandedPlayer = expanded
-                                },
-                                onDeviceClick = { showCastSheet = true },
-                                showNavSuite = showNavSuite,
-                                isNavRail = isNavRail,
-                                onHeightChanged = { measuredHeight ->
-                                    castPlayerHeight =
-                                        if (!isMediumScreen) {
-                                            measuredHeight
-                                        } else {
-                                            MaterialTheme.spacings.default
-                                        }
-                                },
-                            )
-                        }
                     }
                 }
-            }
 
-            if (showCastSheet) {
-                CastBottomSheet(onDismissRequest = { showCastSheet = false })
+                if (showCastSheet) {
+                    CastBottomSheet(onDismissRequest = { showCastSheet = false })
+                }
+
+                // Phone Cast Player (Morphing Shared Container Transform)
+                if (!isExpandedScreen) {
+                    AnimatedVisibility(
+                        visible = showCastPlayerPhone,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
+                    ) {
+                        CastPlayerContainer(
+                            isExpanded = showCastExpandedPlayer,
+                            onExpandedChange = { expanded -> showCastExpandedPlayer = expanded },
+                            onDeviceClick = { showCastSheet = true },
+                            showNavSuite = showNavSuite,
+                            isNavRail = isNavRail,
+                            isMediumScreen = isMediumScreen,
+                            modifier = Modifier.zIndex(if (isAccountMenuOpen) 0f else 2f),
+                        )
+                    }
+                }
             }
         }
     }
