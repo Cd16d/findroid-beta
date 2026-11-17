@@ -10,8 +10,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 /**
- * Initializes trickplay thumbnail metadata for scrubbing previews and sets up the 3-sheet sliding
- * window cache without eagerly downloading or slicing sprite sheets.
+ * Initializes trickplay thumbnail metadata for scrubbing previews and starts background prefetching
+ * of all sprite sheets into memory.
  */
 suspend fun fetchTrickplay(
     repository: JellyfinRepository,
@@ -33,7 +33,7 @@ suspend fun fetchTrickplay(
     val tilesPerSheet = trickplayInfo.tileWidth * trickplayInfo.tileHeight
     if (tilesPerSheet <= 0) return null
     val sheetCount = ceil(trickplayInfo.thumbnailCount.toDouble() / tilesPerSheet).toInt()
-    if (sheetCount <= 0 || sheetCount > 150) return null
+    if (sheetCount !in 1..500) return null
 
     return Trickplay(
         itemId = item.itemId,

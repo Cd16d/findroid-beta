@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.work
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.os.StatFs
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -388,8 +389,16 @@ constructor(
         try {
             val tilesPerSheet = trickplayInfo.tileWidth * trickplayInfo.tileHeight
             if (tilesPerSheet <= 0) return
+            // Some servers mistakenly report total sheet count instead of total thumbnail count.
+            val isSheetCountBug =
+                trickplayInfo.thumbnailCount in 1..60 &&
+                    trickplayInfo.thumbnailCount < tilesPerSheet
             val sheetCount =
-                ceil(trickplayInfo.thumbnailCount.toDouble().div(tilesPerSheet)).toInt()
+                if (isSheetCountBug) {
+                    trickplayInfo.thumbnailCount
+                } else {
+                    ceil(trickplayInfo.thumbnailCount.toDouble().div(tilesPerSheet)).toInt()
+                }
             val basePath = "trickplay/${item.id}/$sourceId"
             val dir = File(appContext.filesDir, basePath)
             dir.mkdirs()
@@ -399,14 +408,17 @@ constructor(
                 if (isStopped) break
 
                 val targetFile = File(dir, i.toString())
-                if (targetFile.exists() && targetFile.length() > 0L) {
+                if (isValidImageFile(targetFile)) {
                     tileCount++
                     continue
+                }
+                if (targetFile.exists()) {
+                    targetFile.delete()
                 }
 
                 val byteArray =
                     repository.getTrickplayData(item.id, trickplayInfo.width, i) ?: continue
-                if (byteArray.isEmpty()) continue
+                if (!isValidImageData(byteArray)) continue
 
                 if (!hasEnoughSpace(dir, byteArray.size.toLong())) {
                     Timber.w("Insufficient storage for trickplay tile $i of item ${item.id}")
@@ -429,16 +441,59 @@ constructor(
                     }
                 }
             }
-            if (tileCount > 0) {
-                database.insertTrickplayInfo(trickplayInfo.toFindroidTrickplayInfoDto(sourceId))
+            if (tileCount == sheetCount) {
+                // Store the corrected thumbnailCount so playback can correctly compute frameIndex.
+                val infoToStore =
+                    if (isSheetCountBug) {
+                        trickplayInfo.copy(thumbnailCount = sheetCount * tilesPerSheet)
+                    } else {
+                        trickplayInfo
+                    }
+                database.insertTrickplayInfo(infoToStore.toFindroidTrickplayInfoDto(sourceId))
                 Timber.i(
-                    "Trickplay data downloaded successfully for item ${item.id} ($tileCount tiles)",
+                    "Trickplay data downloaded and verified successfully for item ${item.id} ($tileCount/$sheetCount sheets)",
+                )
+            } else {
+                Timber.w(
+                    "Incomplete trickplay data downloaded for item ${item.id} ($tileCount/$sheetCount sheets); not marking complete",
                 )
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Timber.w(e, "Failed to download trickplay data for item ${item.id}")
+        }
+    }
+
+    private fun isValidImageFile(file: File): Boolean {
+        if (!file.exists() || file.length() < 128L) return false
+        return try {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, opts)
+            opts.outWidth > 0 && opts.outHeight > 0
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun isValidImageData(data: ByteArray): Boolean {
+        if (data.size < 128) return false
+        val isJpeg = data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte()
+        val isWebp =
+            data.size >= 12 &&
+                data[0] == 'R'.code.toByte() &&
+                data[1] == 'I'.code.toByte() &&
+                data[2] == 'F'.code.toByte() &&
+                data[3] == 'F'.code.toByte()
+        val isPng = data.size >= 8 && data[0] == 0x89.toByte() && data[1] == 'P'.code.toByte()
+        if (!isJpeg && !isWebp && !isPng) return false
+
+        return try {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(data, 0, data.size, opts)
+            opts.outWidth > 0 && opts.outHeight > 0
+        } catch (_: Throwable) {
+            false
         }
     }
 
