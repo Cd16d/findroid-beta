@@ -108,7 +108,6 @@ import dev.jdtech.jellyfin.presentation.settings.SmartDownloadsScreen
 import dev.jdtech.jellyfin.presentation.setup.permission.PermissionScreen
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
-import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionAction
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionViewModel
@@ -318,12 +317,6 @@ private fun MainNavigation(
             isTabRoot -> true
             else -> isBottomBarVisible
         }
-
-    val safePadding =
-        rememberSafePadding(
-            handleStartInsets = false,
-            handleBottomInsets = !showNavSuite,
-        )
 
     val navigationSuiteScaffoldState = rememberNavigationSuiteScaffoldState()
 

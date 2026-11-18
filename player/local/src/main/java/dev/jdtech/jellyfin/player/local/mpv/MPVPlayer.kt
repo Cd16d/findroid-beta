@@ -70,6 +70,7 @@ class MPVPlayer(
     private val audioManager: AudioManager by lazy { context.getSystemService()!! }
     private lateinit var audioFocusRequest: AudioFocusRequestCompat
     private val handler: Handler = Handler(context.mainLooper)
+    @Volatile private var isReleased = false
     var mpvAudioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
         private set
 
@@ -354,260 +355,286 @@ class MPVPlayer(
 
     override fun eventProperty(property: String, value: String) {
         handler.post {
-            when (property) {
-                "track-list" -> {
-                    val newTracks = getTracks(value)
-                    currentTracks = newTracks
-                    listeners.sendEvent(EVENT_TRACKS_CHANGED) { listener ->
-                        listener.onTracksChanged(currentTracks)
+            if (isReleased) return@post
+            try {
+                when (property) {
+                    "track-list" -> {
+                        val newTracks = getTracks(value)
+                        currentTracks = newTracks
+                        listeners.sendEvent(EVENT_TRACKS_CHANGED) { listener ->
+                            listener.onTracksChanged(currentTracks)
+                        }
                     }
                 }
-            }
+            } catch (_: Exception) {}
         }
     }
 
     override fun eventProperty(property: String, value: Boolean) {
         handler.post {
-            when (property) {
-                "eof-reached" -> {
-                    if (value && isPlayerReady) {
-                        if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
-                            if (pauseAtEndOfMediaItems) {
+            if (isReleased) return@post
+            try {
+                when (property) {
+                    "eof-reached" -> {
+                        if (value && isPlayerReady) {
+                            if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
+                                if (pauseAtEndOfMediaItems) {
+                                    setPlayerStateAndNotifyIfChanged(
+                                        playWhenReady = false,
+                                        playWhenReadyChangeReason =
+                                            PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
+                                        playbackState = STATE_READY,
+                                    )
+                                } else {
+                                    prepareMediaItem(currentMediaItemIndex + 1)
+                                    play()
+                                }
+                            } else {
                                 setPlayerStateAndNotifyIfChanged(
                                     playWhenReady = false,
                                     playWhenReadyChangeReason =
                                         PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                    playbackState = STATE_READY,
+                                    playbackState = STATE_ENDED,
                                 )
-                            } else {
-                                prepareMediaItem(currentMediaItemIndex + 1)
-                                play()
+                                resetInternalState()
                             }
-                        } else {
-                            setPlayerStateAndNotifyIfChanged(
-                                playWhenReady = false,
-                                playWhenReadyChangeReason =
-                                    PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                playbackState = STATE_ENDED,
-                            )
-                            resetInternalState()
                         }
                     }
-                }
-                "paused-for-cache" -> {
-                    if (isPlayerReady) {
-                        if (value) {
-                            setPlayerStateAndNotifyIfChanged(playbackState = STATE_BUFFERING)
-                        } else {
-                            setPlayerStateAndNotifyIfChanged(playbackState = STATE_READY)
+                    "paused-for-cache" -> {
+                        if (isPlayerReady) {
+                            if (value) {
+                                setPlayerStateAndNotifyIfChanged(playbackState = STATE_BUFFERING)
+                            } else {
+                                setPlayerStateAndNotifyIfChanged(playbackState = STATE_READY)
+                            }
                         }
                     }
+                    "seekable" -> isSeekable = value
                 }
-                "seekable" -> isSeekable = value
-            }
+            } catch (_: Exception) {}
         }
     }
 
     override fun eventProperty(property: String, value: Long) {
         handler.post {
-            when (property) {
-                "time-pos" -> currentPositionMs = value * C.MILLIS_PER_SECOND
-                "duration" -> {
-                    val newDuration = value * C.MILLIS_PER_SECOND
-                    if (currentDurationMs != newDuration) {
-                        currentDurationMs = newDuration
+            if (isReleased) return@post
+            try {
+                when (property) {
+                    "time-pos" -> currentPositionMs = value * C.MILLIS_PER_SECOND
+                    "duration" -> {
+                        val newDuration = value * C.MILLIS_PER_SECOND
+                        if (currentDurationMs != newDuration) {
+                            currentDurationMs = newDuration
+                        }
                     }
-                }
-                "demuxer-cache-time" -> currentCacheTimeMs = value * C.MILLIS_PER_SECOND
-                "dwidth",
-                "dheight",
-                "width",
-                "height" -> checkAndUpdateVideoSize()
-                "playlist-count" -> {
-                    listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
-                        listener.onTimelineChanged(
-                            timeline,
-                            TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
-                        )
-                    }
-                }
-                "playlist-current-pos" -> {
-                    if (value < 0) {
-                        return@post
-                    }
-                    currentMediaItemIndex = value.toInt()
-                    val newMediaItem = currentMediaItem
-                    if (oldMediaItem?.mediaId != newMediaItem?.mediaId) {
-                        oldMediaItem = newMediaItem
-                        listeners.sendEvent(EVENT_MEDIA_ITEM_TRANSITION) { listener ->
-                            listener.onMediaItemTransition(
-                                newMediaItem,
-                                MEDIA_ITEM_TRANSITION_REASON_AUTO,
+                    "demuxer-cache-time" -> currentCacheTimeMs = value * C.MILLIS_PER_SECOND
+                    "dwidth",
+                    "dheight",
+                    "width",
+                    "height" -> checkAndUpdateVideoSize()
+                    "playlist-count" -> {
+                        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+                            listener.onTimelineChanged(
+                                timeline,
+                                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
                             )
                         }
                     }
+                    "playlist-current-pos" -> {
+                        if (value < 0) {
+                            return@post
+                        }
+                        currentMediaItemIndex = value.toInt()
+                        val newMediaItem = currentMediaItem
+                        if (oldMediaItem?.mediaId != newMediaItem?.mediaId) {
+                            oldMediaItem = newMediaItem
+                            listeners.sendEvent(EVENT_MEDIA_ITEM_TRANSITION) { listener ->
+                                listener.onMediaItemTransition(
+                                    newMediaItem,
+                                    MEDIA_ITEM_TRANSITION_REASON_AUTO,
+                                )
+                            }
+                        }
+                    }
                 }
-            }
+            } catch (_: Exception) {}
         }
     }
 
     override fun eventProperty(property: String, value: Double) {
         handler.post {
-            when (property) {
-                "speed" -> {
-                    playbackParameters = playbackParameters.withSpeed(value.toFloat())
-                    listeners.sendEvent(EVENT_PLAYBACK_PARAMETERS_CHANGED) { listener ->
-                        listener.onPlaybackParametersChanged(playbackParameters)
+            if (isReleased) return@post
+            try {
+                when (property) {
+                    "speed" -> {
+                        playbackParameters = playbackParameters.withSpeed(value.toFloat())
+                        listeners.sendEvent(EVENT_PLAYBACK_PARAMETERS_CHANGED) { listener ->
+                            listener.onPlaybackParametersChanged(playbackParameters)
+                        }
+                    }
+                    "demuxer-cache-duration" -> {
+                        currentDemuxerCacheDurationMs =
+                            (value * C.MILLIS_PER_SECOND).toLong().coerceAtLeast(0L)
                     }
                 }
-                "demuxer-cache-duration" -> {
-                    currentDemuxerCacheDurationMs =
-                        (value * C.MILLIS_PER_SECOND).toLong().coerceAtLeast(0L)
-                }
-            }
+            } catch (_: Exception) {}
         }
     }
 
     override fun eventEndFile(reason: Int, error: Int) {
         handler.post {
-            when (reason) {
-                MpvEndFileReason.MPV_END_FILE_REASON_ERROR -> {
-                    val errorCode =
-                        when (error) {
-                            MpvError.MPV_ERROR_LOADING_FAILED ->
-                                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
-                            MpvError.MPV_ERROR_AO_INIT_FAILED ->
-                                PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED
-                            MpvError.MPV_ERROR_VO_INIT_FAILED ->
-                                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
-                            MpvError.MPV_ERROR_UNKNOWN_FORMAT,
-                            MpvError.MPV_ERROR_UNSUPPORTED ->
-                                PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
-                            else -> PlaybackException.ERROR_CODE_UNSPECIFIED
+            if (isReleased) return@post
+            try {
+                when (reason) {
+                    MpvEndFileReason.MPV_END_FILE_REASON_ERROR -> {
+                        val errorCode =
+                            when (error) {
+                                MpvError.MPV_ERROR_LOADING_FAILED ->
+                                    PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+                                MpvError.MPV_ERROR_AO_INIT_FAILED ->
+                                    PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED
+                                MpvError.MPV_ERROR_VO_INIT_FAILED ->
+                                    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
+                                MpvError.MPV_ERROR_UNKNOWN_FORMAT,
+                                MpvError.MPV_ERROR_UNSUPPORTED ->
+                                    PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
+                                else -> PlaybackException.ERROR_CODE_UNSPECIFIED
+                            }
+                        val exception =
+                            PlaybackException(
+                                "mpv end file error: reason=$reason, error=$error",
+                                null,
+                                errorCode,
+                            )
+                        playerError = exception
+                        listeners.sendEvent(EVENT_PLAYER_ERROR) { listener ->
+                            listener.onPlayerError(exception)
                         }
-                    val exception =
-                        PlaybackException(
-                            "mpv end file error: reason=$reason, error=$error",
-                            null,
-                            errorCode,
-                        )
-                    playerError = exception
-                    listeners.sendEvent(EVENT_PLAYER_ERROR) { listener ->
-                        listener.onPlayerError(exception)
+                        setPlayerStateAndNotifyIfChanged(playbackState = STATE_IDLE)
                     }
-                    setPlayerStateAndNotifyIfChanged(playbackState = STATE_IDLE)
-                }
-                MpvEndFileReason.MPV_END_FILE_REASON_EOF -> {
-                    if (isPlayerReady) {
-                        if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
-                            if (pauseAtEndOfMediaItems) {
+                    MpvEndFileReason.MPV_END_FILE_REASON_EOF -> {
+                        if (isPlayerReady) {
+                            if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
+                                if (pauseAtEndOfMediaItems) {
+                                    setPlayerStateAndNotifyIfChanged(
+                                        playWhenReady = false,
+                                        playWhenReadyChangeReason =
+                                            PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
+                                        playbackState = STATE_READY,
+                                    )
+                                } else {
+                                    prepareMediaItem(currentMediaItemIndex + 1)
+                                    play()
+                                }
+                            } else {
                                 setPlayerStateAndNotifyIfChanged(
                                     playWhenReady = false,
                                     playWhenReadyChangeReason =
                                         PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                    playbackState = STATE_READY,
+                                    playbackState = STATE_ENDED,
                                 )
-                            } else {
-                                prepareMediaItem(currentMediaItemIndex + 1)
-                                play()
+                                resetInternalState()
                             }
-                        } else {
-                            setPlayerStateAndNotifyIfChanged(
-                                playWhenReady = false,
-                                playWhenReadyChangeReason =
-                                    PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                playbackState = STATE_ENDED,
-                            )
-                            resetInternalState()
                         }
                     }
                 }
-            }
+            } catch (_: Exception) {}
         }
     }
 
     override fun event(eventId: Int) {
         handler.post {
-            when (eventId) {
-                MpvEvent.MPV_EVENT_START_FILE -> {
-                    if (!isPlayerReady && initialCommands.isNotEmpty()) {
-                        val commandsToRun = initialCommands.toList()
-                        initialCommands.clear()
-                        commandExecutor.execute {
-                            for (command in commandsToRun) {
-                                mpvLib.command(command)
+            if (isReleased) return@post
+            try {
+                when (eventId) {
+                    MpvEvent.MPV_EVENT_START_FILE -> {
+                        if (!isPlayerReady && initialCommands.isNotEmpty()) {
+                            val commandsToRun = initialCommands.toList()
+                            initialCommands.clear()
+                            commandExecutor.execute {
+                                if (isReleased) return@execute
+                                try {
+                                    for (command in commandsToRun) {
+                                        mpvLib.command(command)
+                                    }
+                                } catch (_: Exception) {}
                             }
                         }
                     }
-                }
-                MpvEvent.MPV_EVENT_FILE_LOADED -> {
-                    isSeekable = mpvLib.getPropertyBoolean("seekable") == true
-                    currentDurationMs =
-                        (mpvLib.getPropertyDouble("duration")?.times(C.MILLIS_PER_SECOND))?.toLong()
-                    checkAndUpdateVideoSize()
-                }
-                MpvEvent.MPV_EVENT_VIDEO_RECONFIG -> {
-                    checkAndUpdateVideoSize()
-                }
-                MpvEvent.MPV_EVENT_SEEK -> {
-                    currentCacheTimeMs = null
-                    currentDemuxerCacheDurationMs = 0L
-                    setPlayerStateAndNotifyIfChanged(playbackState = STATE_BUFFERING)
-                    listeners.sendEvent(EVENT_POSITION_DISCONTINUITY) { listener ->
-                        @Suppress("DEPRECATION")
-                        listener.onPositionDiscontinuity(DISCONTINUITY_REASON_SEEK)
+                    MpvEvent.MPV_EVENT_FILE_LOADED -> {
+                        isSeekable = mpvLib.getPropertyBoolean("seekable") == true
+                        currentDurationMs =
+                            (mpvLib.getPropertyDouble("duration")?.times(C.MILLIS_PER_SECOND))
+                                ?.toLong()
+                        checkAndUpdateVideoSize()
                     }
-                }
-                MpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
-                    checkAndUpdateVideoSize()
-                    if (!isPlayerReady) {
-                        if (initialSeekTo > 0L) {
-                            val seekToMs = initialSeekTo
-                            initialSeekTo = 0L
-                            mpvLib.command(
-                                arrayOf(
-                                    "seek",
-                                    "${seekToMs.toDouble().div(C.MILLIS_PER_SECOND)}",
-                                    "absolute",
-                                ),
-                            )
-                            return@post
+                    MpvEvent.MPV_EVENT_VIDEO_RECONFIG -> {
+                        checkAndUpdateVideoSize()
+                    }
+                    MpvEvent.MPV_EVENT_SEEK -> {
+                        currentCacheTimeMs = null
+                        currentDemuxerCacheDurationMs = 0L
+                        setPlayerStateAndNotifyIfChanged(playbackState = STATE_BUFFERING)
+                        listeners.sendEvent(EVENT_POSITION_DISCONTINUITY) { listener ->
+                            @Suppress("DEPRECATION")
+                            listener.onPositionDiscontinuity(DISCONTINUITY_REASON_SEEK)
                         }
-                        isPlayerReady = true
-                        if (playWhenReady) {
-                            Timber.d("Starting playback...")
-                            if (handleAudioFocus) {
-                                val res =
-                                    AudioManagerCompat.requestAudioFocus(
-                                        audioManager,
-                                        audioFocusRequest,
-                                    )
-                                if (res != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                                    mpvLib.setPropertyBoolean("pause", true)
+                    }
+                    MpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
+                        checkAndUpdateVideoSize()
+                        if (!isPlayerReady) {
+                            if (initialSeekTo > 0L) {
+                                val seekToMs = initialSeekTo
+                                initialSeekTo = 0L
+                                mpvLib.command(
+                                    arrayOf(
+                                        "seek",
+                                        "${seekToMs.toDouble().div(C.MILLIS_PER_SECOND)}",
+                                        "absolute",
+                                    ),
+                                )
+                                return@post
+                            }
+                            isPlayerReady = true
+                            if (playWhenReady) {
+                                Timber.d("Starting playback...")
+                                if (handleAudioFocus) {
+                                    val res =
+                                        AudioManagerCompat.requestAudioFocus(
+                                            audioManager,
+                                            audioFocusRequest,
+                                        )
+                                    if (res != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                                        mpvLib.setPropertyBoolean("pause", true)
+                                    } else {
+                                        mpvLib.setPropertyBoolean("pause", false)
+                                    }
                                 } else {
                                     mpvLib.setPropertyBoolean("pause", false)
                                 }
-                            } else {
-                                mpvLib.setPropertyBoolean("pause", false)
                             }
+                            val isPausedForCache =
+                                mpvLib.getPropertyBoolean("paused-for-cache") == true
+                            setResizeMode(currentResizeMode)
+                            setPlayerStateAndNotifyIfChanged(
+                                playbackState =
+                                    if (isPausedForCache) STATE_BUFFERING else STATE_READY,
+                            )
+                            for (videoListener in videoListeners) {
+                                videoListener.onRenderedFirstFrame()
+                            }
+                        } else {
+                            val isPausedForCache =
+                                mpvLib.getPropertyBoolean("paused-for-cache") == true
+                            setPlayerStateAndNotifyIfChanged(
+                                playbackState =
+                                    if (isPausedForCache) STATE_BUFFERING else STATE_READY,
+                            )
                         }
-                        val isPausedForCache = mpvLib.getPropertyBoolean("paused-for-cache") == true
-                        setResizeMode(currentResizeMode)
-                        setPlayerStateAndNotifyIfChanged(
-                            playbackState = if (isPausedForCache) STATE_BUFFERING else STATE_READY,
-                        )
-                        for (videoListener in videoListeners) {
-                            videoListener.onRenderedFirstFrame()
-                        }
-                    } else {
-                        val isPausedForCache = mpvLib.getPropertyBoolean("paused-for-cache") == true
-                        setPlayerStateAndNotifyIfChanged(
-                            playbackState = if (isPausedForCache) STATE_BUFFERING else STATE_READY,
-                        )
                     }
+                    else -> Unit
                 }
-                else -> Unit
-            }
+            } catch (_: Exception) {}
         }
     }
 
@@ -1223,15 +1250,31 @@ class MPVPlayer(
      * player must not be used after calling this method.
      */
     override fun release() {
+        if (isReleased) return
+        isReleased = true
+
         if (handleAudioFocus) {
-            AudioManagerCompat.abandonAudioFocusRequest(audioManager, audioFocusRequest)
+            try {
+                AudioManagerCompat.abandonAudioFocusRequest(audioManager, audioFocusRequest)
+            } catch (_: Exception) {}
         }
         resetInternalState()
+        handler.removeCallbacksAndMessages(null)
         try {
             commandExecutor.shutdown()
         } catch (_: Exception) {}
-        mpvLib.removeObserver(this)
-        mpvLib.destroy()
+        try {
+            mpvLib.removeObserver(this)
+        } catch (_: Exception) {}
+        try {
+            mpvLib.command(arrayOf("stop"))
+            mpvLib.setOptionString("vo", "null")
+            mpvLib.setOptionString("force-window", "no")
+            mpvLib.detachSurface()
+        } catch (_: Exception) {}
+        try {
+            mpvLib.destroy()
+        } catch (_: Exception) {}
     }
 
     override fun getCurrentTracks(): Tracks {
@@ -1503,6 +1546,7 @@ class MPVPlayer(
      * @see Player.Listener.onVideoSizeChanged
      */
     override fun getVideoSize(): VideoSize {
+        if (isReleased) return VideoSize.UNKNOWN
         return try {
             val dw = mpvLib.getPropertyInt("dwidth")
             val dh = mpvLib.getPropertyInt("dheight")
@@ -1531,6 +1575,7 @@ class MPVPlayer(
     }
 
     private fun checkAndUpdateVideoSize() {
+        if (isReleased) return
         val newSize = getVideoSize()
         if (newSize != lastVideoSize && newSize != VideoSize.UNKNOWN) {
             lastVideoSize = newSize
