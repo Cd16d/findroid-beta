@@ -60,15 +60,16 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts
+          TAG_NAME="${GITHUB_REF_NAME}"
           for f in app/phone/build/outputs/apk/*/release/*.apk; do
             [ -f "$f" ] || continue
             new_name=$(basename "$f" | sed 's/phone-//' | sed 's/app-//' | sed 's/-release//')
-            cp "$f" "artifacts/findroid-$new_name"
+            cp "$f" "artifacts/findroid-${TAG_NAME}-$new_name"
           done
           for f in app/tv/build/outputs/apk/*/release/*.apk; do
             [ -f "$f" ] || continue
             new_name=$(basename "$f" | sed 's/tv-//' | sed 's/app-//' | sed 's/-release//')
-            cp "$f" "artifacts/findroid-tv-$new_name"
+            cp "$f" "artifacts/findroid-tv-${TAG_NAME}-$new_name"
           done
 
       - name: Create GitHub Release
