@@ -68,7 +68,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerOverlayBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.presentation.drawCustomRoundRect
@@ -90,30 +89,6 @@ fun formatSubtitleDelay(delayMs: Long): String {
         stringResource(id = PlayerR.string.delay_value_format, seconds)
     }
 }
-
-/**
- * Supported MIME types for external subtitle file selection. Explicitly excludes generic wildcards
- * and application/octet-stream to prevent showing PDFs, APKs, and images in the system document
- * picker.
- */
-private val SubtitleMimeTypes =
-    arrayOf(
-        "application/x-subrip",
-        "text/vtt",
-        "text/plain",
-        "text/x-ssa",
-        "text/x-ass",
-        "application/x-subtitle-subrip",
-        "application/x-subtitle-vtt",
-        "application/x-subtitle-ssa",
-        "application/x-subtitle-ass",
-        "application/x-subtitle",
-        "application/subrip",
-        "text/srt",
-        "text/x-microdvd",
-        "application/x-microdvd",
-        "text/subtitle",
-    )
 
 /** Maps subtitle delay in ms to a 0f...1f slider fraction, placing 0L at center (0.5f). */
 private fun delayToFraction(delayMs: Long, minDelay: Long, maxDelay: Long): Float {
@@ -184,7 +159,7 @@ fun PlayerSubtitleOptionsCard(
     Surface(
         modifier = modifier.fillMaxWidth().animateContentSize(),
         shape = shape,
-        color = PlayerCardBackground,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -255,7 +230,7 @@ fun PlayerSubtitleOptionsCard(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = PlayerCardBackground,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         border =
                             BorderStroke(
                                 1.dp,
@@ -277,13 +252,13 @@ fun PlayerSubtitleOptionsCard(
                     Surface(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = PlayerCardBackground,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
                         border =
                             BorderStroke(
                                 1.dp,
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                             ),
-                        onClick = { subtitlePickerLauncher.launch(SubtitleMimeTypes) },
+                        onClick = { subtitlePickerLauncher.launch(arrayOf("*/*")) },
                     ) {
                         Row(
                             modifier =

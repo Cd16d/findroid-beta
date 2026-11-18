@@ -134,12 +134,14 @@ fun CastExpandedPlayer(
                 }
         }
 
+        val themeColors = rememberMiniPlayerThemeColors(uiState.currentItemPoster?.blurHash)
+
         ModalBottomSheet(
             onDismissRequest = onClose,
             modifier = modifier,
             sheetState = sheetState,
             dragHandle = null,
-            containerColor = MaterialTheme.colorScheme.background,
+            containerColor = themeColors.containerColor,
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
             shape = RectangleShape,
             sheetMaxWidth = Dp.Unspecified,
@@ -153,19 +155,22 @@ fun CastExpandedPlayer(
                     isExpandedScreen = false,
                     uiState = uiState,
                     actions = actions,
+                    themeColors = themeColors,
                 )
             }
         }
     } else {
+        val themeColors = rememberMiniPlayerThemeColors(uiState.currentItemPoster?.blurHash)
         Surface(
             modifier = modifier.fillMaxHeight().width(400.dp),
             shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.background,
+            color = themeColors.containerColor,
         ) {
             CastExpandedPlayerLayout(
                 isExpandedScreen = true,
                 uiState = uiState,
                 actions = actions,
+                themeColors = themeColors,
             )
         }
     }
@@ -184,6 +189,8 @@ data class CastPlayerActions(
     val onSubtitleTrackSelected: (Track?) -> Unit,
     val onDeviceClick: () -> Unit,
     val onClose: () -> Unit,
+    val onDragCollapse: ((Float) -> Unit)? = null,
+    val onDragCollapseEnd: ((Float) -> Unit)? = null,
 )
 
 /**
@@ -191,12 +198,16 @@ data class CastPlayerActions(
  * sheets and expanded side-sheets.
  */
 @Composable
-private fun CastExpandedPlayerLayout(
+internal fun CastExpandedPlayerLayout(
     isExpandedScreen: Boolean,
     uiState: CastPlayerViewModel.UiState,
     actions: CastPlayerActions,
     modifier: Modifier = Modifier,
+    expansionFraction: Float = 1f,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
+    val activeThemeColors =
+        themeColors ?: rememberMiniPlayerThemeColors(uiState.currentItemPoster?.blurHash)
     var isScrubbing by remember { mutableStateOf(false) }
     var scrubPosition by remember { mutableFloatStateOf(0f) }
     var showTrackSelection by remember { mutableStateOf(false) }
@@ -253,32 +264,78 @@ private fun CastExpandedPlayerLayout(
             if (trackType == C.TRACK_TYPE_AUDIO) uiState.audioTracks else uiState.subtitleTracks
         }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier =
-                Modifier.fillMaxSize()
-                    .padding(
-                        top = safePadding.top,
-                        bottom = safePadding.bottom,
-                        start = safePadding.start,
-                        end = safePadding.end,
-                    ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (isLandscape && !isExpandedScreen) {
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+    val topPadding = safePadding.top
+
+    MaterialTheme(colorScheme = activeThemeColors.colorScheme) {
+        Box(modifier = modifier.fillMaxSize()) {
+            Column(
+                modifier =
+                    Modifier.fillMaxSize()
+                        .padding(
+                            top = topPadding,
+                            bottom = safePadding.bottom,
+                            start = safePadding.start,
+                            end = safePadding.end,
+                        ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (isLandscape && !isExpandedScreen) {
+                    Row(
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PlayerTopSection(
+                            uiState = uiState,
+                            isScrubbing = isScrubbing,
+                            scrubPosition = scrubPosition,
+                            onClose = actions.onClose,
+                            onDeviceClick = actions.onDeviceClick,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            onDragCollapse = actions.onDragCollapse,
+                            onDragCollapseEnd = actions.onDragCollapseEnd,
+                            isExpandedScreen = isExpandedScreen,
+                            themeColors = activeThemeColors,
+                        )
+
+                        CastExpandedPlayerBottomSection(
+                            uiState = uiState,
+                            isScrubbing = isScrubbing,
+                            scrubPosition = scrubPosition,
+                            onScrubStart = onScrubStart,
+                            onScrubStop = onScrubStop,
+                            onPlay = actions.onPlay,
+                            onPause = actions.onPause,
+                            onPlayPreviousItem = actions.onPlayPreviousItem,
+                            onPlayNextItem = actions.onPlayNextItem,
+                            onSkipSegment = actions.onSkipSegment,
+                            onVolumeChange = actions.onVolumeChange,
+                            onClickAudio = onClickAudio,
+                            onClickSubtitle = onClickSubtitle,
+                            modifier = Modifier.weight(1.25f),
+                            onOpenChapters = onOpenChapters,
+                            themeColors = activeThemeColors,
+                            isLandscapePhone = true,
+                        )
+                    }
+                } else {
                     PlayerTopSection(
                         uiState = uiState,
                         isScrubbing = isScrubbing,
                         scrubPosition = scrubPosition,
                         onClose = actions.onClose,
                         onDeviceClick = actions.onDeviceClick,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = Modifier.weight(1f),
+                        onDragCollapse = actions.onDragCollapse,
+                        onDragCollapseEnd = actions.onDragCollapseEnd,
+                        isExpandedScreen = isExpandedScreen,
+                        themeColors = activeThemeColors,
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     CastExpandedPlayerBottomSection(
                         uiState = uiState,
@@ -294,62 +351,34 @@ private fun CastExpandedPlayerLayout(
                         onVolumeChange = actions.onVolumeChange,
                         onClickAudio = onClickAudio,
                         onClickSubtitle = onClickSubtitle,
-                        modifier = Modifier.weight(1f),
                         onOpenChapters = onOpenChapters,
+                        themeColors = activeThemeColors,
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            } else {
-                PlayerTopSection(
-                    uiState = uiState,
-                    isScrubbing = isScrubbing,
-                    scrubPosition = scrubPosition,
-                    onClose = actions.onClose,
-                    onDeviceClick = actions.onDeviceClick,
-                    modifier = Modifier.weight(1f),
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                CastExpandedPlayerBottomSection(
-                    uiState = uiState,
-                    isScrubbing = isScrubbing,
-                    scrubPosition = scrubPosition,
-                    onScrubStart = onScrubStart,
-                    onScrubStop = onScrubStop,
-                    onPlay = actions.onPlay,
-                    onPause = actions.onPause,
-                    onPlayPreviousItem = actions.onPlayPreviousItem,
-                    onPlayNextItem = actions.onPlayNextItem,
-                    onSkipSegment = actions.onSkipSegment,
-                    onVolumeChange = actions.onVolumeChange,
-                    onClickAudio = onClickAudio,
-                    onClickSubtitle = onClickSubtitle,
-                    onOpenChapters = onOpenChapters,
-                )
-                Spacer(modifier = Modifier.height(48.dp))
             }
+
+            CastTrackSelectionDialog(
+                visible = showTrackSelection,
+                type = trackType,
+                tracks = currentTracks,
+                onSetTrack = onSetTrack,
+                onDismiss = onDismissTrackSelection,
+                displayExtraInfo = uiState.displayExtraInfo,
+                modifier = Modifier.padding(bottom = safePadding.bottom),
+            )
+
+            CastChaptersDialog(
+                visible = showChaptersSelection,
+                chapters = uiState.currentChapters,
+                currentPositionMs = uiState.playerState.currentPosition,
+                durationMs = uiState.playerState.duration,
+                segments = uiState.segments,
+                onChapterSelected = { startTimeMs -> actions.onSeek(startTimeMs) },
+                onDismiss = onDismissChaptersSelection,
+                modifier = Modifier.padding(bottom = safePadding.bottom),
+            )
         }
-
-        CastTrackSelectionDialog(
-            visible = showTrackSelection,
-            type = trackType,
-            tracks = currentTracks,
-            onSetTrack = onSetTrack,
-            onDismiss = onDismissTrackSelection,
-            displayExtraInfo = uiState.displayExtraInfo,
-            modifier = Modifier.padding(bottom = safePadding.bottom),
-        )
-
-        CastChaptersDialog(
-            visible = showChaptersSelection,
-            chapters = uiState.currentChapters,
-            currentPositionMs = uiState.playerState.currentPosition,
-            durationMs = uiState.playerState.duration,
-            segments = uiState.segments,
-            onChapterSelected = { startTimeMs -> actions.onSeek(startTimeMs) },
-            onDismiss = onDismissChaptersSelection,
-            modifier = Modifier.padding(bottom = safePadding.bottom),
-        )
     }
 }
 
@@ -357,6 +386,18 @@ private fun CastExpandedPlayerLayout(
 @Composable
 private fun CastExpandedPlayerPhoneVerticalPreview() {
     FindroidTheme {
+        CastExpandedPlayerLayout(
+            isExpandedScreen = false,
+            uiState = mockUiStateEpisode(),
+            actions = mockActions(),
+        )
+    }
+}
+
+@Preview(name = "Vertical Light", showBackground = true)
+@Composable
+private fun CastExpandedPlayerPhoneVerticalLightPreview() {
+    FindroidTheme(darkTheme = false) {
         CastExpandedPlayerLayout(
             isExpandedScreen = false,
             uiState = mockUiStateEpisode(),

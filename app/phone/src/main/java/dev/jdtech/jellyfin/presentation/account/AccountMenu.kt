@@ -95,6 +95,7 @@ fun AccountMenuWrapper(
     onAddUser: () -> Unit,
     onManageAccounts: () -> Unit,
     onSwitchUser: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
     content: @Composable () -> Unit,
 ) {
@@ -153,7 +154,7 @@ fun AccountMenuWrapper(
 
     BackHandler(enabled = isMenuOpen) { onCloseMenu() }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         // Main content of the screen
         content()
 
@@ -165,7 +166,7 @@ fun AccountMenuWrapper(
             visible = isMenuOpen,
             enter = enterTransition,
             exit = exitTransition,
-            modifier = Modifier.zIndex(10f),
+            modifier = Modifier.zIndex(100f),
         ) {
             Box(
                 modifier =

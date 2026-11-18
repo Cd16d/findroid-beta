@@ -27,7 +27,7 @@ fun ItemTopBar(
     onHomeClick: () -> Unit = {},
     content: @Composable (RowScope.() -> Unit) = {},
 ) {
-    val safePadding = rememberSafePadding()
+    val safePadding = rememberSafePadding(handleStartInsets = false)
 
     Row(
         modifier =

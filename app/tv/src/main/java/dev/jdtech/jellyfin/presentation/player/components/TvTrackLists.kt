@@ -134,7 +134,7 @@ internal fun AudioTrackList(
         item(key = "audio_dialogue_boost") {
             NavigationItem(
                 title = stringResource(id = PlayerR.string.dialogue_boost),
-                iconRes = CoreR.drawable.ic_waveform,
+                iconRes = CoreR.drawable.ic_dialog_boost,
                 onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
                 modifier = Modifier.focusRequester(initialFocusRequester),
                 trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
@@ -564,7 +564,7 @@ private fun AudioTrackListPreview() {
         ) {
             NavigationItem(
                 title = stringResource(id = PlayerR.string.dialogue_boost),
-                iconRes = CoreR.drawable.ic_waveform,
+                iconRes = CoreR.drawable.ic_dialog_boost,
                 onClick = {},
                 trailingContent = { PlayerSwitch(checked = true) },
             )

@@ -1,11 +1,15 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
+import android.content.res.Configuration
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,14 +17,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -29,10 +42,12 @@ import dev.jdtech.jellyfin.player.cast.models.Device
 import dev.jdtech.jellyfin.player.cast.presentation.CastPlayerViewModel
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerImage
 import dev.jdtech.jellyfin.player.core.domain.models.Trickplay
+import dev.jdtech.jellyfin.presentation.cast.MiniPlayerThemeColors
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.toBlurHashPainter
 import dev.jdtech.jellyfin.utils.toOptimizedImageUri
+import kotlin.math.abs
 
 /**
  * Top artwork and header section of expanded Google Cast player.
@@ -52,6 +67,10 @@ fun PlayerTopSection(
     onClose: () -> Unit,
     onDeviceClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onDragCollapse: ((Float) -> Unit)? = null,
+    onDragCollapseEnd: ((Float) -> Unit)? = null,
+    isExpandedScreen: Boolean = false,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
     val deviceName = uiState.connectedDevice?.name
     val itemTitle =
@@ -65,9 +84,21 @@ fun PlayerTopSection(
         }
 
     val trickplay = uiState.currentTrickplay
+    val stateAspect = uiState.trickplayAspectRatio
+    val trickplayRatio =
+        when {
+            trickplay != null && trickplay.height > 0 -> {
+                trickplay.width.toFloat() / trickplay.height.toFloat()
+            }
+            stateAspect != null && stateAspect > 0f -> {
+                stateAspect
+            }
+            else -> null
+        }
+
     val computedAspectRatio =
-        if (isScrubbing && trickplay != null) {
-            uiState.trickplayAspectRatio ?: uiState.defaultAspectRatio
+        if (isScrubbing && trickplayRatio != null) {
+            trickplayRatio
         } else {
             uiState.defaultAspectRatio
         }
@@ -75,33 +106,150 @@ fun PlayerTopSection(
         if (computedAspectRatio.isFinite() && computedAspectRatio > 0f) {
             computedAspectRatio
         } else {
-            16f / 10f
+            16f / 9f
         }
 
+    val dragModifier =
+        if (onDragCollapse != null) {
+            Modifier.pointerInput(isScrubbing) {
+                if (!isScrubbing) {
+                    val velocityTracker = VelocityTracker()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        velocityTracker.resetTracking()
+                        velocityTracker.addPosition(down.uptimeMillis, down.position)
+                        var isDragging = false
+                        var totalDrag = 0f
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (change.changedToUp()) {
+                                if (isDragging) {
+                                    val velocity = velocityTracker.calculateVelocity().y
+                                    onDragCollapseEnd?.invoke(velocity)
+                                }
+                                break
+                            }
+                            if (change.isConsumed) break
+                            val dragY = change.position.y - change.previousPosition.y
+                            totalDrag += dragY
+                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+                            if (!isDragging && abs(totalDrag) > viewConfiguration.touchSlop) {
+                                isDragging = true
+                            }
+                            if (isDragging) {
+                                change.consume()
+                                onDragCollapse(dragY)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Modifier
+        }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscapePhone = isLandscape && !isExpandedScreen
+    val hasSeriesName = uiState.currentItemTitle.seriesName != null
+    val bottomArtworkPadding = if (isLandscapePhone && !hasSeriesName) 24.dp else 4.dp
+
     Column(
-        modifier = modifier,
+        modifier = modifier.then(dragModifier),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CastExpandedPlayerHeader(
             deviceName = deviceName,
             onClose = onClose,
             onDeviceClick = onDeviceClick,
+            isExpandedScreen = isExpandedScreen,
+            themeColors = themeColors,
         )
 
-        Box(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+        BoxWithConstraints(
+            modifier =
+                Modifier.weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacings.default)
+                    .padding(bottom = bottomArtworkPadding),
             contentAlignment = Alignment.Center,
         ) {
-            CastPlayerArtwork(
-                poster = uiState.currentItemPoster,
-                itemTitle = itemTitle,
-                isScrubbing = isScrubbing,
-                scrubPosition = scrubPosition,
-                trickplay = trickplay,
-                hasValidDuration = uiState.playerState.duration > 0,
-                aspectRatio = safeAspectRatio,
-                modifier = Modifier.fillMaxHeight(),
-            )
+            val minAspect = if (isScrubbing && trickplayRatio != null) 0.75f else 0.5f
+            val maxAspect = 2.75f
+            val targetAspect = safeAspectRatio.coerceIn(minAspect, maxAspect)
+            val (artworkWidth, artworkHeight) =
+                if (isLandscapePhone) {
+                    val maxAllowedHeight = maxHeight * 0.92f
+                    val maxAllowedWidth = maxWidth * 0.98f
+                    val candidateWidth = maxAllowedHeight * targetAspect
+                    if (candidateWidth <= maxAllowedWidth) {
+                        candidateWidth to maxAllowedHeight
+                    } else {
+                        maxAllowedWidth to (maxAllowedWidth / targetAspect)
+                    }
+                } else {
+                    val maxAllowedHeight = (maxHeight * 0.78f).coerceAtMost(320.dp)
+                    val maxAllowedWidth = maxWidth * 0.98f
+                    val candidateWidth = maxAllowedHeight * targetAspect
+                    if (candidateWidth <= maxAllowedWidth) {
+                        candidateWidth to maxAllowedHeight
+                    } else {
+                        maxAllowedWidth to (maxAllowedWidth / targetAspect)
+                    }
+                }
+            val animatedWidth by
+                animateDpAsState(
+                    targetValue = artworkWidth,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                    label = "artworkWidth",
+                )
+            val animatedHeight by
+                animateDpAsState(
+                    targetValue = artworkHeight,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                    label = "artworkHeight",
+                )
+            val artworkModifier = Modifier.size(width = animatedWidth, height = animatedHeight)
+
+            Box(contentAlignment = Alignment.Center) {
+                CastPlayerArtwork(
+                    poster = uiState.currentItemPoster,
+                    itemTitle = itemTitle,
+                    isScrubbing = isScrubbing,
+                    scrubPosition = scrubPosition,
+                    trickplay = trickplay,
+                    hasValidDuration = uiState.playerState.duration > 0,
+                    modifier = artworkModifier,
+                )
+            }
+        }
+
+        if (isLandscapePhone && hasSeriesName) {
+            Column(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp, bottom = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = uiState.currentItemTitle.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!uiState.currentItemTitle.episodeInfo.isNullOrBlank()) {
+                    Text(
+                        text = uiState.currentItemTitle.episodeInfo!!,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
         }
     }
 }
@@ -136,15 +284,11 @@ private fun CastPlayerArtwork(
     scrubPosition: Float,
     trickplay: Trickplay?,
     hasValidDuration: Boolean,
-    aspectRatio: Float,
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(
+    Box(
         modifier =
             modifier
-                .padding(horizontal = MaterialTheme.spacings.default)
-                .padding(bottom = MaterialTheme.spacings.default)
-                .aspectRatio(aspectRatio)
                 .clip(RoundedCornerShape(24.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
@@ -158,8 +302,11 @@ private fun CastPlayerArtwork(
         } else if (poster != null) {
             val blurPlaceholder = remember(poster.blurHash) { poster.blurHash.toBlurHashPainter() }
 
+            val configuration = LocalConfiguration.current
+            val stableWidthDp = configuration.screenWidthDp.dp
+            val stableHeightDp = configuration.screenHeightDp.dp
             val optimizedUri =
-                poster.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+                poster.uri.toOptimizedImageUri(widthDp = stableWidthDp, heightDp = stableHeightDp)
 
             val contentDescription =
                 if (itemTitle.isNotBlank()) {

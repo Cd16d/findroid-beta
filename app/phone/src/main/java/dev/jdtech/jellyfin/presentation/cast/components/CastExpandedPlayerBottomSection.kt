@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.models.FindroidSegment
 import dev.jdtech.jellyfin.player.cast.models.CastPlaybackStatus
 import dev.jdtech.jellyfin.player.cast.presentation.CastPlayerViewModel
+import dev.jdtech.jellyfin.presentation.cast.MiniPlayerThemeColors
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 
 /**
@@ -56,6 +57,8 @@ fun CastExpandedPlayerBottomSection(
     onClickSubtitle: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenChapters: (() -> Unit)? = null,
+    themeColors: MiniPlayerThemeColors? = null,
+    isLandscapePhone: Boolean = false,
 ) {
     val playerState = uiState.playerState
     val segment = uiState.currentSegment
@@ -65,14 +68,35 @@ fun CastExpandedPlayerBottomSection(
     val duration = playerState.duration.toFloat()
     val volume = playerState.volume
 
+    val isItemLoaded =
+        remember(
+            uiState.fileLoaded,
+            uiState.currentItemTitle.title,
+            playerState.duration,
+            playerState.status,
+        ) {
+            uiState.fileLoaded ||
+                uiState.currentItemTitle.title.isNotBlank() ||
+                playerState.duration > 0L ||
+                playerState.status != CastPlaybackStatus.IDLE
+        }
+
+    val titleSpacer = if (isLandscapePhone) 10.dp else 24.dp
+    val timelineSpacer = if (isLandscapePhone) 8.dp else 16.dp
+    val playbackSpacer = if (isLandscapePhone) 10.dp else 24.dp
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CastPlayerTitles(uiState = uiState)
+        if (isLandscapePhone) {
+            Spacer(modifier = Modifier.height(28.dp))
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        CastPlayerTitles(uiState = uiState, isLandscapePhone = isLandscapePhone)
+
+        Spacer(modifier = Modifier.height(titleSpacer))
 
         CastScrubbingTimeline(
             playerStatus = playerState.status,
@@ -83,10 +107,12 @@ fun CastExpandedPlayerBottomSection(
             onScrubStop = onScrubStop,
             segments =
                 uiState.segments.ifEmpty { if (segment != null) listOf(segment) else emptyList() },
-            onOpenChapters = onOpenChapters,
+            isItemLoaded = isItemLoaded,
+            enabled = isItemLoaded && duration > 0f,
+            themeColors = themeColors,
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(timelineSpacer))
 
         val isPlaying =
             remember(playerState.status) { playerState.status == CastPlaybackStatus.PLAYING }
@@ -98,9 +124,10 @@ fun CastExpandedPlayerBottomSection(
             onSeekBack = onPlayPreviousItem,
             onSeekForward = onPlayNextItem,
             onSkipSegment = { if (segment != null) onSkipSegment(segment) },
+            themeColors = themeColors,
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(playbackSpacer))
 
         CastTrackVolumeControls(
             uiState = uiState,
@@ -108,42 +135,60 @@ fun CastExpandedPlayerBottomSection(
             onVolumeChange = onVolumeChange,
             onClickAudio = onClickAudio,
             onClickSubtitle = onClickSubtitle,
+            onClickChapters = onOpenChapters,
+            themeColors = themeColors,
         )
     }
 }
 
 @Composable
-private fun CastPlayerTitles(uiState: CastPlayerViewModel.UiState) {
+private fun CastPlayerTitles(
+    uiState: CastPlayerViewModel.UiState,
+    isLandscapePhone: Boolean = false,
+) {
     val titleInfo = uiState.currentItemTitle
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         if (titleInfo.seriesName != null) {
-            Text(
-                text = titleInfo.seriesName!!,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = titleInfo.episodeInfo ?: "",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.secondary,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = titleInfo.title,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (!isLandscapePhone) {
+                Text(
+                    text = titleInfo.seriesName!!,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = titleInfo.episodeInfo ?: "",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = titleInfo.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    text = titleInfo.seriesName!!,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         } else {
             Text(
                 text = titleInfo.title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
+                maxLines = if (isLandscapePhone) 1 else 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

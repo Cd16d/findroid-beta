@@ -105,6 +105,8 @@
     <string name="sort_by">Sort by</string>
     <string name="sort_order">Sort order</string>
     <string name="close">Close</string>
+    <string name="collapse">Collapse</string>
+    <string name="chapters">Chapters</string>
     <string name="share">Share</string>
     <string name="image_description_poster">%1$s poster</string>
     <string name="image_description_backdrop">%1$s backdrop</string>
@@ -175,6 +177,7 @@
     <string name="cast_available_devices">Available devices</string>
     <string name="cast_wifi_instruction">To connect via Wi-Fi, make sure this device and your TV are connected to the same Wi-Fi network.</string>
     <string name="cast_connect_tv">Connect TV</string>
+    <string name="cast_connected">Connected</string>
     <string name="hi_user">Hi %1$s!</string>
     <string name="quick_connect">Quick Connect</string>
     <string name="quick_connect_description">Enter the code to pair the new device.</string>

@@ -42,7 +42,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
-import dev.jdtech.jellyfin.core.presentation.theme.PlayerCardBackground
 import dev.jdtech.jellyfin.core.presentation.theme.PlayerOverlayBackground
 import dev.jdtech.jellyfin.player.core.R as PlayerR
 import dev.jdtech.jellyfin.player.core.domain.models.SleepTimerMode
@@ -106,7 +105,7 @@ fun SleepTimerPicker(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = CardShape,
-                color = PlayerCardBackground,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
             ) {
                 Column(
@@ -320,7 +319,7 @@ fun SleepTimerPicker(
 @Composable
 private fun SleepTimerPickerOffPreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             SleepTimerPicker(
                 sleepTimerStatus = SleepTimerStatus(mode = SleepTimerMode.Off),
                 onSelectMode = {},
@@ -340,7 +339,7 @@ private fun SleepTimerPickerOffPreview() {
 @Composable
 private fun SleepTimerPickerActivePreview() {
     FindroidTheme(darkTheme = true) {
-        Surface(color = PlayerCardBackground) {
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
             SleepTimerPicker(
                 sleepTimerStatus =
                     SleepTimerStatus(

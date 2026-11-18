@@ -384,7 +384,12 @@ class JellyfinRepositoryOfflineImpl(
                 val sources =
                     File(context.filesDir, "trickplay/$itemId").listFiles()
                         ?: return@withContext null
-                File(sources.first(), index.toString()).readBytes()
+                val file = sources.firstOrNull()?.let { File(it, index.toString()) }
+                if (file != null && file.exists() && file.length() >= 128L) {
+                    file.readBytes()
+                } else {
+                    null
+                }
             } catch (_: Exception) {
                 null
             }

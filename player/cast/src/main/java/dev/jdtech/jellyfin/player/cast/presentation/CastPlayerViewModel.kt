@@ -228,7 +228,18 @@ constructor(
                 val oldTrickplay = _uiState.value.currentTrickplay
                 if (oldTrickplay != trickplay) {
                     oldTrickplay?.release()
-                    _uiState.update { it.copy(currentTrickplay = trickplay) }
+                    val ratio =
+                        if (trickplay != null && trickplay.height > 0) {
+                            trickplay.width.toFloat() / trickplay.height.toFloat()
+                        } else {
+                            null
+                        }
+                    _uiState.update {
+                        it.copy(
+                            currentTrickplay = trickplay,
+                            trickplayAspectRatio = ratio,
+                        )
+                    }
                 }
             }
             .launchIn(viewModelScope)

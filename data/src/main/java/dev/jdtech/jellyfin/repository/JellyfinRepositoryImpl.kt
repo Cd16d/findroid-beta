@@ -1023,8 +1023,12 @@ class JellyfinRepositoryImpl(
             try {
                 try {
                     val sources = File(context.filesDir, "trickplay/$itemId").listFiles()
-                    if (sources != null) {
-                        return@withContext File(sources.first(), index.toString()).readBytes()
+                    val file = sources?.firstOrNull()?.let { File(it, index.toString()) }
+                    if (file != null && file.exists() && file.length() >= 128L) {
+                        val bytes = file.readBytes()
+                        if (bytes.isNotEmpty()) {
+                            return@withContext bytes
+                        }
                     }
                 } catch (_: Exception) {}
 

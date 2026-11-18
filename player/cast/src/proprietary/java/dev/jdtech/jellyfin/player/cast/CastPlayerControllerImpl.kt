@@ -223,14 +223,18 @@ constructor(
     private val remoteMediaClientProgressListener =
         RemoteMediaClient.ProgressListener { progressMs, durationMs ->
             val safeProgress = progressMs.coerceAtLeast(0L)
-            val safeDuration = durationMs.coerceAtLeast(0L)
+            val currentItemId = _currentItem.value?.item?.itemId
+            val cachedDuration =
+                currentItemId?.let { itemDuration[it] }?.takeIf { it > 0L }
+                    ?: _playerState.value.duration.takeIf { it > 0L }
+                    ?: 0L
+            val safeDuration = if (durationMs > 0L) durationMs else cachedDuration
             _playerState.update {
                 it.copy(
                     currentPosition = safeProgress,
                     duration = safeDuration,
                 )
             }
-            val currentItemId = _currentItem.value?.item?.itemId
             if (currentItemId != null && safeDuration > 0L) {
                 itemDuration[currentItemId] = safeDuration
             }
@@ -850,6 +854,14 @@ constructor(
                     .setMetadata(mediaMetadata)
                     .setCustomData(customData)
 
+            mediaSource.runTimeTicks?.let { ticks ->
+                val durationMs = ticks / 10_000
+                if (durationMs > 0L) {
+                    mediaInfoBuilder.setStreamDuration(durationMs)
+                    itemDuration[item.itemId] = durationMs
+                }
+            }
+
             val (castTracks, subtitles, audio) = getTracks(mediaSource)
 
             if (castTracks.isNotEmpty()) {
@@ -996,6 +1008,15 @@ constructor(
                         .setAutoplay(true)
                         .setCurrentTime(startPositionMs)
                         .build()
+
+                val initialDuration = itemDuration[initialItem.itemId] ?: 0L
+                _playerState.update {
+                    it.copy(
+                        currentPosition = startPositionMs,
+                        duration = initialDuration,
+                        status = CastPlaybackStatus.BUFFERING,
+                    )
+                }
 
                 itemCache[initialItem.itemId] = castItem
                 _currentItem.value = castItem

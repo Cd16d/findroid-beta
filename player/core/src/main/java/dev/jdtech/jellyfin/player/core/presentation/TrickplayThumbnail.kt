@@ -1,9 +1,11 @@
 package dev.jdtech.jellyfin.player.core.presentation
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,9 +46,6 @@ fun calculateTrickplayCardWidth(
  * Renders a trickplay seek preview thumbnail for the specified [positionMs] by clipping coordinates
  * directly from the cached whole-sheet bitmap via Canvas GPU clipping.
  *
- * This completely avoids slicing sheets into hundreds of individual Bitmaps, keeping heap memory
- * capped to only the active 3-sheet sliding window (~6-8 MB).
- *
  * @param trickplay Trickplay manager instance.
  * @param positionMs Target playback or scrubbing timestamp in milliseconds.
  * @param modifier Layout modifier applied to the thumbnail canvas.
@@ -59,20 +58,26 @@ fun TrickplayThumbnail(
 ) {
     val frame = remember(trickplay, positionMs) { trickplay.getFrameInfo(positionMs) } ?: return
 
-    var sheetBitmap by
-        remember(trickplay, frame.sheetIndex) {
-            mutableStateOf(trickplay.getCachedSheet(frame.sheetIndex))
-        }
+    var currentSheetIndex by remember(trickplay) { mutableIntStateOf(-1) }
+    var sheetBitmap by remember(trickplay) { mutableStateOf<Bitmap?>(null) }
 
-    LaunchedEffect(trickplay, frame.sheetIndex, positionMs) {
+    LaunchedEffect(trickplay, frame.sheetIndex) {
         trickplay.updatePosition(positionMs)
-        if (sheetBitmap == null || sheetBitmap?.isRecycled == true) {
-            sheetBitmap = trickplay.getSheet(frame.sheetIndex)
+        val cached = trickplay.getCachedSheet(frame.sheetIndex)
+        if (cached != null && !cached.isRecycled) {
+            sheetBitmap = cached
+            currentSheetIndex = frame.sheetIndex
+        } else {
+            val loaded = trickplay.getSheet(frame.sheetIndex)
+            if (loaded != null && !loaded.isRecycled) {
+                sheetBitmap = loaded
+                currentSheetIndex = frame.sheetIndex
+            }
         }
     }
 
     val currentSheet = sheetBitmap
-    if (currentSheet != null && !currentSheet.isRecycled) {
+    if (currentSheet != null && !currentSheet.isRecycled && currentSheetIndex == frame.sheetIndex) {
         val imageBitmap = remember(currentSheet) { currentSheet.asImageBitmap() }
         Canvas(modifier = modifier) {
             drawImage(

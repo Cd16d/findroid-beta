@@ -1,11 +1,11 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.LocalVolumeKeyEvents
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.player.cast.presentation.CastPlayerViewModel
+import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.domain.models.Track
+import dev.jdtech.jellyfin.presentation.cast.MiniPlayerThemeColors
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import kotlin.math.ceil
@@ -73,21 +75,68 @@ fun CastTrackVolumeControls(
     onClickAudio: () -> Unit,
     onClickSubtitle: () -> Unit,
     modifier: Modifier = Modifier,
+    onClickChapters: (() -> Unit)? = null,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
+    val chaptersInteractionSource = remember { MutableInteractionSource() }
     val audioInteractionSource = remember { MutableInteractionSource() }
     val subtitlesInteractionSource = remember { MutableInteractionSource() }
 
+    val isChaptersPressed by chaptersInteractionSource.collectIsPressedAsState()
     val isAudioPressed by audioInteractionSource.collectIsPressedAsState()
     val isSubtitlePressed by subtitlesInteractionSource.collectIsPressedAsState()
 
-    val audioButtonCornerShape by
+    val chaptersWidth by
+        animateDpAsState(
+            targetValue =
+                when {
+                    isChaptersPressed -> 48.dp
+                    isAudioPressed || isSubtitlePressed -> 36.dp
+                    else -> 40.dp
+                },
+            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+            label = "chaptersWidth",
+        )
+
+    val audioWidth by
+        animateDpAsState(
+            targetValue =
+                when {
+                    isAudioPressed -> 48.dp
+                    isChaptersPressed || isSubtitlePressed -> 36.dp
+                    else -> 40.dp
+                },
+            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+            label = "audioWidth",
+        )
+
+    val subtitleWidth by
+        animateDpAsState(
+            targetValue =
+                when {
+                    isSubtitlePressed -> 48.dp
+                    isChaptersPressed || isAudioPressed -> 36.dp
+                    else -> 40.dp
+                },
+            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+            label = "subtitleWidth",
+        )
+
+    val chaptersCornerShape by
+        animateDpAsState(
+            targetValue = if (isChaptersPressed) 50.dp else 3.dp,
+            animationSpec = tween(durationMillis = 200),
+            label = "chaptersShapeAnimation",
+        )
+
+    val audioCornerShape by
         animateDpAsState(
             targetValue = if (isAudioPressed) 50.dp else 3.dp,
             animationSpec = tween(durationMillis = 200),
             label = "audioShapeAnimation",
         )
 
-    val subtitleButtonCornerShape by
+    val subtitleCornerShape by
         animateDpAsState(
             targetValue = if (isSubtitlePressed) 50.dp else 3.dp,
             animationSpec = tween(durationMillis = 200),
@@ -96,8 +145,14 @@ fun CastTrackVolumeControls(
 
     val buttonColors =
         IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = themeColors?.accentColor ?: MaterialTheme.colorScheme.primary,
+            contentColor = themeColors?.onAccentColor ?: MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor =
+                (themeColors?.accentColor ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.15f),
+            disabledContentColor =
+                (themeColors?.colorScheme?.onSurface ?: MaterialTheme.colorScheme.onSurface).copy(
+                    alpha = 0.38f,
+                ),
         )
 
     Row(
@@ -105,22 +160,44 @@ fun CastTrackVolumeControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            FilledIconButton(
+                onClick = { onClickChapters?.invoke() },
+                enabled = uiState.currentChapters.isNotEmpty() && onClickChapters != null,
+                shape =
+                    RoundedCornerShape(
+                        topStart = 50.dp,
+                        bottomStart = 50.dp,
+                        topEnd = chaptersCornerShape,
+                        bottomEnd = chaptersCornerShape,
+                    ),
+                interactionSource = chaptersInteractionSource,
+                colors = buttonColors,
+                modifier = Modifier.width(chaptersWidth).height(40.dp),
+            ) {
+                Icon(
+                    painter = painterResource(CoreR.drawable.ic_chapters),
+                    contentDescription = stringResource(CoreR.string.chapters),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(2.5.dp))
+
             FilledIconButton(
                 onClick = onClickAudio,
                 enabled = uiState.audioTracks.isNotEmpty(),
                 shape =
                     RoundedCornerShape(
-                        topStart = 50.dp,
-                        bottomStart = 50.dp,
-                        topEnd = audioButtonCornerShape,
-                        bottomEnd = audioButtonCornerShape,
+                        topStart = audioCornerShape,
+                        bottomStart = audioCornerShape,
+                        topEnd = audioCornerShape,
+                        bottomEnd = audioCornerShape,
                     ),
                 interactionSource = audioInteractionSource,
                 colors = buttonColors,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.width(audioWidth).height(40.dp),
             ) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_audio),
@@ -128,19 +205,22 @@ fun CastTrackVolumeControls(
                     modifier = Modifier.size(20.dp),
                 )
             }
+
+            Spacer(modifier = Modifier.width(2.5.dp))
+
             FilledIconButton(
                 onClick = onClickSubtitle,
                 enabled = uiState.subtitleTracks.isNotEmpty(),
                 shape =
                     RoundedCornerShape(
-                        topStart = subtitleButtonCornerShape,
-                        bottomStart = subtitleButtonCornerShape,
+                        topStart = subtitleCornerShape,
+                        bottomStart = subtitleCornerShape,
                         topEnd = 50.dp,
                         bottomEnd = 50.dp,
                     ),
                 interactionSource = subtitlesInteractionSource,
                 colors = buttonColors,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.width(subtitleWidth).height(40.dp),
             ) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_closed_caption),
@@ -157,6 +237,7 @@ fun CastTrackVolumeControls(
             onValueChange = onVolumeChange,
             modifier = Modifier.weight(1.5f),
             isMuted = uiState.playerState.isMuted,
+            themeColors = themeColors,
         )
     }
 }
@@ -184,6 +265,7 @@ fun VolumeSlider(
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     isMuted: Boolean = false,
+    themeColors: MiniPlayerThemeColors? = null,
 ) {
     val safeVolume = remember(volume) { if (volume.isFinite()) volume.coerceIn(0f, 1f) else 0f }
     var localVolume by remember { mutableFloatStateOf(safeVolume) }
@@ -230,11 +312,13 @@ fun VolumeSlider(
         }
     val currentIcon = painterResource(iconRes)
 
+    val sliderAccent = themeColors?.accentColor ?: MaterialTheme.colorScheme.primary
     val colors =
         SliderDefaults.colors(
-            activeTrackColor = MaterialTheme.colorScheme.primary,
-            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-            thumbColor = MaterialTheme.colorScheme.primary,
+            activeTrackColor = sliderAccent,
+            inactiveTrackColor =
+                themeColors?.subtleContainerColor ?: MaterialTheme.colorScheme.surfaceVariant,
+            thumbColor = sliderAccent,
         )
 
     val volumeContentDescription = stringResource(CoreR.string.audio)
@@ -255,7 +339,8 @@ fun VolumeSlider(
         colors = colors,
         track = { sliderState ->
             val iconSize = VolumeSliderDefaults.InsetIconDpSize
-            val activeIconColor = MaterialTheme.colorScheme.onPrimary
+            val activeIconColor =
+                themeColors?.playButtonContentColor ?: MaterialTheme.colorScheme.onPrimary
             val inactiveIconColor = MaterialTheme.colorScheme.onSurfaceVariant
 
             SliderDefaults.Track(
@@ -327,6 +412,22 @@ private fun CastTrackVolumeControlsPreview() {
             onVolumeChange = {},
             onClickAudio = {},
             onClickSubtitle = {},
+            onClickChapters = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun CastTrackVolumeControlsNoChaptersPreview() {
+    FindroidTheme {
+        CastTrackVolumeControls(
+            uiState = mockUiStateEpisode().copy(currentChapters = emptyList()),
+            volume = 0.5f,
+            onVolumeChange = {},
+            onClickAudio = {},
+            onClickSubtitle = {},
+            onClickChapters = null,
         )
     }
 }
@@ -346,7 +447,7 @@ private fun mockUiStateEpisode() =
         currentSegment = null,
         currentSkipButtonStringRes = 0,
         currentTrickplay = null,
-        currentChapters = emptyList(),
+        currentChapters = listOf(PlayerChapter(0L, "Intro"), PlayerChapter(60000L, "Story")),
         fileLoaded = true,
         audioTracks =
             listOf(

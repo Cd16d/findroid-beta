@@ -56,7 +56,7 @@ internal fun PhoneAudioTrackList(viewModel: PlayerViewModel, tracks: Tracks) {
         item {
             PlayerNavigationItem(
                 title = stringResource(id = PlayerR.string.dialogue_boost),
-                iconRes = CoreR.drawable.ic_waveform,
+                iconRes = CoreR.drawable.ic_dialog_boost,
                 showChevron = false,
                 trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
                 onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
@@ -126,7 +126,7 @@ internal fun TabletAudioTrackList(viewModel: PlayerViewModel, tracks: Tracks) {
             item {
                 PlayerNavigationItem(
                     title = stringResource(id = PlayerR.string.dialogue_boost),
-                    iconRes = CoreR.drawable.ic_waveform,
+                    iconRes = CoreR.drawable.ic_dialog_boost,
                     showChevron = false,
                     trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
                     onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
@@ -169,7 +169,7 @@ internal fun TabletAudioTrackList(viewModel: PlayerViewModel, tracks: Tracks) {
             item {
                 PlayerNavigationItem(
                     title = stringResource(id = PlayerR.string.dialogue_boost),
-                    iconRes = CoreR.drawable.ic_waveform,
+                    iconRes = CoreR.drawable.ic_dialog_boost,
                     showChevron = false,
                     trailingContent = { PlayerSwitch(checked = uiState.isDialogueBoostEnabled) },
                     onClick = { viewModel.setDialogueBoost(!uiState.isDialogueBoostEnabled) },
@@ -217,7 +217,7 @@ private fun PhoneAudioTrackListPreview() {
         ) {
             PlayerNavigationItem(
                 title = stringResource(id = PlayerR.string.dialogue_boost),
-                iconRes = CoreR.drawable.ic_waveform,
+                iconRes = CoreR.drawable.ic_dialog_boost,
                 showChevron = false,
                 trailingContent = { PlayerSwitch(checked = true) },
                 onClick = {},
@@ -253,7 +253,7 @@ private fun TabletAudioTrackListPreview() {
         ) {
             PlayerNavigationItem(
                 title = stringResource(id = PlayerR.string.dialogue_boost),
-                iconRes = CoreR.drawable.ic_waveform,
+                iconRes = CoreR.drawable.ic_dialog_boost,
                 showChevron = false,
                 trailingContent = { PlayerSwitch(checked = false) },
                 onClick = {},
