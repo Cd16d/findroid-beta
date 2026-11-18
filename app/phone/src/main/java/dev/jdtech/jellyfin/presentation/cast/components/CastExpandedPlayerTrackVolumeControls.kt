@@ -1,7 +1,6 @@
 package dev.jdtech.jellyfin.presentation.cast.components
 
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
@@ -86,42 +85,6 @@ fun CastTrackVolumeControls(
     val isAudioPressed by audioInteractionSource.collectIsPressedAsState()
     val isSubtitlePressed by subtitlesInteractionSource.collectIsPressedAsState()
 
-    val chaptersWidth by
-        animateDpAsState(
-            targetValue =
-                when {
-                    isChaptersPressed -> 48.dp
-                    isAudioPressed || isSubtitlePressed -> 36.dp
-                    else -> 40.dp
-                },
-            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-            label = "chaptersWidth",
-        )
-
-    val audioWidth by
-        animateDpAsState(
-            targetValue =
-                when {
-                    isAudioPressed -> 48.dp
-                    isChaptersPressed || isSubtitlePressed -> 36.dp
-                    else -> 40.dp
-                },
-            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-            label = "audioWidth",
-        )
-
-    val subtitleWidth by
-        animateDpAsState(
-            targetValue =
-                when {
-                    isSubtitlePressed -> 48.dp
-                    isChaptersPressed || isAudioPressed -> 36.dp
-                    else -> 40.dp
-                },
-            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-            label = "subtitleWidth",
-        )
-
     val chaptersCornerShape by
         animateDpAsState(
             targetValue = if (isChaptersPressed) 50.dp else 3.dp,
@@ -174,7 +137,7 @@ fun CastTrackVolumeControls(
                     ),
                 interactionSource = chaptersInteractionSource,
                 colors = buttonColors,
-                modifier = Modifier.width(chaptersWidth).height(40.dp),
+                modifier = Modifier.width(40.dp).height(40.dp),
             ) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_chapters),
@@ -197,7 +160,7 @@ fun CastTrackVolumeControls(
                     ),
                 interactionSource = audioInteractionSource,
                 colors = buttonColors,
-                modifier = Modifier.width(audioWidth).height(40.dp),
+                modifier = Modifier.width(40.dp).height(40.dp),
             ) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_audio),
@@ -220,7 +183,7 @@ fun CastTrackVolumeControls(
                     ),
                 interactionSource = subtitlesInteractionSource,
                 colors = buttonColors,
-                modifier = Modifier.width(subtitleWidth).height(40.dp),
+                modifier = Modifier.width(40.dp).height(40.dp),
             ) {
                 Icon(
                     painter = painterResource(CoreR.drawable.ic_closed_caption),
