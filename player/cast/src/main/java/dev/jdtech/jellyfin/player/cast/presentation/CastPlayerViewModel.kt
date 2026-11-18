@@ -237,7 +237,7 @@ constructor(
                     _uiState.update {
                         it.copy(
                             currentTrickplay = trickplay,
-                            trickplayAspectRatio = ratio ?: it.trickplayAspectRatio,
+                            trickplayAspectRatio = ratio,
                         )
                     }
                 }

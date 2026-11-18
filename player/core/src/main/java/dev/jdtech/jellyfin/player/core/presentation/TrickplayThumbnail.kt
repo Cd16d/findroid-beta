@@ -62,6 +62,7 @@ fun TrickplayThumbnail(
     var sheetBitmap by remember(trickplay) { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(trickplay, frame.sheetIndex) {
+        trickplay.updatePosition(positionMs)
         val cached = trickplay.getCachedSheet(frame.sheetIndex)
         if (cached != null && !cached.isRecycled) {
             sheetBitmap = cached
