@@ -63,13 +63,13 @@ jobs:
           TAG_NAME="${GITHUB_REF_NAME}"
           for f in app/phone/build/outputs/apk/*/release/*.apk; do
             [ -f "$f" ] || continue
-            new_name=$(basename "$f" | sed 's/phone-//' | sed 's/app-//' | sed 's/-release//')
-            cp "$f" "artifacts/findroid-${TAG_NAME}-$new_name"
+            clean_name=$(basename "$f" | sed -E 's/.*(libre|proprietary)/\1/' | sed 's/-release//')
+            cp "$f" "artifacts/findroid-${TAG_NAME}-$clean_name"
           done
           for f in app/tv/build/outputs/apk/*/release/*.apk; do
             [ -f "$f" ] || continue
-            new_name=$(basename "$f" | sed 's/tv-//' | sed 's/app-//' | sed 's/-release//')
-            cp "$f" "artifacts/findroid-tv-${TAG_NAME}-$new_name"
+            clean_name=$(basename "$f" | sed -E 's/.*(libre|proprietary)/\1/' | sed 's/-release//')
+            cp "$f" "artifacts/findroid-tv-${TAG_NAME}-$clean_name"
           done
 
       - name: Create GitHub Release

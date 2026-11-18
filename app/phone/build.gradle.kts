@@ -85,7 +85,7 @@ android {
             // present since AGP 8.9.0, for more info see:
             // https://issuetracker.google.com/issues/402800800
             val isBuildingBundle =
-                gradle.startParameter.taskNames.any { it.lowercase().contains("bundle") }
+                project.gradle.startParameter.taskNames.any { it.lowercase().contains("bundle") }
             isEnable = !isBuildingBundle
 
             reset()
@@ -115,7 +115,7 @@ androidComponents {
                     .firstOrNull { it.filterType == FilterConfiguration.FilterType.ABI }
                     ?.identifier
             output.outputFileName.set(
-                "findroid-v${output.versionName.get()}-${variant.flavorName}-$abi.apk",
+                "phone-${variant.flavorName}-$abi.apk",
             )
         }
     }
