@@ -90,30 +90,6 @@ fun formatSubtitleDelay(delayMs: Long): String {
     }
 }
 
-/**
- * Supported MIME types for external subtitle file selection. Explicitly excludes generic wildcards
- * and application/octet-stream to prevent showing PDFs, APKs, and images in the system document
- * picker.
- */
-private val SubtitleMimeTypes =
-    arrayOf(
-        "application/x-subrip",
-        "text/vtt",
-        "text/plain",
-        "text/x-ssa",
-        "text/x-ass",
-        "application/x-subtitle-subrip",
-        "application/x-subtitle-vtt",
-        "application/x-subtitle-ssa",
-        "application/x-subtitle-ass",
-        "application/x-subtitle",
-        "application/subrip",
-        "text/srt",
-        "text/x-microdvd",
-        "application/x-microdvd",
-        "text/subtitle",
-    )
-
 /** Maps subtitle delay in ms to a 0f...1f slider fraction, placing 0L at center (0.5f). */
 private fun delayToFraction(delayMs: Long, minDelay: Long, maxDelay: Long): Float {
     return if (delayMs <= 0L) {
@@ -282,7 +258,7 @@ fun PlayerSubtitleOptionsCard(
                                 1.dp,
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                             ),
-                        onClick = { subtitlePickerLauncher.launch(SubtitleMimeTypes) },
+                        onClick = { subtitlePickerLauncher.launch(arrayOf("*/*")) },
                     ) {
                         Row(
                             modifier =

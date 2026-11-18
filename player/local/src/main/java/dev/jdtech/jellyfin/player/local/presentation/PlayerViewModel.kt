@@ -2408,6 +2408,11 @@ constructor(
                     }
                         .getOrNull() ?: uri.lastPathSegment ?: "External Subtitle"
 
+                val supportedExtensions = setOf(".srt", ".vtt", ".ass", ".ssa", ".sub")
+                if (supportedExtensions.none { rawFileName.endsWith(it, ignoreCase = true) }) {
+                    throw IOException("Unsupported external subtitle format")
+                }
+
                 val displayName = File(rawFileName).nameWithoutExtension.ifEmpty { rawFileName }
 
                 // Check if this subtitle file is already loaded to prevent duplicate tracks
