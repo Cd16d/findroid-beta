@@ -416,7 +416,7 @@ fun CastPlayerContainerLayout(
                     },
                     onDragCancel = {
                         velocityTracker.resetTracking()
-                        onCollapse()
+                        onSettle(0f)
                     },
                     onDragEnd = {
                         val velocityY = -velocityTracker.calculateVelocity().y
@@ -458,7 +458,7 @@ fun CastPlayerContainerLayout(
                         shape = morphShape
                         clip = true
                     }
-                    .then(if (fraction > 0.05f) dragGestureModifier else Modifier),
+                    .then(dragGestureModifier),
         ) {
             // Expanded Player Content (reveals smoothly as container expands)
             if (fraction > 0.05f) {
@@ -498,7 +498,6 @@ fun CastPlayerContainerLayout(
                                 .height(collapsedHeight)
                                 .clip(CircleShape)
                                 .graphicsLayer { alpha = miniAlpha }
-                                .then(if (fraction <= 0.05f) dragGestureModifier else Modifier)
                                 .clickable(
                                     enabled = fraction <= 0.05f,
                                     indication = null,
