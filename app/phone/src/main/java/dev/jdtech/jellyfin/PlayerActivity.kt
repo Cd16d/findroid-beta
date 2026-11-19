@@ -67,6 +67,14 @@ class PlayerActivity : AppCompatActivity() {
     private var currentResizeMode by mutableStateOf(Constants.PlayerResizeMode.FIT)
     private var isOrientationLockedState by mutableStateOf(false)
     private var activePlayerView: PlayerView? = null
+    private var dynamicPipSourceRect: Rect? = null
+
+    fun updatePipSourceRect(rect: Rect) {
+        if (dynamicPipSourceRect != rect) {
+            dynamicPipSourceRect = rect
+            updatePipParams()
+        }
+    }
 
     private var savedCustomBrightness: Float = BRIGHTNESS_OVERRIDE_NONE
 
@@ -233,6 +241,7 @@ class PlayerActivity : AppCompatActivity() {
                 launch {
                     appPreferences.observe(appPreferences.playerDefaultResizeMode).collect {
                         currentResizeMode = Constants.PlayerResizeMode.fromValue(it)
+                        updatePipParams()
                     }
                 }
                 launch {
@@ -267,10 +276,14 @@ class PlayerActivity : AppCompatActivity() {
                         activePlayerView = playerView
                         updatePipParams()
                     },
+                    onPipSourceRectHintChanged = { rect -> updatePipSourceRect(rect) },
                     isPipSupported = isPipSupported,
                     isInPictureInPictureMode = isInPipMode,
                     resizeMode = currentResizeMode,
-                    onResizeModeChange = { currentResizeMode = it },
+                    onResizeModeChange = {
+                        currentResizeMode = it
+                        updatePipParams()
+                    },
                     onToggleOrientation = { toggleOrientationLock() },
                     isOrientationLocked = isOrientationLockedState,
                     volumeKeyEvents = volumeKeyEvents,
@@ -396,6 +409,19 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+    private fun getPipAspectRatio(videoSize: VideoSize): Rational {
+        val pixelRatio =
+            if (videoSize.pixelWidthHeightRatio > 0f) videoSize.pixelWidthHeightRatio else 1f
+        val rawAspect =
+            if (videoSize.height > 0 && videoSize.width > 0) {
+                (videoSize.width.toFloat() * pixelRatio) / videoSize.height.toFloat()
+            } else {
+                16f / 9f
+            }
+        val clampedAspect = rawAspect.coerceIn(1f / 2.39f, 2.39f)
+        return Rational((clampedAspect * 10000).toInt(), 10000)
+    }
+
     private fun pipParams(
         enableAutoEnter: Boolean =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -404,48 +430,58 @@ class PlayerActivity : AppCompatActivity() {
                 !isControlsLocked,
     ): PictureInPictureParams {
         val videoSize = viewModel.player.videoSize
-        val aspectRatio =
-            if (videoSize.width > 0 && videoSize.height > 0) {
-                Rational(
-                    videoSize.width.coerceAtMost((videoSize.height * 2.39f).toInt()),
-                    videoSize.height.coerceAtMost((videoSize.width * 2.39f).toInt()),
-                )
-            } else {
-                Rational(16, 9)
-            }
+        val defaultAspectRatio = getPipAspectRatio(videoSize)
 
         val sourceRectHint = Rect()
-        val surfaceView = activePlayerView?.videoSurfaceView
-        val viewToMeasure = surfaceView ?: activePlayerView ?: window.decorView
-        val fullRect = Rect()
-        viewToMeasure.getGlobalVisibleRect(fullRect)
-
-        if (!fullRect.isEmpty && fullRect.width() > 0 && fullRect.height() > 0) {
-            val aspect = aspectRatio.toFloat()
-            val fullWidth = fullRect.width()
-            val fullHeight = fullRect.height()
-            val fullAspect = fullWidth.toFloat() / fullHeight.toFloat()
-
-            if (fullAspect > aspect) {
-                val targetWidth = (fullHeight * aspect).toInt()
-                val leftOffset = fullRect.left + (fullWidth - targetWidth) / 2
-                sourceRectHint.set(
-                    leftOffset,
-                    fullRect.top,
-                    leftOffset + targetWidth,
-                    fullRect.bottom,
-                )
+        val dynamicRect = dynamicPipSourceRect
+        val aspectRatio =
+            if (
+                dynamicRect != null &&
+                    !dynamicRect.isEmpty &&
+                    dynamicRect.width() > 0 &&
+                    dynamicRect.height() > 0
+            ) {
+                sourceRectHint.set(dynamicRect)
+                val dynamicAspect =
+                    (dynamicRect.width().toFloat() / dynamicRect.height().toFloat()).coerceIn(
+                        1f / 2.39f,
+                        2.39f,
+                    )
+                Rational((dynamicAspect * 10000).toInt(), 10000)
             } else {
-                val targetHeight = (fullWidth / aspect).toInt()
-                val topOffset = fullRect.top + (fullHeight - targetHeight) / 2
-                sourceRectHint.set(
-                    fullRect.left,
-                    topOffset,
-                    fullRect.right,
-                    topOffset + targetHeight,
-                )
+                val surfaceView = activePlayerView?.videoSurfaceView
+                val viewToMeasure = surfaceView ?: activePlayerView ?: window.decorView
+                val fullRect = Rect()
+                viewToMeasure.getGlobalVisibleRect(fullRect)
+
+                if (!fullRect.isEmpty && fullRect.width() > 0 && fullRect.height() > 0) {
+                    val aspect = defaultAspectRatio.toFloat()
+                    val fullWidth = fullRect.width()
+                    val fullHeight = fullRect.height()
+                    val fullAspect = fullWidth.toFloat() / fullHeight.toFloat()
+
+                    if (fullAspect > aspect) {
+                        val targetWidth = (fullHeight * aspect).toInt()
+                        val leftOffset = fullRect.left + (fullWidth - targetWidth) / 2
+                        sourceRectHint.set(
+                            leftOffset,
+                            fullRect.top,
+                            leftOffset + targetWidth,
+                            fullRect.bottom,
+                        )
+                    } else {
+                        val targetHeight = (fullWidth / aspect).toInt()
+                        val topOffset = fullRect.top + (fullHeight - targetHeight) / 2
+                        sourceRectHint.set(
+                            fullRect.left,
+                            topOffset,
+                            fullRect.right,
+                            topOffset + targetHeight,
+                        )
+                    }
+                }
+                defaultAspectRatio
             }
-        }
 
         val builder = PictureInPictureParams.Builder().setAspectRatio(aspectRatio)
 
