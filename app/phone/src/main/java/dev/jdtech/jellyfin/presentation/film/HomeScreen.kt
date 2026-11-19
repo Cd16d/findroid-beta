@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.LocalCastPlayerHeight
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSuggestions
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeView
@@ -46,6 +48,7 @@ import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
 import dev.jdtech.jellyfin.presentation.film.components.HomeSection
 import dev.jdtech.jellyfin.presentation.film.components.HomeView
+import dev.jdtech.jellyfin.presentation.film.components.PlaceholderScreen
 import dev.jdtech.jellyfin.presentation.film.components.ServerSelectionBottomSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -102,8 +105,17 @@ private fun HomeScreenLayout(
     val showServerSelectionSheetState = rememberModalBottomSheetState()
     var showServerSelectionBottomSheet by remember { mutableStateOf(false) }
 
+    val isHomeEmpty =
+        state.suggestionsSection == null &&
+            state.resumeSection == null &&
+            state.nextUpSection == null &&
+            state.views.isEmpty()
+
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
-        PullToRefreshBox(isRefreshing = false, onRefresh = { onAction(HomeAction.Refresh) }) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && !isHomeEmpty,
+            onRefresh = { onAction(HomeAction.Refresh) },
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
@@ -150,6 +162,16 @@ private fun HomeScreenLayout(
                     )
                 }
             }
+        }
+
+        if (isHomeEmpty && !state.isLoading && state.error != null) {
+            PlaceholderScreen(
+                modifier = Modifier.fillMaxSize().padding(top = contentPaddingTop),
+                title = stringResource(CoreR.string.error_loading_data),
+                subtitle = state.error?.message,
+                buttonText = stringResource(CoreR.string.retry),
+                onButtonClick = { onAction(HomeAction.OnRetryClick) },
+            )
         }
 
         if (state.error != null && showErrorDialog) {

@@ -1113,16 +1113,25 @@ class JellyfinRepositoryImpl(
                 playedPercentage < 10 -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
                     database.setPlayed(jellyfinApi.userId!!, itemId, false)
+                    database.updateHomeItemPlaybackProgress(jellyfinApi.userId!!, itemId, 0L, false)
                 }
 
                 playedPercentage > 90 -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
                     database.setPlayed(jellyfinApi.userId!!, itemId, true)
+                    database.updateHomeItemPlaybackProgress(jellyfinApi.userId!!, itemId, 0L, true)
+                    database.removeHomeResumeItem(jellyfinApi.userId!!, itemId)
                 }
 
                 else -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, positionTicks)
                     database.setPlayed(jellyfinApi.userId!!, itemId, false)
+                    database.updateHomeItemPlaybackProgress(
+                        jellyfinApi.userId!!,
+                        itemId,
+                        positionTicks,
+                        false,
+                    )
                 }
             }
             try {
@@ -1152,6 +1161,12 @@ class JellyfinRepositoryImpl(
         Timber.d("Posting progress of $itemId, position: $positionTicks")
         withContext(Dispatchers.IO) {
             database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, positionTicks)
+            database.updateHomeItemPlaybackProgress(
+                jellyfinApi.userId!!,
+                itemId,
+                positionTicks,
+                false,
+            )
             try {
                 jellyfinApi.sessionApi.reportPlaybackProgress(
                     PlaybackProgressInfo(

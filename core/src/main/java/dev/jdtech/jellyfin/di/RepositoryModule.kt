@@ -6,7 +6,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.database.HomeSectionDao
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.repository.HomeRepository
+import dev.jdtech.jellyfin.repository.HomeRepositoryImpl
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepositoryImpl
 import dev.jdtech.jellyfin.repository.JellyfinRepositoryOfflineImpl
@@ -57,5 +60,15 @@ object RepositoryModule {
             true -> jellyfinRepositoryOfflineImpl
             false -> jellyfinRepositoryImpl
         }
+    }
+
+    @Singleton
+    @Provides
+    fun provideHomeRepository(
+        homeSectionDao: HomeSectionDao,
+        jellyfinRepository: JellyfinRepository,
+        appPreferences: AppPreferences,
+    ): HomeRepository {
+        return HomeRepositoryImpl(homeSectionDao, jellyfinRepository, appPreferences)
     }
 }
