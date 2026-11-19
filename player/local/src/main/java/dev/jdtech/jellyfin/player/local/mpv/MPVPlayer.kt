@@ -586,6 +586,7 @@ class MPVPlayer(
                             if (initialSeekTo > 0L) {
                                 val seekToMs = initialSeekTo
                                 initialSeekTo = 0L
+                                currentPositionMs = seekToMs
                                 mpvLib.command(
                                     arrayOf(
                                         "seek",
@@ -880,15 +881,34 @@ class MPVPlayer(
      * @param mediaItems The [MediaItems][MediaItem] to add.
      */
     override fun addMediaItems(index: Int, mediaItems: MutableList<MediaItem>) {
+        if (isReleased) return
+        val isAppend = index >= internalMediaItems.size
         internalMediaItems.addAll(index, mediaItems)
-        mediaItems.forEach { mediaItem ->
-            mpvLib.command(
-                arrayOf(
-                    "loadfile",
-                    "${mediaItem.localConfiguration?.uri}",
-                    "insert-at",
-                    index.toString(),
-                ),
+        if (index <= currentMediaItemIndex) {
+            currentMediaItemIndex += mediaItems.size
+        }
+        mediaItems.forEachIndexed { offset, mediaItem ->
+            val command =
+                if (isAppend) {
+                    arrayOf(
+                        "loadfile",
+                        "${mediaItem.localConfiguration?.uri}",
+                        "append",
+                    )
+                } else {
+                    arrayOf(
+                        "loadfile",
+                        "${mediaItem.localConfiguration?.uri}",
+                        "insert-at",
+                        (index + offset).toString(),
+                    )
+                }
+            mpvLib.command(command)
+        }
+        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+            listener.onTimelineChanged(
+                timeline,
+                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
             )
         }
     }
@@ -903,7 +923,42 @@ class MPVPlayer(
      *   to the end of the playlist.
      */
     override fun moveMediaItems(fromIndex: Int, toIndex: Int, newIndex: Int) {
-        TODO("Not yet implemented")
+        if (isReleased) return
+        val safeFrom = fromIndex.coerceIn(0, internalMediaItems.size)
+        val safeTo = toIndex.coerceIn(safeFrom, internalMediaItems.size)
+        if (safeFrom >= safeTo) return
+        val moving = mutableListOf<MediaItem>()
+        for (i in (safeTo - 1) downTo safeFrom) {
+            moving.add(0, internalMediaItems.removeAt(i))
+            mpvLib.command(arrayOf("playlist-remove", i.toString()))
+        }
+        val safeNewIndex = newIndex.coerceIn(0, internalMediaItems.size)
+        val isAppend = safeNewIndex >= internalMediaItems.size
+        internalMediaItems.addAll(safeNewIndex, moving)
+        moving.forEachIndexed { offset, mediaItem ->
+            val command =
+                if (isAppend) {
+                    arrayOf(
+                        "loadfile",
+                        "${mediaItem.localConfiguration?.uri}",
+                        "append",
+                    )
+                } else {
+                    arrayOf(
+                        "loadfile",
+                        "${mediaItem.localConfiguration?.uri}",
+                        "insert-at",
+                        (safeNewIndex + offset).toString(),
+                    )
+                }
+            mpvLib.command(command)
+        }
+        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+            listener.onTimelineChanged(
+                timeline,
+                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
+            )
+        }
     }
 
     override fun replaceMediaItems(
@@ -911,7 +966,8 @@ class MPVPlayer(
         toIndex: Int,
         mediaItems: MutableList<MediaItem>,
     ) {
-        TODO("Not yet implemented")
+        removeMediaItems(fromIndex, toIndex)
+        addMediaItems(fromIndex, mediaItems)
     }
 
     /**
@@ -921,7 +977,19 @@ class MPVPlayer(
      * @param toIndex The first item not to be removed (exclusive).
      */
     override fun removeMediaItems(fromIndex: Int, toIndex: Int) {
-        TODO("Not yet implemented")
+        if (isReleased) return
+        val safeFrom = fromIndex.coerceIn(0, internalMediaItems.size)
+        val safeTo = toIndex.coerceIn(safeFrom, internalMediaItems.size)
+        for (i in (safeTo - 1) downTo safeFrom) {
+            internalMediaItems.removeAt(i)
+            mpvLib.command(arrayOf("playlist-remove", i.toString()))
+        }
+        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+            listener.onTimelineChanged(
+                timeline,
+                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
+            )
+        }
     }
 
     /**
@@ -968,13 +1036,15 @@ class MPVPlayer(
             .build()
     }
 
-    private fun resetInternalState() {
+    private fun resetInternalState(preserveDuration: Boolean = false) {
         isPlayerReady = false
         isSeekable = false
         playerError = null
         playbackState = STATE_IDLE
         currentPositionMs = null
-        currentDurationMs = null
+        if (!preserveDuration) {
+            currentDurationMs = null
+        }
         currentCacheTimeMs = null
         currentDemuxerCacheDurationMs = null
         initialCommands.clear()
@@ -1163,6 +1233,7 @@ class MPVPlayer(
                     }
                     0L
                 } else {
+                    currentPositionMs = seekTo
                     seekTo
                 }
         } else {
@@ -1173,7 +1244,9 @@ class MPVPlayer(
 
     private fun prepareMediaItem(index: Int) {
         internalMediaItems.getOrNull(index)?.let { mediaItem ->
-            resetInternalState()
+            val isSameMediaItem =
+                mediaItem.mediaId.isNotEmpty() && mediaItem.mediaId == currentMediaItem?.mediaId
+            resetInternalState(preserveDuration = isSameMediaItem)
             mediaItem.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
                 val uriStr = "${subtitle.uri}"
                 if (loadedSubtitlePaths.add(uriStr)) {
@@ -1360,7 +1433,7 @@ class MPVPlayer(
      * prospective position in milliseconds if the [current timeline][.getCurrentTimeline] is empty.
      */
     override fun getCurrentPosition(): Long {
-        return currentPositionMs ?: C.TIME_UNSET
+        return currentPositionMs ?: if (initialSeekTo > 0L) initialSeekTo else C.TIME_UNSET
     }
 
     /**

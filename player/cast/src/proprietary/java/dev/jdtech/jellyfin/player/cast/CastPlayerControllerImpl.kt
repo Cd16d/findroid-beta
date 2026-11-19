@@ -1261,9 +1261,12 @@ constructor(
                     ?: _currentItem.value?.takeIf { it.item.itemId == itemId }
                     ?: return@launch
             val currentPositionMs = client.approximateStreamPosition.coerceAtLeast(0L)
+            val oldPlaySessionId = cachedMedia.playbackInfo?.playSessionId
+            val oldMediaSourceId = cachedMedia.playbackInfo?.mediaSources?.firstOrNull()?.id
 
             // Request new playback info from Jellyfin with the selected audio track index
             val result = buildMediaInfo(cachedMedia.item) ?: return@launch
+            val newPlaySessionId = result.playbackInfo.playSessionId
 
             // Update the current item
             val loadRequest =
@@ -1275,6 +1278,17 @@ constructor(
 
             client.load(loadRequest).setResultCallback { callbackResult ->
                 if (callbackResult.status.isSuccess) {
+                    if (oldPlaySessionId != null && oldPlaySessionId != newPlaySessionId) {
+                        scope.launch {
+                            playbackManager.stopStreamSession(
+                                itemId = itemId,
+                                positionMs = currentPositionMs,
+                                mediaSourceId = oldMediaSourceId,
+                                playSessionId = oldPlaySessionId,
+                            )
+                        }
+                    }
+
                     itemCache.clear()
 
                     val updatedMedia =

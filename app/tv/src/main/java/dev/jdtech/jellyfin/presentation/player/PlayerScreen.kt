@@ -89,6 +89,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
@@ -241,19 +243,27 @@ fun PlayerScreen(
             object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
-                    currentPosition = viewModel.player.currentPosition
-                    bufferedPosition = viewModel.player.bufferedPosition
+                    val pos = viewModel.player.currentPosition
+                    if (pos >= 0L && pos != C.TIME_UNSET) currentPosition = pos
+                    val buf = viewModel.player.bufferedPosition
+                    if (buf >= 0L && buf != C.TIME_UNSET) bufferedPosition = buf
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     isBuffering = playbackState == Player.STATE_BUFFERING
-                    bufferedPosition = viewModel.player.bufferedPosition
+                    val buf = viewModel.player.bufferedPosition
+                    if (buf >= 0L && buf != C.TIME_UNSET) bufferedPosition = buf
                 }
 
                 override fun onVideoSizeChanged(videoSize: VideoSize) {
                     if (videoSize.height > 0 && videoSize.width > 0) {
                         videoAspectRatio = videoSize.toAspectRatio()
                     }
+                }
+
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    currentPosition = 0L
+                    bufferedPosition = 0L
                 }
             }
         viewModel.player.addListener(listener)
@@ -263,8 +273,10 @@ fun PlayerScreen(
     LaunchedEffect(Unit) {
         var tick = 0
         while (true) {
-            currentPosition = viewModel.player.currentPosition
-            bufferedPosition = viewModel.player.bufferedPosition
+            val pos = viewModel.player.currentPosition
+            if (pos >= 0L && pos != C.TIME_UNSET) currentPosition = pos
+            val buf = viewModel.player.bufferedPosition
+            if (buf >= 0L && buf != C.TIME_UNSET) bufferedPosition = buf
             if (isPlaying) {
                 if (tick % 3 == 0) viewModel.updateCurrentSegment()
                 if (tick % 16 == 0 && tick > 0) viewModel.updatePlaybackProgress()

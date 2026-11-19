@@ -75,16 +75,21 @@ constructor(
     suspend fun reportProgress(
         positionMs: Long,
         isPaused: Boolean,
+        playSessionId: String? = null,
     ) {
         val itemId = activeItemId ?: return
         if (!isSessionActive) return
+        val effectivePlaySessionId = playSessionId ?: activePlaySessionId
+        if (playSessionId != null && playSessionId != activePlaySessionId) {
+            activePlaySessionId = playSessionId
+        }
         reportProgress(
             itemId = itemId,
             positionMs = positionMs,
             isPaused = isPaused,
             playMethod = activePlayMethod,
             mediaSourceId = activeMediaSourceId,
-            playSessionId = activePlaySessionId,
+            playSessionId = effectivePlaySessionId,
         )
     }
 
@@ -110,6 +115,78 @@ constructor(
 
     fun updateActivePlayMethod(playMethod: PlayMethod) {
         activePlayMethod = playMethod
+    }
+
+    fun updateActiveSessionParameters(
+        playSessionId: String?,
+        mediaSourceId: String? = null,
+        playMethod: PlayMethod = PlayMethod.DIRECT_PLAY,
+    ) {
+        activePlaySessionId = playSessionId
+        mediaSourceId?.let { activeMediaSourceId = it }
+        activePlayMethod = playMethod
+    }
+
+    /**
+     * Stops a specific stream/transcode session on the server to terminate background FFmpeg jobs
+     * without triggering watched status or auto-delete side effects.
+     */
+    suspend fun stopStreamSession(
+        itemId: UUID,
+        positionMs: Long,
+        mediaSourceId: String? = null,
+        playSessionId: String? = null,
+    ) {
+        if (playSessionId.isNullOrEmpty()) return
+        try {
+            repository.postPlaybackStop(
+                itemId = itemId,
+                positionTicks = positionMs.coerceAtLeast(0L) * 10000L,
+                playedPercentage = 0,
+                mediaSourceId = mediaSourceId,
+                playSessionId = playSessionId,
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to stop stream session: $playSessionId")
+        }
+    }
+
+    /**
+     * Handles switching stream sessions (e.g. transcode reload on audio track or quality switch).
+     * If the playSessionId has changed, stops the old session on the server to terminate its FFmpeg
+     * transcode job, then starts the new session with the updated parameters.
+     */
+    suspend fun switchStreamSession(
+        itemId: UUID,
+        positionMs: Long,
+        newPlaySessionId: String?,
+        newMediaSourceId: String?,
+        newPlayMethod: PlayMethod,
+        oldPlaySessionId: String? = activePlaySessionId,
+        oldMediaSourceId: String? = activeMediaSourceId,
+    ) {
+        if (oldPlaySessionId != null && oldPlaySessionId != newPlaySessionId) {
+            stopStreamSession(
+                itemId = itemId,
+                positionMs = positionMs,
+                mediaSourceId = oldMediaSourceId,
+                playSessionId = oldPlaySessionId,
+            )
+        }
+
+        activeItemId = itemId
+        activePlaySessionId = newPlaySessionId
+        activeMediaSourceId = newMediaSourceId
+        activePlayMethod = newPlayMethod
+        isSessionActive = true
+
+        reportStart(
+            itemId = itemId,
+            positionMs = positionMs,
+            playMethod = newPlayMethod,
+            mediaSourceId = newMediaSourceId,
+            playSessionId = newPlaySessionId,
+        )
     }
 
     /**

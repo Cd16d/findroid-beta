@@ -226,11 +226,19 @@ constructor(
 
     private fun updateItemDuration() {
         val durationMs = player.duration
+        if (durationMs > 0L && durationMs != C.TIME_UNSET) {
+            lastKnownDurationMs = durationMs
+        }
         itemDurationUs.set(if (durationMs == C.TIME_UNSET) C.TIME_UNSET else durationMs * 1000)
     }
 
     private var currentMediaItemIndex = savedStateHandle["mediaItemIndex"] ?: 0
     private var playbackPosition: Long = savedStateHandle["position"] ?: 0
+    private var lastKnownPositionMs: Long = savedStateHandle["position"] ?: 0L
+    private var lastKnownDurationMs: Long = 0L
+    private var reloadStreamJob: Job? = null
+    private var syncQueueJob: Job? = null
+    private var sessionMeasuredSpeedBps: Int? = null
     private var currentMediaItemSegments: List<FindroidSegment> = emptyList()
 
     // Segments preferences
@@ -535,45 +543,6 @@ constructor(
 
         initializePlayerJob?.cancel()
         initializePlayerJob = viewModelScope.launch {
-            val startItem =
-                try {
-                    val resolvedKind =
-                        BaseItemKind.fromNameOrNull(itemKind)
-                            ?: BaseItemKind.entries.firstOrNull {
-                                it.name.equals(itemKind, ignoreCase = true) ||
-                                    it.serialName.equals(itemKind, ignoreCase = true)
-                            }
-                            ?: repository.getItem(itemId)?.let { item ->
-                                when (item) {
-                                    is FindroidMovie -> BaseItemKind.MOVIE
-                                    is FindroidEpisode -> BaseItemKind.EPISODE
-                                    is FindroidShow -> BaseItemKind.SERIES
-                                    is FindroidSeason -> BaseItemKind.SEASON
-                                    else -> null
-                                }
-                            }
-                            ?: BaseItemKind.fromName(itemKind)
-
-                    playlistManager.getInitialItem(
-                        itemId = itemId,
-                        itemKind = resolvedKind,
-                        mediaSourceIndex = null,
-                        startFromBeginning = startFromBeginning,
-                    )
-                } catch (e: Exception) {
-                    if (e !is CancellationException) {
-                        Timber.e(e)
-                        Toast.makeText(application, e.localizedMessage, Toast.LENGTH_LONG).show()
-                    }
-                    null
-                }
-
-            if (startItem == null) {
-                Timber.e("No start item, stopping player initialization")
-                return@launch
-            }
-            currentMediaSourceId = startItem.mediaSourceId
-
             val selectedOption = _uiState.value.selectedQuality
 
             // If Auto, measure network speed
@@ -586,6 +555,7 @@ constructor(
                         _uiState.update { it.copy(isSpeedTesting = false) }
                     }
                 } else null
+            sessionMeasuredSpeedBps = autoMeasuredBitrate
 
             val maxTranscodeBitrateKbps = appPreferences.getValue(appPreferences.castMaxBitrateKbps)
             val maxTranscodeBitrateBps =
@@ -627,6 +597,49 @@ constructor(
                     maxHeight = selectedOption.maxHeight,
                 )
 
+            val window =
+                try {
+                    val resolvedKind =
+                        BaseItemKind.fromNameOrNull(itemKind)
+                            ?: BaseItemKind.entries.firstOrNull {
+                                it.name.equals(itemKind, ignoreCase = true) ||
+                                    it.serialName.equals(itemKind, ignoreCase = true)
+                            }
+                            ?: repository.getItem(itemId)?.let { item ->
+                                when (item) {
+                                    is FindroidMovie -> BaseItemKind.MOVIE
+                                    is FindroidEpisode -> BaseItemKind.EPISODE
+                                    is FindroidShow -> BaseItemKind.SERIES
+                                    is FindroidSeason -> BaseItemKind.SEASON
+                                    else -> null
+                                }
+                            }
+                            ?: BaseItemKind.fromName(itemKind)
+
+                    playlistManager.getInitialWindow(
+                        itemId = itemId,
+                        itemKind = resolvedKind,
+                        mediaSourceIndex = null,
+                        startFromBeginning = startFromBeginning,
+                        maxStreamingBitrate = effectiveBitrate,
+                        deviceProfile = deviceProfile,
+                        enableDirectPlay = enableDirectPlay,
+                    )
+                } catch (e: Exception) {
+                    if (e !is CancellationException) {
+                        Timber.e(e)
+                        Toast.makeText(application, e.localizedMessage, Toast.LENGTH_LONG).show()
+                    }
+                    null
+                }
+
+            if (window == null) {
+                Timber.e("No start item window, stopping player initialization")
+                return@launch
+            }
+            val startItem = window.currentItem
+            currentMediaSourceId = startItem.mediaSourceId
+
             val sources =
                 try {
                     repository.getMediaSources(
@@ -645,8 +658,8 @@ constructor(
 
             val firstSource = sources.firstOrNull()
             currentSource = firstSource
-            playSessionId = firstSource?.playSessionId
-            currentMediaSourceId = firstSource?.id
+            playSessionId = firstSource?.playSessionId ?: startItem.playSessionId
+            currentMediaSourceId = firstSource?.id ?: startItem.mediaSourceId
 
             val isDirectPlay = (firstSource?.supportsDirectPlay == true) && enableDirectPlay
             currentPlayMethod =
@@ -734,8 +747,17 @@ constructor(
             updateAvailableAudioTracks()
             autoSelectDefaultSubtitleIfNeeded(player.currentTracks)
 
-            items = listOf(updatedStartItem).toMutableList()
-            currentMediaItemIndex = 0
+            val initialQueue = mutableListOf<PlayerItem>()
+            var activeIndex = 0
+            window.previousItem?.let { prev ->
+                initialQueue.add(prev)
+                activeIndex = 1
+            }
+            initialQueue.add(updatedStartItem)
+            window.nextItem?.let { next -> initialQueue.add(next) }
+
+            items = initialQueue.toMutableList()
+            currentMediaItemIndex = activeIndex
 
             val startPosition =
                 if (playbackPosition == 0L) {
@@ -743,8 +765,9 @@ constructor(
                 } else {
                     playbackPosition
                 }
+            lastKnownPositionMs = startPosition
 
-            player.setMediaItems(listOf(updatedStartItem.toMediaItem()), 0, startPosition)
+            player.setMediaItems(initialQueue.map { it.toMediaItem() }, activeIndex, startPosition)
             currentPlayingMediaId = updatedStartItem.itemId.toString()
             player.prepare()
             player.play()
@@ -755,9 +778,6 @@ constructor(
     fun loadItemMetadata(itemId: UUID) {
         loadMetadataJob?.cancel()
         loadMetadataJob = viewModelScope.launch {
-            if (_uiState.value.selectedQuality.isAuto) {
-                _uiState.update { it.copy(isSpeedTesting = true) }
-            }
             try {
                 val item = repository.getItem(itemId)
                 if (item != null) {
@@ -803,7 +823,7 @@ constructor(
                     val requestedBitrate: Int? =
                         when {
                             selectedOption.isOriginal -> null
-                            selectedOption.isAuto -> null
+                            selectedOption.isAuto -> sessionMeasuredSpeedBps ?: 15_000_000
                             (optionBitrate != null) && (optionBitrate > 0) -> optionBitrate
                             else -> null
                         }
@@ -858,8 +878,38 @@ constructor(
                                         enableDirectPlay = enableDirectPlay,
                                         transcodingUrl = firstSource?.transcodingUrl,
                                     )
+                                if (playbackManager.isReporting) {
+                                    playbackManager.updateActiveSessionParameters(
+                                        playSessionId = playSessionId,
+                                        mediaSourceId = currentMediaSourceId,
+                                        playMethod = currentPlayMethod,
+                                    )
+                                }
                                 firstSource
                             }
+
+                    if (
+                        currentPlayMethod != PlayMethod.DIRECT_PLAY &&
+                            activeSource != null &&
+                            !activeSource.transcodingUrl.isNullOrBlank()
+                    ) {
+                        val currentItemObj = items.firstOrNull { it.itemId == itemId }
+                        val expectedStreamUrl =
+                            StreamUtils.buildStreamUrl(
+                                baseUrl = repository.getBaseUrl(),
+                                itemId = itemId,
+                                mediaSourceId = activeSource.id,
+                                transcodingUrl = activeSource.transcodingUrl,
+                                audioStreamIndex = selectedAudioStreamIndex,
+                            )
+                        if (
+                            currentItemObj != null &&
+                                currentItemObj.mediaSourceUri != expectedStreamUrl &&
+                                expectedStreamUrl.isNotBlank()
+                        ) {
+                            reloadMediaStream()
+                        }
+                    }
 
                     val suggestions =
                         try {
@@ -1004,6 +1054,7 @@ constructor(
     fun selectVideoQuality(quality: VideoQualityOption) {
         _uiState.update { it.copy(selectedQuality = quality) }
         reloadMediaStream()
+        syncQueueMediaItemsWithQuality(quality)
     }
 
     /**
@@ -1012,6 +1063,7 @@ constructor(
     fun refreshAutoQuality() {
         if (_uiState.value.isSpeedTesting) return
         reloadMediaStream()
+        syncQueueMediaItemsWithQuality(_uiState.value.selectedQuality)
     }
 
     /**
@@ -1191,10 +1243,29 @@ constructor(
     private fun reloadMediaStream(targetInternalTrackIndex: Int? = null) {
         val currentMediaId = player.currentMediaItem?.mediaId ?: return
         val itemId = UUID.fromString(currentMediaId)
-        val currentPositionMs = player.currentPosition.coerceAtLeast(0L)
-        val durationMs = player.duration
 
-        viewModelScope.launch {
+        val playerPos = player.currentPosition
+        val currentPositionMs =
+            when {
+                playerPos > 0L && playerPos != C.TIME_UNSET -> playerPos
+                lastKnownPositionMs > 0L -> lastKnownPositionMs
+                else -> playerPos.coerceAtLeast(0L)
+            }
+        lastKnownPositionMs = currentPositionMs
+
+        val playerDuration = player.duration
+        val durationMs =
+            when {
+                playerDuration > 0L && playerDuration != C.TIME_UNSET -> playerDuration
+                lastKnownDurationMs > 0L -> lastKnownDurationMs
+                else -> playerDuration
+            }
+        if (durationMs > 0L && durationMs != C.TIME_UNSET) {
+            lastKnownDurationMs = durationMs
+        }
+
+        reloadStreamJob?.cancel()
+        reloadStreamJob = viewModelScope.launch {
             if (_uiState.value.selectedQuality.isAuto) {
                 _uiState.update { it.copy(isSpeedTesting = true) }
             }
@@ -1219,6 +1290,9 @@ constructor(
                     if (selectedOption.isAuto) {
                         NetworkSpeedUtils.measureNetworkSpeed(jellyfinApi)
                     } else null
+                if (autoMeasuredBitrate != null) {
+                    sessionMeasuredSpeedBps = autoMeasuredBitrate
+                }
 
                 val speedBps = autoMeasuredBitrate ?: 15_000_000
                 val requestedBitrate: Int? =
@@ -1259,6 +1333,9 @@ constructor(
                         maxWidth = selectedOption.maxWidth,
                         maxHeight = selectedOption.maxHeight,
                     )
+
+                val previousPlaySessionId = playSessionId
+                val previousMediaSourceId = currentMediaSourceId
 
                 val sources =
                     repository.getMediaSources(
@@ -1410,14 +1487,27 @@ constructor(
 
                 targetInternalTrackIndex?.let { switchToTrack(C.TRACK_TYPE_AUDIO, it) }
 
-                playbackManager.startSession(
-                    itemId = itemId,
-                    positionMs = currentPositionMs,
-                    playMethod = currentPlayMethod,
-                    mediaSourceId = currentMediaSourceId,
-                    playSessionId = playSessionId,
-                    previousDurationMs = durationMs,
-                )
+                if (!playbackManager.isReporting) {
+                    playbackManager.startSession(
+                        itemId = itemId,
+                        positionMs = currentPositionMs,
+                        playMethod = currentPlayMethod,
+                        mediaSourceId = currentMediaSourceId,
+                        playSessionId = playSessionId,
+                        previousDurationMs = durationMs,
+                    )
+                } else {
+                    playbackManager.switchStreamSession(
+                        itemId = itemId,
+                        positionMs = currentPositionMs,
+                        newPlaySessionId = playSessionId,
+                        newMediaSourceId = currentMediaSourceId,
+                        newPlayMethod = currentPlayMethod,
+                        oldPlaySessionId = previousPlaySessionId,
+                        oldMediaSourceId = previousMediaSourceId,
+                    )
+                    updatePlaybackProgress()
+                }
                 hasReportedStart = true
                 if (player.isPlaying) {
                     startPlaybackProgressJob()
@@ -1426,6 +1516,86 @@ constructor(
                 Timber.e(e, "Error reloading media stream")
             } finally {
                 _uiState.update { it.copy(isSpeedTesting = false) }
+            }
+        }
+    }
+
+    private fun syncQueueMediaItemsWithQuality(targetQuality: VideoQualityOption) {
+        syncQueueJob?.cancel()
+        syncQueueJob = viewModelScope.launch {
+            try {
+                val speedBps = sessionMeasuredSpeedBps ?: 15_000_000
+                val optionBitrate = targetQuality.bitrateBps
+                val requestedBitrate: Int? =
+                    when {
+                        targetQuality.isOriginal -> null
+                        targetQuality.isAuto -> speedBps
+                        (optionBitrate != null) && (optionBitrate > 0) -> optionBitrate
+                        else -> null
+                    }
+                val settingMaxBitrateKbps =
+                    appPreferences.getValue(appPreferences.castMaxBitrateKbps)
+                val effectiveBitrate =
+                    StreamUtils.computeEffectiveBitrate(
+                        settingMaxBitrateKbps = settingMaxBitrateKbps,
+                        requestedBitrate = requestedBitrate,
+                        isOriginal = targetQuality.isOriginal,
+                        isAuto = targetQuality.isAuto,
+                    )
+                val enableDirectPlay = targetQuality.isOriginal || targetQuality.isAuto
+                val deviceProfile =
+                    DeviceCodecCapabilities.createDeviceProfile(
+                        maxBitrate = effectiveBitrate ?: 120_000_000,
+                        maxWidth = targetQuality.maxWidth,
+                        maxHeight = targetQuality.maxHeight,
+                    )
+
+                val currentIndex = player.currentMediaItemIndex
+                val queueIndices =
+                    items.indices
+                        .filter { it != currentIndex }
+                        .sortedWith { a, b ->
+                            when {
+                                a == currentIndex + 1 -> -1
+                                b == currentIndex + 1 -> 1
+                                a > currentIndex && b < currentIndex -> -1
+                                a < currentIndex && b > currentIndex -> 1
+                                a > currentIndex -> a.compareTo(b)
+                                else -> b.compareTo(a)
+                            }
+                        }
+
+                for (idx in queueIndices) {
+                    val currentItemAtIndex = items.getOrNull(idx) ?: continue
+                    val oldSessionId = currentItemAtIndex.playSessionId
+                    val resolvedItem =
+                        playlistManager.resolvePlayerItem(
+                            itemId = currentItemAtIndex.itemId,
+                            playbackPosition = currentItemAtIndex.playbackPosition,
+                            maxStreamingBitrate = effectiveBitrate,
+                            deviceProfile = deviceProfile,
+                            enableDirectPlay = enableDirectPlay,
+                        ) ?: continue
+
+                    if (idx in items.indices) {
+                        items[idx] = resolvedItem
+                        try {
+                            player.replaceMediaItem(idx, resolvedItem.toMediaItem())
+                        } catch (e: Exception) {
+                            Timber.e(e, "Error replacing media item in player at index $idx")
+                        }
+                        if (oldSessionId != null && oldSessionId != resolvedItem.playSessionId) {
+                            playbackManager.stopStreamSession(
+                                itemId = currentItemAtIndex.itemId,
+                                positionMs = 0L,
+                                mediaSourceId = currentItemAtIndex.mediaSourceId,
+                                playSessionId = oldSessionId,
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Error syncing queue media items with quality")
             }
         }
     }
@@ -1882,9 +2052,6 @@ constructor(
         val itemId = UUID.fromString(currentMediaId)
         val currentlyFavorite = _uiState.value.isFavorite
         viewModelScope.launch {
-            if (_uiState.value.selectedQuality.isAuto) {
-                _uiState.update { it.copy(isSpeedTesting = true) }
-            }
             try {
                 if (currentlyFavorite) {
                     repository.unmarkAsFavorite(itemId)
@@ -2022,6 +2189,13 @@ constructor(
         _uiState.update { it.copy(currentTrickplay = null) }
         playWhenReady = false
         playbackPosition = 0L
+        lastKnownPositionMs = 0L
+        lastKnownDurationMs = 0L
+        sessionMeasuredSpeedBps = null
+        reloadStreamJob?.cancel()
+        reloadStreamJob = null
+        syncQueueJob?.cancel()
+        syncQueueJob = null
         currentMediaItemIndex = 0
         player.removeListener(this)
         player.release()
@@ -2034,6 +2208,15 @@ constructor(
             while (player.isPlaying) {
                 delay(1_000L.milliseconds)
                 if (player.isPlaying) {
+                    val pos = player.currentPosition
+                    if (pos > 0L && pos != C.TIME_UNSET) {
+                        lastKnownPositionMs = pos
+                        savedStateHandle["position"] = pos
+                    }
+                    val dur = player.duration
+                    if (dur > 0L && dur != C.TIME_UNSET) {
+                        lastKnownDurationMs = dur
+                    }
                     updateCurrentSegment()
                     _uiState.value.currentTrickplay?.updatePosition(player.currentPosition)
                     progressTick++
@@ -2055,16 +2238,18 @@ constructor(
 
     fun updatePlaybackProgress() {
         val currentPos = player.currentPosition
-        if (currentPos < 0L) {
+        if (currentPos < 0L || currentPos == C.TIME_UNSET) {
             return
         }
+        lastKnownPositionMs = currentPos
+        savedStateHandle["position"] = currentPos
         Timber.d("Updating playback progress")
         viewModelScope.launch(Dispatchers.Main) {
-            savedStateHandle["position"] = currentPos
             if (player.currentMediaItem != null && player.currentMediaItem!!.mediaId.isNotEmpty()) {
                 playbackManager.reportProgress(
                     positionMs = currentPos,
                     isPaused = !player.isPlaying,
+                    playSessionId = playSessionId,
                 )
             }
         }
@@ -2145,6 +2330,17 @@ constructor(
         val newMediaId = mediaItem?.mediaId
         if (newMediaId != null && newMediaId != currentPlayingMediaId) {
             currentPlayingMediaId = newMediaId
+            val nextItem = items.firstOrNull { it.itemId.toString() == newMediaId }
+            lastKnownPositionMs = nextItem?.playbackPosition ?: 0L
+            lastKnownDurationMs = 0L
+            if (nextItem?.playSessionId != null) {
+                playSessionId = nextItem.playSessionId
+            }
+            if (nextItem?.mediaSourceId != null) {
+                currentMediaSourceId = nextItem.mediaSourceId
+            }
+            reloadStreamJob?.cancel()
+            reloadStreamJob = null
             setSubtitleDelay(0L)
             externalSubtitleCacheFiles.forEach { runCatching { it.delete() } }
             externalSubtitleCacheFiles.clear()
@@ -2170,104 +2366,134 @@ constructor(
             eventsChannel.trySend(PlayerEvents.NavigateBack)
             return
         }
-        Timber.d("Playing MediaItem: ${mediaItem?.mediaId}")
+        val targetMediaId = newMediaId ?: player.currentMediaItem?.mediaId ?: return
+        Timber.d("Playing MediaItem: $targetMediaId")
         savedStateHandle["mediaItemIndex"] = player.currentMediaItemIndex
         viewModelScope.launch {
-            if (_uiState.value.selectedQuality.isAuto) {
-                _uiState.update { it.copy(isSpeedTesting = true) }
-            }
             try {
-                items
-                    .first { it.itemId.toString() == player.currentMediaItem?.mediaId }
-                    .let { item ->
-                        currentMediaSourceId = item.mediaSourceId
-                        currentSource = null
-                        selectedAudioStreamIndex = null
-                        val parentIndexNumber = item.parentIndexNumber
-                        val indexNumber = item.indexNumber
-                        val indexNumberEnd = item.indexNumberEnd
-                        val (itemTitle, itemSubtitle) =
-                            if (parentIndexNumber != null && indexNumber != null) {
-                                val epNumberStr =
-                                    if (indexNumberEnd == null || indexNumberEnd <= indexNumber) {
-                                        indexNumber.toString()
-                                    } else {
-                                        "$indexNumber-$indexNumberEnd"
-                                    }
-                                val baseStr = "S$parentIndexNumber:E$epNumberStr"
-                                val partName = item.partName
-                                val partSuffix =
-                                    if (partName != null) {
-                                        " - ${partName.getTranslatablePartName(application)}"
-                                    } else {
-                                        ""
-                                    }
-                                val epTitle = "$baseStr$partSuffix • ${item.name}"
-                                val seriesName = item.seriesName?.takeIf { it.isNotBlank() }
-                                if (seriesName != null) {
-                                    seriesName to epTitle
-                                } else {
-                                    item.name to "$baseStr$partSuffix"
-                                }
+                val item =
+                    items.firstOrNull { it.itemId.toString() == targetMediaId } ?: return@launch
+                currentMediaSourceId = item.mediaSourceId
+                currentSource = null
+                selectedAudioStreamIndex = null
+                val parentIndexNumber = item.parentIndexNumber
+                val indexNumber = item.indexNumber
+                val indexNumberEnd = item.indexNumberEnd
+                val (itemTitle, itemSubtitle) =
+                    if (parentIndexNumber != null && indexNumber != null) {
+                        val epNumberStr =
+                            if (indexNumberEnd == null || indexNumberEnd <= indexNumber) {
+                                indexNumber.toString()
                             } else {
-                                val partName = item.partName
-                                val title =
-                                    if (partName != null) {
-                                        "${item.name} - ${partName.getTranslatablePartName(application)}"
-                                    } else {
-                                        item.name
-                                    }
-                                title to null
+                                "$indexNumber-$indexNumberEnd"
                             }
-                        val loadedSegments =
-                            getSegments(item.itemId, repository) {
-                                appPreferences.getSegmentColor(it.name)
+                        val baseStr = "S$parentIndexNumber:E$epNumberStr"
+                        val partName = item.partName
+                        val partSuffix =
+                            if (partName != null) {
+                                " - ${partName.getTranslatablePartName(application)}"
+                            } else {
+                                ""
                             }
-                        activeSegment = null
-                        currentMediaItemSegments = loadedSegments
-
-                        _uiState.update {
-                            it.copy(
-                                currentItemTitle = itemTitle,
-                                currentItemSubtitle = itemSubtitle,
-                                currentSegment = null,
-                                currentChapters = item.chapters,
-                                segments = loadedSegments,
-                                currentImages = item.images,
-                                showChapterMarkers =
-                                    appPreferences.getValue(appPreferences.playerChapterMarkers),
-                                fileLoaded = false,
-                            )
+                        val epTitle = "$baseStr$partSuffix • ${item.name}"
+                        val seriesName = item.seriesName?.takeIf { it.isNotBlank() }
+                        if (seriesName != null) {
+                            seriesName to epTitle
+                        } else {
+                            item.name to "$baseStr$partSuffix"
                         }
-
-                        hasReportedStart = false
-
-                        currentItem.value = item
-
-                        loadItemMetadata(item.itemId)
-
-                        playlistManager.setCurrentMediaItemIndex(item.itemId)
-
-                        val previousItem = playlistManager.getPreviousPlayerItem()
-                        if (previousItem != null && previousItem !in items) {
-                            items.add(player.currentMediaItemIndex, previousItem)
-                            player.addMediaItem(
-                                player.currentMediaItemIndex,
-                                previousItem.toMediaItem(),
-                            )
-                        }
-
-                        val nextItem = playlistManager.getNextPlayerItem()
-                        if (nextItem != null && nextItem !in items) {
-                            items.add(player.currentMediaItemIndex + 1, nextItem)
-                            player.addMediaItem(
-                                player.currentMediaItemIndex + 1,
-                                nextItem.toMediaItem(),
-                            )
-                        }
-
-                        Timber.tag("PlayerItems").d(items.map { it.indexNumber }.toString())
+                    } else {
+                        val partName = item.partName
+                        val title =
+                            if (partName != null) {
+                                "${item.name} - ${partName.getTranslatablePartName(application)}"
+                            } else {
+                                item.name
+                            }
+                        title to null
                     }
+                val loadedSegments =
+                    getSegments(item.itemId, repository) { appPreferences.getSegmentColor(it.name) }
+                activeSegment = null
+                currentMediaItemSegments = loadedSegments
+
+                _uiState.update {
+                    it.copy(
+                        currentItemTitle = itemTitle,
+                        currentItemSubtitle = itemSubtitle,
+                        currentSegment = null,
+                        currentChapters = item.chapters,
+                        segments = loadedSegments,
+                        currentImages = item.images,
+                        showChapterMarkers =
+                            appPreferences.getValue(appPreferences.playerChapterMarkers),
+                        fileLoaded = false,
+                    )
+                }
+
+                hasReportedStart = false
+
+                currentItem.value = item
+
+                loadItemMetadata(item.itemId)
+
+                playlistManager.setCurrentMediaItemIndex(item.itemId)
+
+                val selectedOption = _uiState.value.selectedQuality
+                val optionBitrate = selectedOption.bitrateBps
+                val requestedBitrate: Int? =
+                    when {
+                        selectedOption.isOriginal -> null
+                        selectedOption.isAuto -> sessionMeasuredSpeedBps ?: 15_000_000
+                        (optionBitrate != null) && (optionBitrate > 0) -> optionBitrate
+                        else -> null
+                    }
+                val effectiveBitrate =
+                    StreamUtils.computeEffectiveBitrate(
+                        settingMaxBitrateKbps =
+                            appPreferences.getValue(appPreferences.castMaxBitrateKbps),
+                        requestedBitrate = requestedBitrate,
+                        isOriginal = selectedOption.isOriginal,
+                        isAuto = selectedOption.isAuto,
+                    )
+                val enableDirectPlay = selectedOption.isOriginal || selectedOption.isAuto
+                val deviceProfile =
+                    DeviceCodecCapabilities.createDeviceProfile(
+                        maxBitrate = effectiveBitrate ?: 120_000_000,
+                        maxWidth = selectedOption.maxWidth,
+                        maxHeight = selectedOption.maxHeight,
+                    )
+
+                val currentIdx = items.indexOfFirst { it.itemId == item.itemId }
+                // 1. Backward Prepend: If playing at the beginning of loaded queue (index 0)
+                if (currentIdx == 0) {
+                    val previousItem =
+                        playlistManager.getPreviousPlayerItem(
+                            maxStreamingBitrate = effectiveBitrate,
+                            deviceProfile = deviceProfile,
+                            enableDirectPlay = enableDirectPlay,
+                        )
+                    if (previousItem != null && items.none { it.itemId == previousItem.itemId }) {
+                        items.add(0, previousItem)
+                        player.addMediaItem(0, previousItem.toMediaItem())
+                    }
+                }
+
+                // 2. Forward Append: If playing at or near the end of loaded queue
+                if (currentIdx >= items.lastIndex) {
+                    val nextItem =
+                        playlistManager.getNextPlayerItem(
+                            maxStreamingBitrate = effectiveBitrate,
+                            deviceProfile = deviceProfile,
+                            enableDirectPlay = enableDirectPlay,
+                        )
+                    if (nextItem != null && items.none { it.itemId == nextItem.itemId }) {
+                        items.add(nextItem)
+                        player.addMediaItem(nextItem.toMediaItem())
+                    }
+                }
+
+                Timber.tag("PlayerItems").d(items.map { it.indexNumber }.toString())
             } catch (e: Exception) {
                 Timber.e(e)
             }
@@ -2326,6 +2552,10 @@ constructor(
         reason: Int,
     ) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+            if (newPosition.positionMs > 0L && newPosition.positionMs != C.TIME_UNSET) {
+                lastKnownPositionMs = newPosition.positionMs
+                savedStateHandle["position"] = newPosition.positionMs
+            }
             _uiState.value.currentTrickplay?.updatePosition(newPosition.positionMs)
             updatePlaybackProgress()
             updateCurrentSegment()
@@ -2649,6 +2879,8 @@ constructor(
                         )
                     }
                 }
+            } else {
+                updatePlaybackProgress()
             }
         } else {
             stopPlaybackProgressJob()

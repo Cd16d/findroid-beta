@@ -85,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
@@ -278,6 +279,13 @@ fun PlayerScreen(
 
     var currentPosition by remember { mutableLongStateOf(0L) }
     var bufferedPosition by remember { mutableLongStateOf(0L) }
+    var currentDuration by remember {
+        mutableLongStateOf(
+            viewModel.player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: 0L,
+        )
+    }
+    val playerDuration =
+        viewModel.player.duration.takeIf { it > 0L && it != C.TIME_UNSET } ?: currentDuration
     var isPlaying by remember { mutableStateOf(viewModel.player.isPlaying) }
     var isBuffering by remember {
         mutableStateOf(viewModel.player.playbackState == Player.STATE_BUFFERING)
@@ -499,13 +507,26 @@ fun PlayerScreen(
             object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
-                    currentPosition = viewModel.player.currentPosition
-                    bufferedPosition = viewModel.player.bufferedPosition
+                    val pos = viewModel.player.currentPosition
+                    if (pos >= 0L && pos != C.TIME_UNSET) {
+                        currentPosition = pos
+                    }
+                    val buf = viewModel.player.bufferedPosition
+                    if (buf >= 0L && buf != C.TIME_UNSET) {
+                        bufferedPosition = buf
+                    }
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     isBuffering = playbackState == Player.STATE_BUFFERING
-                    bufferedPosition = viewModel.player.bufferedPosition
+                    val buf = viewModel.player.bufferedPosition
+                    if (buf >= 0L && buf != C.TIME_UNSET) {
+                        bufferedPosition = buf
+                    }
+                    val dur = viewModel.player.duration
+                    if (dur > 0L && dur != C.TIME_UNSET) {
+                        currentDuration = dur
+                    }
                 }
 
                 override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -519,20 +540,31 @@ fun PlayerScreen(
                     newPosition: Player.PositionInfo,
                     reason: Int,
                 ) {
-                    currentPosition = newPosition.positionMs
-                    bufferedPosition = viewModel.player.bufferedPosition
+                    if (newPosition.positionMs >= 0L && newPosition.positionMs != C.TIME_UNSET) {
+                        currentPosition = newPosition.positionMs
+                    }
+                    val buf = viewModel.player.bufferedPosition
+                    if (buf >= 0L && buf != C.TIME_UNSET) {
+                        bufferedPosition = buf
+                    }
                 }
 
                 override fun onTimelineChanged(timeline: Timeline, reason: Int) {
                     hasPreviousItem = viewModel.player.hasPreviousMediaItem()
                     hasNextItem = viewModel.player.hasNextMediaItem()
                     mediaItemCount = viewModel.player.mediaItemCount
+                    val dur = viewModel.player.duration
+                    if (dur > 0L && dur != C.TIME_UNSET) {
+                        currentDuration = dur
+                    }
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     hasPreviousItem = viewModel.player.hasPreviousMediaItem()
                     hasNextItem = viewModel.player.hasNextMediaItem()
                     mediaItemCount = viewModel.player.mediaItemCount
+                    currentPosition = 0L
+                    currentDuration = 0L
                 }
             }
         viewModel.player.addListener(listener)
@@ -544,8 +576,18 @@ fun PlayerScreen(
     LaunchedEffect(videoPlayerState.controlsVisible, isPlaying, shouldShrinkVideo) {
         if (!videoPlayerState.controlsVisible && !shouldShrinkVideo) return@LaunchedEffect
         while (true) {
-            currentPosition = viewModel.player.currentPosition
-            bufferedPosition = viewModel.player.bufferedPosition
+            val pos = viewModel.player.currentPosition
+            if (pos >= 0L && pos != C.TIME_UNSET) {
+                currentPosition = pos
+            }
+            val buf = viewModel.player.bufferedPosition
+            if (buf >= 0L && buf != C.TIME_UNSET) {
+                bufferedPosition = buf
+            }
+            val dur = viewModel.player.duration
+            if (dur > 0L && dur != C.TIME_UNSET) {
+                currentDuration = dur
+            }
             hasPreviousItem = viewModel.player.hasPreviousMediaItem()
             hasNextItem = viewModel.player.hasNextMediaItem()
             mediaItemCount = viewModel.player.mediaItemCount
@@ -1029,13 +1071,13 @@ fun PlayerScreen(
                     VideoPlayerSeeker(
                         state = videoPlayerState,
                         onSeek = { fraction ->
-                            val duration = viewModel.player.duration.coerceAtLeast(0L)
+                            val duration = playerDuration
                             val targetMs = (fraction * duration).toLong()
                             currentPosition = targetMs
                             viewModel.player.seekTo(targetMs)
                         },
                         contentProgress = currentPosition.milliseconds,
-                        contentDuration = viewModel.player.duration.coerceAtLeast(0L).milliseconds,
+                        contentDuration = playerDuration.milliseconds,
                         bufferedProgress = bufferedPosition.milliseconds,
                         chapters =
                             if (uiState.showChapterMarkers) uiState.currentChapters
@@ -1071,7 +1113,7 @@ fun PlayerScreen(
                         },
                         onSeekRelative = { deltaMs ->
                             videoPlayerState.resetTimeout()
-                            val duration = viewModel.player.duration.coerceAtLeast(0L)
+                            val duration = playerDuration
                             val newPos =
                                 (viewModel.player.currentPosition + deltaMs).coerceIn(0L, duration)
                             currentPosition = newPos
@@ -1158,7 +1200,7 @@ fun PlayerScreen(
                         accumulatedSeekSeconds = seekForwardSec
                         showDoubleTapSeekRight = true
                     }
-                    val duration = viewModel.player.duration.coerceAtLeast(0L)
+                    val duration = playerDuration
                     val newPos =
                         (viewModel.player.currentPosition + seekForwardIncMs).coerceAtMost(duration)
                     viewModel.player.seekTo(newPos)
@@ -1592,10 +1634,7 @@ fun PlayerScreen(
                                                         }
                                                     } else if (isHorizontalDrag) {
                                                         dragChange.consume()
-                                                        val duration =
-                                                            viewModel.player.duration.coerceAtLeast(
-                                                                0L,
-                                                            )
+                                                        val duration = playerDuration
                                                         val deltaMs =
                                                             (totalDragX / size.width * 120_000L)
                                                                 .toLong()
@@ -1706,7 +1745,7 @@ fun PlayerScreen(
                     TrickplayScrubber(
                         trickplay = gestureTrickplay,
                         currentPositionMs = gestureScrubPositionMs,
-                        durationMs = viewModel.player.duration.coerceAtLeast(0L),
+                        durationMs = playerDuration,
                         segments = uiState.segments,
                         chapters = uiState.currentChapters,
                         seekDeltaMs = gestureScrubDeltaMs,
@@ -1734,7 +1773,7 @@ fun PlayerScreen(
                     TrickplayScrubber(
                         trickplay = uiState.currentTrickplay,
                         currentPositionMs = seekBarScrubPositionMs,
-                        durationMs = viewModel.player.duration.coerceAtLeast(0L),
+                        durationMs = playerDuration,
                         segments = uiState.segments,
                         chapters = uiState.currentChapters,
                         seekDeltaMs = 0L,
@@ -1916,7 +1955,7 @@ fun PlayerScreen(
                                     },
                                     onSeekRelative = { deltaMs ->
                                         videoPlayerState.resetTimeout()
-                                        val duration = viewModel.player.duration.coerceAtLeast(0L)
+                                        val duration = playerDuration
                                         val newPos =
                                             (viewModel.player.currentPosition + deltaMs).coerceIn(
                                                 0L,
@@ -1949,14 +1988,13 @@ fun PlayerScreen(
                             VideoPlayerSeeker(
                                 state = videoPlayerState,
                                 onSeek = { fraction ->
-                                    val duration = viewModel.player.duration.coerceAtLeast(0L)
+                                    val duration = playerDuration
                                     val targetMs = (fraction * duration).toLong()
                                     currentPosition = targetMs
                                     viewModel.player.seekTo(targetMs)
                                 },
                                 contentProgress = currentPosition.milliseconds,
-                                contentDuration =
-                                    viewModel.player.duration.coerceAtLeast(0L).milliseconds,
+                                contentDuration = playerDuration.milliseconds,
                                 bufferedProgress = bufferedPosition.milliseconds,
                                 chapters =
                                     if (uiState.showChapterMarkers) uiState.currentChapters
@@ -1990,14 +2028,13 @@ fun PlayerScreen(
                                 VideoPlayerSeeker(
                                     state = videoPlayerState,
                                     onSeek = { fraction ->
-                                        val duration = viewModel.player.duration.coerceAtLeast(0L)
+                                        val duration = playerDuration
                                         val targetMs = (fraction * duration).toLong()
                                         currentPosition = targetMs
                                         viewModel.player.seekTo(targetMs)
                                     },
                                     contentProgress = currentPosition.milliseconds,
-                                    contentDuration =
-                                        viewModel.player.duration.coerceAtLeast(0L).milliseconds,
+                                    contentDuration = playerDuration.milliseconds,
                                     bufferedProgress = bufferedPosition.milliseconds,
                                     chapters =
                                         if (uiState.showChapterMarkers) uiState.currentChapters
@@ -2033,7 +2070,7 @@ fun PlayerScreen(
                                     },
                                     onSeekRelative = { deltaMs ->
                                         videoPlayerState.resetTimeout()
-                                        val duration = viewModel.player.duration.coerceAtLeast(0L)
+                                        val duration = playerDuration
                                         val newPos =
                                             (viewModel.player.currentPosition + deltaMs).coerceIn(
                                                 0L,
