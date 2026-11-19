@@ -21,6 +21,7 @@ data class PlayerItem(
     val chapters: List<PlayerChapter> = emptyList(),
     val trickplayInfo: TrickplayInfo? = null,
     val images: PlayerImages,
+    val playSessionId: String? = null,
 ) : Parcelable
 
 enum class PlayerMediaType {

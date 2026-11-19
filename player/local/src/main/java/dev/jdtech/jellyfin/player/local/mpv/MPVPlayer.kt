@@ -346,6 +346,7 @@ class MPVPlayer(
     private var oldMediaItem: MediaItem? = null
     private var currentResizeMode: PlayerResizeMode = PlayerResizeMode.FIT
     private var playerError: PlaybackException? = null
+    private var isEofHandled = false
     private val commandExecutor = newSingleThreadExecutor()
 
     // mpv events
@@ -376,7 +377,8 @@ class MPVPlayer(
             try {
                 when (property) {
                     "eof-reached" -> {
-                        if (value && isPlayerReady) {
+                        if (value && isPlayerReady && !isEofHandled) {
+                            isEofHandled = true
                             if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
                                 if (pauseAtEndOfMediaItems) {
                                     setPlayerStateAndNotifyIfChanged(
@@ -512,31 +514,6 @@ class MPVPlayer(
                         }
                         setPlayerStateAndNotifyIfChanged(playbackState = STATE_IDLE)
                     }
-                    MpvEndFileReason.MPV_END_FILE_REASON_EOF -> {
-                        if (isPlayerReady) {
-                            if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
-                                if (pauseAtEndOfMediaItems) {
-                                    setPlayerStateAndNotifyIfChanged(
-                                        playWhenReady = false,
-                                        playWhenReadyChangeReason =
-                                            PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                        playbackState = STATE_READY,
-                                    )
-                                } else {
-                                    prepareMediaItem(currentMediaItemIndex + 1)
-                                    play()
-                                }
-                            } else {
-                                setPlayerStateAndNotifyIfChanged(
-                                    playWhenReady = false,
-                                    playWhenReadyChangeReason =
-                                        PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                    playbackState = STATE_ENDED,
-                                )
-                                resetInternalState()
-                            }
-                        }
-                    }
                 }
             } catch (_: Exception) {}
         }
@@ -548,6 +525,7 @@ class MPVPlayer(
             try {
                 when (eventId) {
                     MpvEvent.MPV_EVENT_START_FILE -> {
+                        isEofHandled = false
                         if (!isPlayerReady && initialCommands.isNotEmpty()) {
                             val commandsToRun = initialCommands.toList()
                             initialCommands.clear()
@@ -555,6 +533,7 @@ class MPVPlayer(
                                 if (isReleased) return@execute
                                 try {
                                     for (command in commandsToRun) {
+                                        if (isReleased) return@execute
                                         mpvLib.command(command)
                                     }
                                 } catch (_: Exception) {}
@@ -586,6 +565,7 @@ class MPVPlayer(
                             if (initialSeekTo > 0L) {
                                 val seekToMs = initialSeekTo
                                 initialSeekTo = 0L
+                                currentPositionMs = seekToMs
                                 mpvLib.command(
                                     arrayOf(
                                         "seek",
@@ -880,15 +860,36 @@ class MPVPlayer(
      * @param mediaItems The [MediaItems][MediaItem] to add.
      */
     override fun addMediaItems(index: Int, mediaItems: MutableList<MediaItem>) {
-        internalMediaItems.addAll(index, mediaItems)
-        mediaItems.forEach { mediaItem ->
-            mpvLib.command(
-                arrayOf(
-                    "loadfile",
-                    "${mediaItem.localConfiguration?.uri}",
-                    "insert-at",
-                    index.toString(),
-                ),
+        if (isReleased) return
+        val safeIndex = index.coerceIn(0, internalMediaItems.size)
+        val isAppend = safeIndex >= internalMediaItems.size
+        internalMediaItems.addAll(safeIndex, mediaItems)
+        if (!isAppend && safeIndex <= currentMediaItemIndex) {
+            currentMediaItemIndex += mediaItems.size
+        }
+        mediaItems.forEachIndexed { offset, mediaItem ->
+            val uri = mediaItem.localConfiguration?.uri?.toString() ?: return@forEachIndexed
+            val command =
+                if (isAppend) {
+                    arrayOf(
+                        "loadfile",
+                        uri,
+                        "append",
+                    )
+                } else {
+                    arrayOf(
+                        "loadfile",
+                        uri,
+                        "insert-at",
+                        (safeIndex + offset).toString(),
+                    )
+                }
+            mpvLib.command(command)
+        }
+        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+            listener.onTimelineChanged(
+                timeline,
+                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
             )
         }
     }
@@ -903,7 +904,42 @@ class MPVPlayer(
      *   to the end of the playlist.
      */
     override fun moveMediaItems(fromIndex: Int, toIndex: Int, newIndex: Int) {
-        TODO("Not yet implemented")
+        if (isReleased) return
+        val safeFrom = fromIndex.coerceIn(0, internalMediaItems.size)
+        val safeTo = toIndex.coerceIn(safeFrom, internalMediaItems.size)
+        if (safeFrom >= safeTo) return
+        val moving = mutableListOf<MediaItem>()
+        for (i in (safeTo - 1) downTo safeFrom) {
+            moving.add(0, internalMediaItems.removeAt(i))
+            mpvLib.command(arrayOf("playlist-remove", i.toString()))
+        }
+        val safeNewIndex = newIndex.coerceIn(0, internalMediaItems.size)
+        val isAppend = safeNewIndex >= internalMediaItems.size
+        internalMediaItems.addAll(safeNewIndex, moving)
+        moving.forEachIndexed { offset, mediaItem ->
+            val command =
+                if (isAppend) {
+                    arrayOf(
+                        "loadfile",
+                        "${mediaItem.localConfiguration?.uri}",
+                        "append",
+                    )
+                } else {
+                    arrayOf(
+                        "loadfile",
+                        "${mediaItem.localConfiguration?.uri}",
+                        "insert-at",
+                        (safeNewIndex + offset).toString(),
+                    )
+                }
+            mpvLib.command(command)
+        }
+        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+            listener.onTimelineChanged(
+                timeline,
+                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
+            )
+        }
     }
 
     override fun replaceMediaItems(
@@ -911,7 +947,8 @@ class MPVPlayer(
         toIndex: Int,
         mediaItems: MutableList<MediaItem>,
     ) {
-        TODO("Not yet implemented")
+        removeMediaItems(fromIndex, toIndex)
+        addMediaItems(fromIndex, mediaItems)
     }
 
     /**
@@ -921,7 +958,19 @@ class MPVPlayer(
      * @param toIndex The first item not to be removed (exclusive).
      */
     override fun removeMediaItems(fromIndex: Int, toIndex: Int) {
-        TODO("Not yet implemented")
+        if (isReleased) return
+        val safeFrom = fromIndex.coerceIn(0, internalMediaItems.size)
+        val safeTo = toIndex.coerceIn(safeFrom, internalMediaItems.size)
+        for (i in (safeTo - 1) downTo safeFrom) {
+            internalMediaItems.removeAt(i)
+            mpvLib.command(arrayOf("playlist-remove", i.toString()))
+        }
+        listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
+            listener.onTimelineChanged(
+                timeline,
+                TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED,
+            )
+        }
     }
 
     /**
@@ -968,13 +1017,16 @@ class MPVPlayer(
             .build()
     }
 
-    private fun resetInternalState() {
+    private fun resetInternalState(preserveDuration: Boolean = false) {
         isPlayerReady = false
         isSeekable = false
+        isEofHandled = false
         playerError = null
         playbackState = STATE_IDLE
         currentPositionMs = null
-        currentDurationMs = null
+        if (!preserveDuration) {
+            currentDurationMs = null
+        }
         currentCacheTimeMs = null
         currentDemuxerCacheDurationMs = null
         initialCommands.clear()
@@ -1163,6 +1215,7 @@ class MPVPlayer(
                     }
                     0L
                 } else {
+                    currentPositionMs = seekTo
                     seekTo
                 }
         } else {
@@ -1173,7 +1226,9 @@ class MPVPlayer(
 
     private fun prepareMediaItem(index: Int) {
         internalMediaItems.getOrNull(index)?.let { mediaItem ->
-            resetInternalState()
+            val isSameMediaItem =
+                mediaItem.mediaId.isNotEmpty() && mediaItem.mediaId == currentMediaItem?.mediaId
+            resetInternalState(preserveDuration = isSameMediaItem)
             mediaItem.localConfiguration?.subtitleConfigurations?.forEach { subtitle ->
                 val uriStr = "${subtitle.uri}"
                 if (loadedSubtitlePaths.add(uriStr)) {
@@ -1261,7 +1316,8 @@ class MPVPlayer(
         resetInternalState()
         handler.removeCallbacksAndMessages(null)
         try {
-            commandExecutor.shutdown()
+            commandExecutor.shutdownNow()
+            commandExecutor.awaitTermination(500, java.util.concurrent.TimeUnit.MILLISECONDS)
         } catch (_: Exception) {}
         try {
             mpvLib.removeObserver(this)
@@ -1360,7 +1416,7 @@ class MPVPlayer(
      * prospective position in milliseconds if the [current timeline][.getCurrentTimeline] is empty.
      */
     override fun getCurrentPosition(): Long {
-        return currentPositionMs ?: C.TIME_UNSET
+        return currentPositionMs ?: if (initialSeekTo > 0L) initialSeekTo else C.TIME_UNSET
     }
 
     /**
@@ -1795,13 +1851,16 @@ class MPVPlayer(
         Timber.i("MPV setDialogueBoost: $enabled (audioSessionId: $mpvAudioSessionId)")
         isDialogueBoostActive = enabled
         commandExecutor.execute {
-            if (enabled) {
-                mpvLib.command(
-                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
-                )
-            } else {
-                mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
-            }
+            if (isReleased) return@execute
+            try {
+                if (enabled) {
+                    mpvLib.command(
+                        arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
+                    )
+                } else {
+                    mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -1817,15 +1876,18 @@ class MPVPlayer(
             return
         }
         commandExecutor.execute {
-            mpvLib.command(
-                arrayOf(
-                    "sub-add",
-                    uri,
-                    if (select) "select" else "auto",
-                    title ?: "External",
-                    language ?: "und",
-                ),
-            )
+            if (isReleased) return@execute
+            try {
+                mpvLib.command(
+                    arrayOf(
+                        "sub-add",
+                        uri,
+                        if (select) "select" else "auto",
+                        title ?: "External",
+                        language ?: "und",
+                    ),
+                )
+            } catch (_: Exception) {}
         }
     }
 
