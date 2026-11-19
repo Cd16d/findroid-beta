@@ -495,7 +495,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             )
 
         val targetUri =
-            if (
+            if (mediaSource.type == FindroidSourceType.LOCAL && mediaSource.path.isNotBlank()) {
+                mediaSource.path
+            } else if (
                 playMethod != PlayMethod.DIRECT_PLAY || !mediaSource.transcodingUrl.isNullOrBlank()
             ) {
                 StreamUtils.buildStreamUrl(
@@ -505,7 +507,13 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     transcodingUrl = mediaSource.transcodingUrl,
                 )
             } else {
-                mediaSource.path
+                mediaSource.path.takeIf { it.isNotBlank() }
+                    ?: StreamUtils.buildStreamUrl(
+                        baseUrl = repository.getBaseUrl(),
+                        itemId = id,
+                        mediaSourceId = mediaSource.id,
+                        transcodingUrl = null,
+                    )
             }
 
         val externalSubtitles =

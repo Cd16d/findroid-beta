@@ -2480,7 +2480,7 @@ constructor(
                 }
 
                 // 2. Forward Append: If playing at or near the end of loaded queue
-                if (currentIdx >= items.lastIndex) {
+                if (currentIdx != -1 && currentIdx >= items.lastIndex - 1) {
                     val nextItem =
                         playlistManager.getNextPlayerItem(
                             maxStreamingBitrate = effectiveBitrate,

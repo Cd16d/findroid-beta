@@ -346,6 +346,7 @@ class MPVPlayer(
     private var oldMediaItem: MediaItem? = null
     private var currentResizeMode: PlayerResizeMode = PlayerResizeMode.FIT
     private var playerError: PlaybackException? = null
+    private var isEofHandled = false
     private val commandExecutor = newSingleThreadExecutor()
 
     // mpv events
@@ -376,7 +377,8 @@ class MPVPlayer(
             try {
                 when (property) {
                     "eof-reached" -> {
-                        if (value && isPlayerReady) {
+                        if (value && isPlayerReady && !isEofHandled) {
+                            isEofHandled = true
                             if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
                                 if (pauseAtEndOfMediaItems) {
                                     setPlayerStateAndNotifyIfChanged(
@@ -512,31 +514,6 @@ class MPVPlayer(
                         }
                         setPlayerStateAndNotifyIfChanged(playbackState = STATE_IDLE)
                     }
-                    MpvEndFileReason.MPV_END_FILE_REASON_EOF -> {
-                        if (isPlayerReady) {
-                            if (currentMediaItemIndex < (internalMediaItems.size - 1)) {
-                                if (pauseAtEndOfMediaItems) {
-                                    setPlayerStateAndNotifyIfChanged(
-                                        playWhenReady = false,
-                                        playWhenReadyChangeReason =
-                                            PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                        playbackState = STATE_READY,
-                                    )
-                                } else {
-                                    prepareMediaItem(currentMediaItemIndex + 1)
-                                    play()
-                                }
-                            } else {
-                                setPlayerStateAndNotifyIfChanged(
-                                    playWhenReady = false,
-                                    playWhenReadyChangeReason =
-                                        PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM,
-                                    playbackState = STATE_ENDED,
-                                )
-                                resetInternalState()
-                            }
-                        }
-                    }
                 }
             } catch (_: Exception) {}
         }
@@ -548,6 +525,7 @@ class MPVPlayer(
             try {
                 when (eventId) {
                     MpvEvent.MPV_EVENT_START_FILE -> {
+                        isEofHandled = false
                         if (!isPlayerReady && initialCommands.isNotEmpty()) {
                             val commandsToRun = initialCommands.toList()
                             initialCommands.clear()
@@ -555,6 +533,7 @@ class MPVPlayer(
                                 if (isReleased) return@execute
                                 try {
                                     for (command in commandsToRun) {
+                                        if (isReleased) return@execute
                                         mpvLib.command(command)
                                     }
                                 } catch (_: Exception) {}
@@ -882,25 +861,27 @@ class MPVPlayer(
      */
     override fun addMediaItems(index: Int, mediaItems: MutableList<MediaItem>) {
         if (isReleased) return
-        val isAppend = index >= internalMediaItems.size
-        internalMediaItems.addAll(index, mediaItems)
-        if (index <= currentMediaItemIndex) {
+        val safeIndex = index.coerceIn(0, internalMediaItems.size)
+        val isAppend = safeIndex >= internalMediaItems.size
+        internalMediaItems.addAll(safeIndex, mediaItems)
+        if (!isAppend && safeIndex <= currentMediaItemIndex) {
             currentMediaItemIndex += mediaItems.size
         }
         mediaItems.forEachIndexed { offset, mediaItem ->
+            val uri = mediaItem.localConfiguration?.uri?.toString() ?: return@forEachIndexed
             val command =
                 if (isAppend) {
                     arrayOf(
                         "loadfile",
-                        "${mediaItem.localConfiguration?.uri}",
+                        uri,
                         "append",
                     )
                 } else {
                     arrayOf(
                         "loadfile",
-                        "${mediaItem.localConfiguration?.uri}",
+                        uri,
                         "insert-at",
-                        (index + offset).toString(),
+                        (safeIndex + offset).toString(),
                     )
                 }
             mpvLib.command(command)
@@ -1039,6 +1020,7 @@ class MPVPlayer(
     private fun resetInternalState(preserveDuration: Boolean = false) {
         isPlayerReady = false
         isSeekable = false
+        isEofHandled = false
         playerError = null
         playbackState = STATE_IDLE
         currentPositionMs = null
@@ -1334,7 +1316,8 @@ class MPVPlayer(
         resetInternalState()
         handler.removeCallbacksAndMessages(null)
         try {
-            commandExecutor.shutdown()
+            commandExecutor.shutdownNow()
+            commandExecutor.awaitTermination(500, java.util.concurrent.TimeUnit.MILLISECONDS)
         } catch (_: Exception) {}
         try {
             mpvLib.removeObserver(this)
@@ -1868,13 +1851,16 @@ class MPVPlayer(
         Timber.i("MPV setDialogueBoost: $enabled (audioSessionId: $mpvAudioSessionId)")
         isDialogueBoostActive = enabled
         commandExecutor.execute {
-            if (enabled) {
-                mpvLib.command(
-                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
-                )
-            } else {
-                mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
-            }
+            if (isReleased) return@execute
+            try {
+                if (enabled) {
+                    mpvLib.command(
+                        arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
+                    )
+                } else {
+                    mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -1890,15 +1876,18 @@ class MPVPlayer(
             return
         }
         commandExecutor.execute {
-            mpvLib.command(
-                arrayOf(
-                    "sub-add",
-                    uri,
-                    if (select) "select" else "auto",
-                    title ?: "External",
-                    language ?: "und",
-                ),
-            )
+            if (isReleased) return@execute
+            try {
+                mpvLib.command(
+                    arrayOf(
+                        "sub-add",
+                        uri,
+                        if (select) "select" else "auto",
+                        title ?: "External",
+                        language ?: "und",
+                    ),
+                )
+            } catch (_: Exception) {}
         }
     }
 
