@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.graphics.Rect as AndroidRect
 import android.media.AudioManager
 import android.provider.Settings
 import android.view.View
@@ -124,6 +125,7 @@ import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.domain.Constants.PlayerResizeMode
 import java.util.UUID
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.Job
@@ -141,6 +143,59 @@ private fun VideoSize.toAspectRatio(): Float =
     }
 
 /**
+ * Calculates the bounding [AndroidRect] of the visible video viewport in screen/window coordinates
+ * for Picture-in-Picture source bounds hint tracking.
+ */
+internal fun calculatePipSourceRect(
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    videoAspectRatio: Float,
+    isShrunk: Boolean,
+    shrunkWidthPx: Float,
+    shrunkHeightPx: Float,
+    shrunkCenterXPx: Float,
+    shrunkCenterYPx: Float,
+): AndroidRect {
+    if (screenWidthPx <= 0f || screenHeightPx <= 0f) {
+        return AndroidRect()
+    }
+    val safeAspect =
+        (if (videoAspectRatio > 0f) videoAspectRatio else 16f / 9f).coerceIn(1f / 2.39f, 2.39f)
+
+    if (isShrunk && shrunkWidthPx > 0f && shrunkHeightPx > 0f) {
+        val rawWidth = shrunkWidthPx
+        val rawHeight = shrunkHeightPx
+        val finalWidth = if (rawWidth / rawHeight > 2.39f) rawHeight * 2.39f else rawWidth
+        val finalHeight = if (rawWidth / rawHeight < 1f / 2.39f) rawWidth * 2.39f else rawHeight
+        val left = (shrunkCenterXPx - finalWidth / 2f).roundToInt()
+        val top = (shrunkCenterYPx - finalHeight / 2f).roundToInt()
+        val right = (shrunkCenterXPx + finalWidth / 2f).roundToInt()
+        val bottom = (shrunkCenterYPx + finalHeight / 2f).roundToInt()
+        return AndroidRect(left, top, right, bottom)
+    }
+
+    val containerAspect = screenWidthPx / screenHeightPx
+    val rectWidth: Int
+    val rectHeight: Int
+    val left: Int
+    val top: Int
+    if (containerAspect > safeAspect) {
+        rectHeight = screenHeightPx.roundToInt()
+        rectWidth =
+            (screenHeightPx * safeAspect).roundToInt().coerceAtMost(screenWidthPx.roundToInt())
+        left = ((screenWidthPx - rectWidth) / 2f).roundToInt()
+        top = 0
+    } else {
+        rectWidth = screenWidthPx.roundToInt()
+        rectHeight =
+            (screenWidthPx / safeAspect).roundToInt().coerceAtMost(screenHeightPx.roundToInt())
+        left = 0
+        top = ((screenHeightPx - rectHeight) / 2f).roundToInt()
+    }
+    return AndroidRect(left, top, left + rectWidth, top + rectHeight)
+}
+
+/**
  * Fullscreen video player screen providing gesture-based scrubbing, volume/brightness swipe HUDs,
  * double-tap seeking, chapter navigation, track selection, and PiP on phone and tablet devices.
  *
@@ -156,6 +211,9 @@ private fun VideoSize.toAspectRatio(): Float =
  * @param onToggleOrientation Callback to lock or toggle display orientation.
  * @param isOrientationLocked Whether orientation lock is currently active.
  * @param volumeKeyEvents Stream of hardware volume key events (true for up, false for down).
+ * @param onPlayerViewAvailable Callback invoked when the [PlayerView] is created or laid out.
+ * @param onPipSourceRectHintChanged Callback invoked when the video viewport boundary changes for
+ *   PiP sourceRectHint tracking.
  * @param appPreferences Injected or remembered [AppPreferences] instance.
  * @param viewModel Injected [PlayerViewModel] managing media playback state.
  */
@@ -175,6 +233,7 @@ fun PlayerScreen(
     isOrientationLocked: Boolean = false,
     volumeKeyEvents: Flow<VolumeKeyEvent> = emptyFlow(),
     onPlayerViewAvailable: (PlayerView) -> Unit = {},
+    onPipSourceRectHintChanged: (AndroidRect) -> Unit = {},
     appPreferences: AppPreferences? = null,
     viewModel: PlayerViewModel = hiltViewModel(),
 ) {
@@ -665,6 +724,44 @@ fun PlayerScreen(
 
             val targetCenterX = if (isShrunkOrAnimating) shrunkCenterX else fullCenterX
             val targetCenterY = if (isShrunkOrAnimating) shrunkCenterY else fullCenterY
+
+            val isSettledShrunk = shouldShrinkVideo && panelProgressState.value == 1f
+            val isSettledFull = !shouldShrinkVideo && panelProgressState.value == 0f
+
+            LaunchedEffect(
+                shouldShrinkVideo,
+                isSettledShrunk,
+                isSettledFull,
+                videoAspectRatio,
+                currentResizeMode,
+                screenWidth,
+                screenHeight,
+            ) {
+                val densityVal = density.density
+                val screenWPx = screenWidth.value * densityVal
+                val screenHPx = screenHeight.value * densityVal
+                val shrunkWPx = shrunkVideoWidth.value * densityVal
+                val shrunkHPx = shrunkVideoHeight.value * densityVal
+                val shrunkCXPx = shrunkCenterX.value * densityVal
+                val shrunkCYPx = shrunkCenterY.value * densityVal
+
+                val useShrunk = shouldShrinkVideo || panelProgressState.value > 0.5f
+
+                val rect =
+                    calculatePipSourceRect(
+                        screenWidthPx = screenWPx,
+                        screenHeightPx = screenHPx,
+                        videoAspectRatio = videoAspectRatio,
+                        isShrunk = useShrunk,
+                        shrunkWidthPx = shrunkWPx,
+                        shrunkHeightPx = shrunkHPx,
+                        shrunkCenterXPx = shrunkCXPx,
+                        shrunkCenterYPx = shrunkCYPx,
+                    )
+                if (!rect.isEmpty) {
+                    onPipSourceRectHintChanged(rect)
+                }
+            }
 
             val videoTop = targetCenterY - (targetHeight / 2)
 
@@ -1753,7 +1850,31 @@ fun PlayerScreen(
                                 openedPanelDirectly = true
                                 videoPlayerState.sidePanelType = PlayerSidePanelType.AUDIO
                             },
-                            onEnterPip = onEnterPip,
+                            onEnterPip = {
+                                val densityVal = density.density
+                                val screenWPx = screenWidth.value * densityVal
+                                val screenHPx = screenHeight.value * densityVal
+                                val shrunkWPx = shrunkVideoWidth.value * densityVal
+                                val shrunkHPx = shrunkVideoHeight.value * densityVal
+                                val shrunkCXPx = shrunkCenterX.value * densityVal
+                                val shrunkCYPx = shrunkCenterY.value * densityVal
+                                val useShrunk = shouldShrinkVideo || panelProgressState.value > 0.5f
+                                val rect =
+                                    calculatePipSourceRect(
+                                        screenWidthPx = screenWPx,
+                                        screenHeightPx = screenHPx,
+                                        videoAspectRatio = videoAspectRatio,
+                                        isShrunk = useShrunk,
+                                        shrunkWidthPx = shrunkWPx,
+                                        shrunkHeightPx = shrunkHPx,
+                                        shrunkCenterXPx = shrunkCXPx,
+                                        shrunkCenterYPx = shrunkCYPx,
+                                    )
+                                if (!rect.isEmpty) {
+                                    onPipSourceRectHintChanged(rect)
+                                }
+                                onEnterPip()
+                            },
                             onOpenSettings = {
                                 openedPanelDirectly = false
                                 videoPlayerState.sidePanelType = PlayerSidePanelType.SETTINGS
@@ -2112,6 +2233,45 @@ private fun PlayerScreenPortraitPreview() {
                 contentDuration = 42.minutes,
                 isCompactWidth = true,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000, widthDp = 1200, heightDp = 800)
+@Composable
+private fun PlayerScreenTabletExpandedPreview() {
+    FindroidTheme(darkTheme = true) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            PlayerTopBar(
+                title = "Inception (2010)",
+                subtitle = "1080p HEVC TrueHD",
+                onBack = {},
+                onOpenSubtitles = {},
+                onOpenAudio = {},
+                onEnterPip = {},
+                onOpenSettings = {},
+                onToggleOrientation = {},
+                isCompactWidth = false,
+            )
+            PlayerCenterControls(
+                isPlaying = true,
+                isBuffering = false,
+                onPlayPause = {},
+                onSeekRelative = {},
+                hasPreviousItem = false,
+                hasNextItem = false,
+                onPreviousItem = {},
+                onNextItem = {},
+                modifier = Modifier.align(Alignment.Center),
+            )
+            VideoPlayerSeeker(
+                state = rememberVideoPlayerState(),
+                onSeek = {},
+                contentProgress = 42.minutes,
+                contentDuration = 148.minutes,
+                isCompactWidth = false,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp),
             )
         }
     }
