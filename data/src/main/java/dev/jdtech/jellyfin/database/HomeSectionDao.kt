@@ -22,6 +22,15 @@ interface HomeSectionDao {
         userId: UUID,
     ): Flow<List<HomeSectionWithItems>>
 
+    @Transaction
+    @Query(
+        "SELECT * FROM home_sections WHERE serverId = :serverId AND userId = :userId AND sectionId != 'suggestions_buffer' ORDER BY orderIndex ASC",
+    )
+    suspend fun getHomeSectionsWithItems(
+        serverId: String,
+        userId: UUID,
+    ): List<HomeSectionWithItems>
+
     @Query(
         "SELECT * FROM home_items WHERE serverId = :serverId AND userId = :userId AND sectionId = :sectionId ORDER BY orderIndex ASC",
     )
@@ -33,6 +42,9 @@ interface HomeSectionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSections(sections: List<HomeSectionEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSection(section: HomeSectionEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItems(items: List<HomeItemEntity>)
@@ -49,6 +61,20 @@ interface HomeSectionDao {
         "DELETE FROM home_sections WHERE serverId = :serverId AND userId = :userId AND sectionId NOT IN ('suggestions', 'suggestions_buffer')",
     )
     suspend fun deleteNonSuggestionSections(serverId: String, userId: UUID)
+
+    @Transaction
+    suspend fun replaceSectionItems(
+        serverId: String,
+        userId: UUID,
+        section: HomeSectionEntity,
+        items: List<HomeItemEntity>,
+    ) {
+        deleteSection(serverId, userId, section.sectionId)
+        if (items.isNotEmpty()) {
+            insertSection(section)
+            insertItems(items)
+        }
+    }
 
     @Transaction
     suspend fun replaceAllHomeSections(

@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -21,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -38,11 +41,14 @@ import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSuggestions
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeView
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServer
+import dev.jdtech.jellyfin.core.presentation.theme.FindroidMotion
+import dev.jdtech.jellyfin.core.presentation.theme.rememberLazyListStateAtStart
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
 import dev.jdtech.jellyfin.film.presentation.home.HomeState
 import dev.jdtech.jellyfin.film.presentation.home.HomeViewModel
 import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.HomeItem
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
@@ -111,56 +117,101 @@ private fun HomeScreenLayout(
             state.nextUpSection == null &&
             state.views.isEmpty()
 
+    val rows =
+        remember(state.suggestionsSection, state.resumeSection, state.nextUpSection, state.views) {
+            buildList {
+                state.suggestionsSection?.let { add(it) }
+                state.resumeSection?.let { add(it) }
+                state.nextUpSection?.let { add(it) }
+                addAll(state.views.distinctBy { it.id })
+            }
+        }
+    val listState = rememberLazyListStateAtStart(firstKey = rows.firstOrNull()?.id)
+
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
         PullToRefreshBox(
-            isRefreshing = state.isLoading && !isHomeEmpty,
+            isRefreshing = state.isLoading,
             onRefresh = { onAction(HomeAction.Refresh) },
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
+                state = listState,
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
             ) {
-                state.suggestionsSection?.let { section ->
-                    item(key = section.id) {
-                        HomeCarousel(
-                            items = section.items,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                        )
+                items(rows, key = { it.id }, contentType = { it::class }) { row ->
+                    when (row) {
+                        is HomeItem.Suggestions -> {
+                            HomeCarousel(
+                                items = row.items,
+                                itemsPadding = itemsPadding,
+                                onAction = onAction,
+                            )
+                        }
+                        is HomeItem.Section -> {
+                            HomeSection(
+                                section = row.homeSection,
+                                itemsPadding = itemsPadding,
+                                onAction = onAction,
+                                modifier =
+                                    Modifier.animateItem(
+                                        fadeInSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingEnter,
+                                            ),
+                                        placementSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingStandard,
+                                            ),
+                                        fadeOutSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_SHORT,
+                                                easing = FindroidMotion.EasingExit,
+                                            ),
+                                    ),
+                                hideEpisodeSpoilers = state.hideEpisodeSpoilers,
+                            )
+                        }
+                        is HomeItem.ViewItem -> {
+                            HomeView(
+                                view = row,
+                                itemsPadding = itemsPadding,
+                                onAction = onAction,
+                                modifier =
+                                    Modifier.animateItem(
+                                        fadeInSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingEnter,
+                                            ),
+                                        placementSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingStandard,
+                                            ),
+                                        fadeOutSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_SHORT,
+                                                easing = FindroidMotion.EasingExit,
+                                            ),
+                                    ),
+                                hideEpisodeSpoilers = state.hideEpisodeSpoilers,
+                            )
+                        }
+                        else -> Unit
                     }
                 }
-                state.resumeSection?.let { section ->
-                    item(key = section.id) {
-                        HomeSection(
-                            section = section.homeSection,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                            modifier = Modifier.animateItem(),
-                            hideEpisodeSpoilers = state.hideEpisodeSpoilers,
-                        )
-                    }
-                }
-                state.nextUpSection?.let { section ->
-                    item(key = section.id) {
-                        HomeSection(
-                            section = section.homeSection,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                            modifier = Modifier.animateItem(),
-                            hideEpisodeSpoilers = state.hideEpisodeSpoilers,
-                        )
-                    }
-                }
-                items(state.views.distinctBy { it.id }, key = { it.id }) { view ->
-                    HomeView(
-                        view = view,
-                        itemsPadding = itemsPadding,
-                        onAction = onAction,
-                        modifier = Modifier.animateItem(),
-                        hideEpisodeSpoilers = state.hideEpisodeSpoilers,
-                    )
-                }
+            }
+        }
+
+        if (isHomeEmpty && state.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(top = contentPaddingTop),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
             }
         }
 

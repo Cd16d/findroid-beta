@@ -17,6 +17,8 @@ data class HomeData(
 interface HomeRepository {
     fun observeHomeData(serverId: String, userId: UUID): Flow<HomeData>
 
+    suspend fun getCachedHomeData(serverId: String, userId: UUID): HomeData
+
     suspend fun rotateSuggestionsBuffer(serverId: String, userId: UUID): Boolean
 
     suspend fun refreshHome(

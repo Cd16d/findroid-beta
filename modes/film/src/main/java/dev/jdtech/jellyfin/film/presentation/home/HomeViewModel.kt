@@ -53,6 +53,32 @@ constructor(
     private var loadDataJob: Job? = null
 
     init {
+        // Fast cold-start cache priming (<15ms): populate state on Frame 1 from Room
+        viewModelScope.launch(Dispatchers.IO) {
+            val serverId = appPreferences.getValue(appPreferences.currentServer) ?: return@launch
+            val server = database.getServer(serverId)
+            val user = database.getServerCurrentUser(serverId) ?: return@launch
+            activeServerId = serverId
+            activeUserId = user.id
+            val baseUrl = repository.getBaseUrl()
+            val imageUrl = user.getProfileImageModel(context, baseUrl)
+            val cachedData = homeRepository.getCachedHomeData(serverId, user.id)
+            if (!cachedData.isEmpty) {
+                _state.update { current ->
+                    current.copy(
+                        server = server ?: current.server,
+                        userName = user.name,
+                        userImageUrl = imageUrl,
+                        suggestionsSection = cachedData.suggestions ?: current.suggestionsSection,
+                        resumeSection = cachedData.resume ?: current.resumeSection,
+                        nextUpSection = cachedData.nextUp ?: current.nextUpSection,
+                        views =
+                            if (cachedData.views.isNotEmpty()) cachedData.views else current.views,
+                    )
+                }
+            }
+        }
+
         viewModelScope.launch {
             appPreferences.observe(appPreferences.hideEpisodeSpoilers).collect { hideSpoilers ->
                 _state.update { it.copy(hideEpisodeSpoilers = hideSpoilers) }
@@ -142,7 +168,11 @@ constructor(
                 }
 
                 if (isAppOpen) {
-                    homeRepository.rotateSuggestionsBuffer(serverId, user.id)
+                    val rotated = homeRepository.rotateSuggestionsBuffer(serverId, user.id)
+                    if (rotated) {
+                        val freshCached = homeRepository.getCachedHomeData(serverId, user.id)
+                        _state.update { it.copy(suggestionsSection = freshCached.suggestions) }
+                    }
                 }
 
                 // Cache user profile image to internal storage if not already present

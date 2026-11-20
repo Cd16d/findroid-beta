@@ -55,6 +55,11 @@ constructor(
         }
     }
 
+    override suspend fun getCachedHomeData(serverId: String, userId: UUID): HomeData {
+        val sectionsWithItems = homeSectionDao.getHomeSectionsWithItems(serverId, userId)
+        return mapSectionsToHomeData(sectionsWithItems)
+    }
+
     private fun mapSectionsToHomeData(sectionsWithItems: List<HomeSectionWithItems>): HomeData {
         var suggestions: HomeItem.Suggestions? = null
         var resume: HomeItem.Section? = null
@@ -136,7 +141,7 @@ constructor(
         withContext(Dispatchers.IO) {
             try {
                 coroutineScope {
-                    val suggestionsDeferred = async {
+                    val suggestionsJob = async {
                         if (
                             refreshSuggestions &&
                                 appPreferences.getValue(appPreferences.homeSuggestions)
@@ -147,202 +152,213 @@ constructor(
                                     startIndex = suggestionsOffset,
                                     limit = SUGGESTIONS_BATCH_SIZE,
                                 )
-                            if (fetched.isEmpty() && suggestionsOffset > 0) {
-                                suggestionsOffset = 0
-                                jellyfinRepository.getSuggestions(
-                                    forceRefresh = true,
-                                    startIndex = 0,
-                                    limit = SUGGESTIONS_BATCH_SIZE,
-                                )
-                            } else {
-                                fetched
+                            val finalSuggestions =
+                                if (fetched.isEmpty() && suggestionsOffset > 0) {
+                                    suggestionsOffset = 0
+                                    jellyfinRepository.getSuggestions(
+                                        forceRefresh = true,
+                                        startIndex = 0,
+                                        limit = SUGGESTIONS_BATCH_SIZE,
+                                    )
+                                } else {
+                                    fetched
+                                }
+
+                            if (finalSuggestions.isNotEmpty()) {
+                                val activeSuggestions =
+                                    homeSectionDao.getItemsForSection(
+                                        serverId,
+                                        userId,
+                                        SECTION_ID_SUGGESTIONS,
+                                    )
+                                if (activeSuggestions.isEmpty()) {
+                                    val section =
+                                        HomeSectionEntity(
+                                            id = "${serverId}_${userId}_$SECTION_ID_SUGGESTIONS",
+                                            serverId = serverId,
+                                            userId = userId,
+                                            sectionId = SECTION_ID_SUGGESTIONS,
+                                            sectionType = SECTION_TYPE_SUGGESTIONS,
+                                            title = "",
+                                            collectionType = null,
+                                            orderIndex = 0,
+                                        )
+                                    val items = finalSuggestions.mapIndexed { idx, item ->
+                                        item.toHomeItemEntity(
+                                            serverId,
+                                            userId,
+                                            SECTION_ID_SUGGESTIONS,
+                                            idx,
+                                        )
+                                    }
+                                    homeSectionDao.replaceSectionItems(
+                                        serverId,
+                                        userId,
+                                        section,
+                                        items,
+                                    )
+
+                                    suggestionsOffset = SUGGESTIONS_BATCH_SIZE
+                                    val bufferBatch =
+                                        jellyfinRepository.getSuggestions(
+                                            forceRefresh = true,
+                                            startIndex = suggestionsOffset,
+                                            limit = SUGGESTIONS_BATCH_SIZE,
+                                        )
+                                    if (bufferBatch.isNotEmpty()) {
+                                        homeSectionDao.saveSuggestionsBuffer(
+                                            serverId,
+                                            userId,
+                                            bufferBatch.mapIndexed { idx, item ->
+                                                item.toHomeItemEntity(
+                                                    serverId,
+                                                    userId,
+                                                    SECTION_ID_SUGGESTIONS_BUFFER,
+                                                    idx,
+                                                )
+                                            },
+                                        )
+                                    }
+                                } else {
+                                    homeSectionDao.saveSuggestionsBuffer(
+                                        serverId,
+                                        userId,
+                                        finalSuggestions.mapIndexed { idx, item ->
+                                            item.toHomeItemEntity(
+                                                serverId,
+                                                userId,
+                                                SECTION_ID_SUGGESTIONS_BUFFER,
+                                                idx,
+                                            )
+                                        },
+                                    )
+                                }
                             }
-                        } else {
-                            emptyList()
+                        } else if (!appPreferences.getValue(appPreferences.homeSuggestions)) {
+                            homeSectionDao.deleteSection(serverId, userId, SECTION_ID_SUGGESTIONS)
                         }
                     }
-                    val resumeDeferred = async {
+
+                    val resumeJob = async {
                         if (appPreferences.getValue(appPreferences.homeContinueWatching)) {
-                            jellyfinRepository.getResumeItems()
+                            val resume = jellyfinRepository.getResumeItems()
+                            val section =
+                                HomeSectionEntity(
+                                    id = "${serverId}_${userId}_$SECTION_ID_RESUME",
+                                    serverId = serverId,
+                                    userId = userId,
+                                    sectionId = SECTION_ID_RESUME,
+                                    sectionType = SECTION_TYPE_RESUME,
+                                    title = "Continue Watching",
+                                    collectionType = null,
+                                    orderIndex = 1,
+                                )
+                            val items = resume.mapIndexed { idx, item ->
+                                item.toHomeItemEntity(serverId, userId, SECTION_ID_RESUME, idx)
+                            }
+                            homeSectionDao.replaceSectionItems(serverId, userId, section, items)
                         } else {
-                            emptyList()
+                            homeSectionDao.deleteSection(serverId, userId, SECTION_ID_RESUME)
                         }
                     }
-                    val nextUpDeferred = async {
+
+                    val nextUpJob = async {
                         if (appPreferences.getValue(appPreferences.homeNextUp)) {
-                            jellyfinRepository.getNextUp()
+                            val nextUp = jellyfinRepository.getNextUp()
+                            val section =
+                                HomeSectionEntity(
+                                    id = "${serverId}_${userId}_$SECTION_ID_NEXT_UP",
+                                    serverId = serverId,
+                                    userId = userId,
+                                    sectionId = SECTION_ID_NEXT_UP,
+                                    sectionType = SECTION_TYPE_NEXT_UP,
+                                    title = "Next Up",
+                                    collectionType = null,
+                                    orderIndex = 2,
+                                )
+                            val items = nextUp.mapIndexed { idx, item ->
+                                item.toHomeItemEntity(serverId, userId, SECTION_ID_NEXT_UP, idx)
+                            }
+                            homeSectionDao.replaceSectionItems(serverId, userId, section, items)
                         } else {
-                            emptyList()
+                            homeSectionDao.deleteSection(serverId, userId, SECTION_ID_NEXT_UP)
                         }
                     }
-                    val viewsDeferred = async {
+
+                    val viewsJob = async {
                         if (appPreferences.getValue(appPreferences.homeLatest)) {
                             val supportedViews =
                                 jellyfinRepository.getUserViews().filter { view ->
                                     CollectionType.fromString(view.collectionType?.serialName) in
                                         CollectionType.supported
                                 }
+                            val supportedViewIds = supportedViews.map { it.id.toString() }.toSet()
+                            val cachedSections =
+                                homeSectionDao.getHomeSectionsWithItems(serverId, userId)
+                            for (cached in cachedSections) {
+                                if (
+                                    cached.section.sectionType == SECTION_TYPE_VIEW &&
+                                        cached.section.sectionId !in supportedViewIds
+                                ) {
+                                    homeSectionDao.deleteSection(
+                                        serverId,
+                                        userId,
+                                        cached.section.sectionId,
+                                    )
+                                }
+                            }
                             supportedViews
-                                .map { view ->
+                                .mapIndexed { viewIdx, view ->
                                     async {
-                                        val latest = jellyfinRepository.getLatestMedia(view.id)
-                                        view to latest
+                                        val latestItems = jellyfinRepository.getLatestMedia(view.id)
+                                        val viewSectionId = view.id.toString()
+                                        val section =
+                                            HomeSectionEntity(
+                                                id = "${serverId}_${userId}_$viewSectionId",
+                                                serverId = serverId,
+                                                userId = userId,
+                                                sectionId = viewSectionId,
+                                                sectionType = SECTION_TYPE_VIEW,
+                                                title = view.name.orEmpty(),
+                                                collectionType = view.collectionType?.serialName,
+                                                orderIndex = 10 + viewIdx,
+                                            )
+                                        val items = latestItems.mapIndexed { itemIdx, item ->
+                                            item.toHomeItemEntity(
+                                                serverId,
+                                                userId,
+                                                viewSectionId,
+                                                itemIdx,
+                                            )
+                                        }
+                                        homeSectionDao.replaceSectionItems(
+                                            serverId,
+                                            userId,
+                                            section,
+                                            items,
+                                        )
                                     }
                                 }
                                 .awaitAll()
-                                .filter { (_, latest) -> latest.isNotEmpty() }
                         } else {
-                            emptyList()
-                        }
-                    }
-
-                    val suggestions = suggestionsDeferred.await()
-                    val resume = resumeDeferred.await()
-                    val nextUp = nextUpDeferred.await()
-                    val views = viewsDeferred.await()
-
-                    val sections = mutableListOf<HomeSectionEntity>()
-                    val items = mutableListOf<HomeItemEntity>()
-
-                    if (refreshSuggestions && suggestions.isNotEmpty()) {
-                        val activeSuggestions =
-                            homeSectionDao.getItemsForSection(
-                                serverId,
-                                userId,
-                                SECTION_ID_SUGGESTIONS,
-                            )
-                        if (activeSuggestions.isEmpty()) {
-                            // First run / clean state: populate active suggestions immediately
-                            sections.add(
-                                HomeSectionEntity(
-                                    id = "${serverId}_${userId}_$SECTION_ID_SUGGESTIONS",
-                                    serverId = serverId,
-                                    userId = userId,
-                                    sectionId = SECTION_ID_SUGGESTIONS,
-                                    sectionType = SECTION_TYPE_SUGGESTIONS,
-                                    title = "",
-                                    collectionType = null,
-                                    orderIndex = 0,
-                                ),
-                            )
-                            items.addAll(
-                                suggestions.mapIndexed { idx, item ->
-                                    item.toHomeItemEntity(
+                            val cachedSections =
+                                homeSectionDao.getHomeSectionsWithItems(serverId, userId)
+                            for (cached in cachedSections) {
+                                if (cached.section.sectionType == SECTION_TYPE_VIEW) {
+                                    homeSectionDao.deleteSection(
                                         serverId,
                                         userId,
-                                        SECTION_ID_SUGGESTIONS,
-                                        idx,
+                                        cached.section.sectionId,
                                     )
-                                },
-                            )
-                            // Also pre-fetch buffer for next session
-                            suggestionsOffset = SUGGESTIONS_BATCH_SIZE
-                            val bufferBatch =
-                                jellyfinRepository.getSuggestions(
-                                    forceRefresh = true,
-                                    startIndex = suggestionsOffset,
-                                    limit = SUGGESTIONS_BATCH_SIZE,
-                                )
-                            if (bufferBatch.isNotEmpty()) {
-                                homeSectionDao.saveSuggestionsBuffer(
-                                    serverId,
-                                    userId,
-                                    bufferBatch.mapIndexed { idx, item ->
-                                        item.toHomeItemEntity(
-                                            serverId,
-                                            userId,
-                                            SECTION_ID_SUGGESTIONS_BUFFER,
-                                            idx,
-                                        )
-                                    },
-                                )
+                                }
                             }
-                        } else {
-                            // Active suggestions already exists: save this new batch into the
-                            // buffer
-                            homeSectionDao.saveSuggestionsBuffer(
-                                serverId,
-                                userId,
-                                suggestions.mapIndexed { idx, item ->
-                                    item.toHomeItemEntity(
-                                        serverId,
-                                        userId,
-                                        SECTION_ID_SUGGESTIONS_BUFFER,
-                                        idx,
-                                    )
-                                },
-                            )
                         }
                     }
 
-                    if (resume.isNotEmpty()) {
-                        sections.add(
-                            HomeSectionEntity(
-                                id = "${serverId}_${userId}_$SECTION_ID_RESUME",
-                                serverId = serverId,
-                                userId = userId,
-                                sectionId = SECTION_ID_RESUME,
-                                sectionType = SECTION_TYPE_RESUME,
-                                title = "Continue Watching",
-                                collectionType = null,
-                                orderIndex = 1,
-                            ),
-                        )
-                        items.addAll(
-                            resume.mapIndexed { idx, item ->
-                                item.toHomeItemEntity(serverId, userId, SECTION_ID_RESUME, idx)
-                            },
-                        )
-                    }
-
-                    if (nextUp.isNotEmpty()) {
-                        sections.add(
-                            HomeSectionEntity(
-                                id = "${serverId}_${userId}_$SECTION_ID_NEXT_UP",
-                                serverId = serverId,
-                                userId = userId,
-                                sectionId = SECTION_ID_NEXT_UP,
-                                sectionType = SECTION_TYPE_NEXT_UP,
-                                title = "Next Up",
-                                collectionType = null,
-                                orderIndex = 2,
-                            ),
-                        )
-                        items.addAll(
-                            nextUp.mapIndexed { idx, item ->
-                                item.toHomeItemEntity(serverId, userId, SECTION_ID_NEXT_UP, idx)
-                            },
-                        )
-                    }
-
-                    views.forEachIndexed { viewIdx, (view, latestItems) ->
-                        val viewSectionId = view.id.toString()
-                        sections.add(
-                            HomeSectionEntity(
-                                id = "${serverId}_${userId}_$viewSectionId",
-                                serverId = serverId,
-                                userId = userId,
-                                sectionId = viewSectionId,
-                                sectionType = SECTION_TYPE_VIEW,
-                                title = view.name.orEmpty(),
-                                collectionType = view.collectionType?.serialName,
-                                orderIndex = 3 + viewIdx,
-                            ),
-                        )
-                        items.addAll(
-                            latestItems.mapIndexed { itemIdx, item ->
-                                item.toHomeItemEntity(serverId, userId, viewSectionId, itemIdx)
-                            },
-                        )
-                    }
-
-                    homeSectionDao.replaceAllHomeSections(
-                        serverId = serverId,
-                        userId = userId,
-                        sections = sections,
-                        items = items,
-                        preserveSuggestions = !refreshSuggestions || suggestions.isEmpty(),
-                    )
+                    suggestionsJob.await()
+                    resumeJob.await()
+                    nextUpJob.await()
+                    viewsJob.await()
                     Result.success(Unit)
                 }
             } catch (e: CancellationException) {
