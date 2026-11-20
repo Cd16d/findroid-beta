@@ -2,8 +2,11 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.components.UserAvatar
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServer
+import dev.jdtech.jellyfin.core.presentation.theme.FindroidMotion
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 
@@ -100,7 +104,31 @@ fun HomeHeader(
                 }
             }
 
-            AnimatedVisibility(visible = isLoading || isError, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(
+                visible = isLoading || isError,
+                enter =
+                    fadeIn(
+                        tween(FindroidMotion.DURATION_SHORT, easing = FindroidMotion.EasingEnter),
+                    ) +
+                        scaleIn(
+                            tween(
+                                FindroidMotion.DURATION_MEDIUM,
+                                easing = FindroidMotion.EasingEnter,
+                            ),
+                            initialScale = 0.5f,
+                        ),
+                exit =
+                    fadeOut(
+                        tween(FindroidMotion.DURATION_SHORT, easing = FindroidMotion.EasingExit),
+                    ) +
+                        scaleOut(
+                            tween(
+                                FindroidMotion.DURATION_SHORT,
+                                easing = FindroidMotion.EasingExit,
+                            ),
+                            targetScale = 0.5f,
+                        ),
+            ) {
                 Surface(
                     onClick = onRetryClick,
                     modifier = Modifier.fillMaxHeight().aspectRatio(1f),

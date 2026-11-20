@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,10 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -128,13 +131,58 @@ private fun HomeScreenLayout(
         }
     val listState = rememberLazyListStateAtStart(firstKey = rows.firstOrNull()?.id)
 
+    var isManualRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(state.isLoading) {
+        if (!state.isLoading) {
+            isManualRefreshing = false
+        }
+    }
+
+    val screenAlpha = remember { Animatable(0f) }
+    val screenOffsetY = remember { Animatable(16f) }
+    LaunchedEffect(Unit) {
+        launch {
+            screenAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec =
+                    tween(FindroidMotion.DURATION_MEDIUM, easing = FindroidMotion.EasingEnter),
+            )
+        }
+        launch {
+            screenOffsetY.animateTo(
+                targetValue = 0f,
+                animationSpec =
+                    tween(FindroidMotion.DURATION_MEDIUM, easing = FindroidMotion.EasingEnter),
+            )
+        }
+    }
+
+    val pullRefreshState = rememberPullToRefreshState()
+
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
         PullToRefreshBox(
-            isRefreshing = state.isLoading,
-            onRefresh = { onAction(HomeAction.Refresh) },
+            isRefreshing = isManualRefreshing && state.isLoading,
+            onRefresh = {
+                isManualRefreshing = true
+                onAction(HomeAction.Refresh)
+            },
+            state = pullRefreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullRefreshState,
+                    isRefreshing = isManualRefreshing && state.isLoading,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = contentPaddingTop),
+                )
+            },
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
+                modifier =
+                    Modifier.fillMaxSize()
+                        .graphicsLayer {
+                            alpha = screenAlpha.value
+                            translationY = screenOffsetY.value * density
+                        }
+                        .semantics { traversalIndex = 1f },
                 state = listState,
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
@@ -146,6 +194,14 @@ private fun HomeScreenLayout(
                                 items = row.items,
                                 itemsPadding = itemsPadding,
                                 onAction = onAction,
+                                modifier =
+                                    Modifier.animateItem(
+                                        placementSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingStandard,
+                                            ),
+                                    ),
                             )
                         }
                         is HomeItem.Section -> {
@@ -155,11 +211,6 @@ private fun HomeScreenLayout(
                                 onAction = onAction,
                                 modifier =
                                     Modifier.animateItem(
-                                        fadeInSpec =
-                                            tween(
-                                                FindroidMotion.DURATION_MEDIUM,
-                                                easing = FindroidMotion.EasingEnter,
-                                            ),
                                         placementSpec =
                                             tween(
                                                 FindroidMotion.DURATION_MEDIUM,
@@ -181,11 +232,6 @@ private fun HomeScreenLayout(
                                 onAction = onAction,
                                 modifier =
                                     Modifier.animateItem(
-                                        fadeInSpec =
-                                            tween(
-                                                FindroidMotion.DURATION_MEDIUM,
-                                                easing = FindroidMotion.EasingEnter,
-                                            ),
                                         placementSpec =
                                             tween(
                                                 FindroidMotion.DURATION_MEDIUM,
@@ -203,15 +249,6 @@ private fun HomeScreenLayout(
                         else -> Unit
                     }
                 }
-            }
-        }
-
-        if (isHomeEmpty && state.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(top = contentPaddingTop),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
             }
         }
 

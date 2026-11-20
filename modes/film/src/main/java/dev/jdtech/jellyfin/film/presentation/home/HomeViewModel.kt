@@ -45,7 +45,10 @@ constructor(
     val database: ServerDatabaseDao,
     private val downloader: Downloader,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(HomeState(isLoading = true))
+    private val _state =
+        MutableStateFlow(
+            memoryCachedState?.copy(isLoading = true, error = null) ?: HomeState(isLoading = true),
+        )
     val state = _state.asStateFlow()
 
     private var activeUserId: UUID? = null
@@ -65,16 +68,21 @@ constructor(
             val cachedData = homeRepository.getCachedHomeData(serverId, user.id)
             if (!cachedData.isEmpty) {
                 _state.update { current ->
-                    current.copy(
-                        server = server ?: current.server,
-                        userName = user.name,
-                        userImageUrl = imageUrl,
-                        suggestionsSection = cachedData.suggestions ?: current.suggestionsSection,
-                        resumeSection = cachedData.resume ?: current.resumeSection,
-                        nextUpSection = cachedData.nextUp ?: current.nextUpSection,
-                        views =
-                            if (cachedData.views.isNotEmpty()) cachedData.views else current.views,
-                    )
+                    val updated =
+                        current.copy(
+                            server = server ?: current.server,
+                            userName = user.name,
+                            userImageUrl = imageUrl,
+                            suggestionsSection =
+                                cachedData.suggestions ?: current.suggestionsSection,
+                            resumeSection = cachedData.resume ?: current.resumeSection,
+                            nextUpSection = cachedData.nextUp ?: current.nextUpSection,
+                            views =
+                                if (cachedData.views.isNotEmpty()) cachedData.views
+                                else current.views,
+                        )
+                    memoryCachedState = updated
+                    updated
                 }
             }
         }
@@ -118,12 +126,17 @@ constructor(
                 .collect { homeData ->
                     if (homeData != null) {
                         _state.update { current ->
-                            current.copy(
-                                suggestionsSection = homeData.suggestions,
-                                resumeSection = homeData.resume,
-                                nextUpSection = homeData.nextUp,
-                                views = homeData.views,
-                            )
+                            val updated =
+                                current.copy(
+                                    suggestionsSection = homeData.suggestions,
+                                    resumeSection = homeData.resume,
+                                    nextUpSection = homeData.nextUp,
+                                    views = homeData.views,
+                                )
+                            if (!updated.isEmpty) {
+                                memoryCachedState = updated
+                            }
+                            updated
                         }
                     }
                 }
@@ -171,7 +184,11 @@ constructor(
                     val rotated = homeRepository.rotateSuggestionsBuffer(serverId, user.id)
                     if (rotated) {
                         val freshCached = homeRepository.getCachedHomeData(serverId, user.id)
-                        _state.update { it.copy(suggestionsSection = freshCached.suggestions) }
+                        _state.update { current ->
+                            val updated = current.copy(suggestionsSection = freshCached.suggestions)
+                            memoryCachedState = updated
+                            updated
+                        }
                     }
                 }
 
@@ -188,7 +205,15 @@ constructor(
                 val refreshResult =
                     homeRepository.refreshHome(serverId, user.id, refreshSuggestions)
                 refreshResult.fold(
-                    onSuccess = { _state.update { it.copy(isLoading = false, error = null) } },
+                    onSuccess = {
+                        _state.update { current ->
+                            val updated = current.copy(isLoading = false, error = null)
+                            if (!updated.isEmpty) {
+                                memoryCachedState = updated
+                            }
+                            updated
+                        }
+                    },
                     onFailure = { error ->
                         Timber.w(error, "Background home revalidation failed")
                         _state.update { current ->
@@ -217,8 +242,10 @@ constructor(
     suspend fun getShow(showId: UUID): FindroidShow = repository.getShow(showId)
 
     companion object {
+        private var memoryCachedState: HomeState? = null
+
         fun clearCache() {
-            // Room database serves as persistent cache
+            memoryCachedState = null
         }
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ fun HomeCarousel(
     items: List<FindroidItem>,
     itemsPadding: PaddingValues,
     onAction: (HomeAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState(pageCount = { items.size })
     val pagerIsDragged by pagerState.interactionSource.collectIsDraggedAsState()
@@ -64,6 +66,7 @@ fun HomeCarousel(
         contentPadding = itemsPadding,
         pageSize = dynamicPageSize,
         pageSpacing = MaterialTheme.spacings.medium,
+        modifier = modifier,
     ) { page ->
         val item = items[page]
         HomeCarouselItem(item = item, onAction = onAction)
