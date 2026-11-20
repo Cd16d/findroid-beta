@@ -23,6 +23,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
+import dev.jdtech.jellyfin.core.presentation.theme.animateRowItem
+import dev.jdtech.jellyfin.core.presentation.theme.rememberLazyListStateAtStart
 import dev.jdtech.jellyfin.film.R as FilmR
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
 import dev.jdtech.jellyfin.models.CollectionType
@@ -81,6 +83,7 @@ fun HomeView(
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
         LazyRow(
+            state = rememberLazyListStateAtStart(firstKey = view.view.items.firstOrNull()?.id),
             contentPadding = itemsPadding,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
         ) {
@@ -89,6 +92,7 @@ fun HomeView(
                     item = item,
                     direction = Direction.VERTICAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
+                    modifier = animateRowItem(),
                     hideEpisodeSpoilers = hideEpisodeSpoilers,
                 )
             }

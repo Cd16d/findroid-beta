@@ -22,12 +22,15 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
+import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.domain.Constants
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
 import dev.jdtech.jellyfin.work.SyncWorker
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import timber.log.Timber
@@ -39,6 +42,8 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     @Inject lateinit var okHttpClient: OkHttpClient
+
+    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -65,12 +70,14 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
             DynamicColors.applyToActivitiesIfAvailable(this)
         }
 
-        val workManager = WorkManager.getInstance(applicationContext)
+        applicationScope.launch {
+            val workManager = WorkManager.getInstance(applicationContext)
 
-        scheduleUserDataSync(workManager)
+            scheduleUserDataSync(workManager)
 
-        if (!appPreferences.getValue(appPreferences.mpvMigrated)) {
-            scheduleMpvCleanup(workManager)
+            if (!appPreferences.getValue(appPreferences.mpvMigrated)) {
+                scheduleMpvCleanup(workManager)
+            }
         }
     }
 

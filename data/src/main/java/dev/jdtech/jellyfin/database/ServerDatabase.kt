@@ -9,6 +9,8 @@ import androidx.room3.migration.AutoMigrationSpec
 import androidx.room3.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import dev.jdtech.jellyfin.database.entity.HomeItemEntity
+import dev.jdtech.jellyfin.database.entity.HomeSectionEntity
 import dev.jdtech.jellyfin.models.FindroidEpisodeDto
 import dev.jdtech.jellyfin.models.FindroidMediaStreamDto
 import dev.jdtech.jellyfin.models.FindroidMovieDto
@@ -41,8 +43,10 @@ import dev.jdtech.jellyfin.models.UserDownloadDto
             FindroidSegmentDto::class,
             FindroidPartDto::class,
             UserDownloadDto::class,
+            HomeSectionEntity::class,
+            HomeItemEntity::class,
         ],
-    version = 10,
+    version = 12,
     autoMigrations =
         [
             AutoMigration(from = 2, to = 3),
@@ -51,11 +55,15 @@ import dev.jdtech.jellyfin.models.UserDownloadDto
             AutoMigration(from = 5, to = 6, spec = ServerDatabase.IntrosMigration::class),
             AutoMigration(from = 7, to = 8),
             AutoMigration(from = 8, to = 9),
+            AutoMigration(from = 10, to = 11),
+            AutoMigration(from = 11, to = 12),
         ],
 )
 @ColumnTypeConverters(Converters::class)
 abstract class ServerDatabase : RoomDatabase() {
     abstract fun getServerDatabaseDao(): ServerDatabaseDao
+
+    abstract fun getHomeSectionDao(): HomeSectionDao
 
     @DeleteTable(tableName = "trickPlayManifests") class TrickplayMigration : AutoMigrationSpec
 

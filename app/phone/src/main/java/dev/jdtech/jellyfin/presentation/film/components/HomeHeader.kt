@@ -2,8 +2,12 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,9 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.components.UserAvatar
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServer
+import dev.jdtech.jellyfin.core.presentation.theme.FindroidMotion
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 
@@ -47,6 +54,7 @@ fun HomeHeader(
     onUserClick: () -> Unit,
     modifier: Modifier = Modifier,
     userName: String = "",
+    pullProgress: Float = 0f,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().height(56.dp),
@@ -100,11 +108,61 @@ fun HomeHeader(
                 }
             }
 
-            AnimatedVisibility(visible = isLoading || isError, enter = fadeIn(), exit = fadeOut()) {
+            val isPulling = pullProgress > 0.02f
+            val showLoaderButton = isLoading || isError || isPulling
+
+            // Scale grows dynamically based on swipe-down depth
+            val targetScale =
+                when {
+                    isLoading || isError -> 1f
+                    isPulling -> pullProgress.coerceIn(0.1f, 1.15f)
+                    else -> 0f
+                }
+            val scale by
+                animateFloatAsState(
+                    targetValue = targetScale,
+                    animationSpec =
+                        tween(
+                            durationMillis =
+                                if (isPulling && !isLoading) 40 else FindroidMotion.DURATION_MEDIUM,
+                            easing = FindroidMotion.EasingStandard,
+                        ),
+                    label = "header_loader_scale",
+                )
+
+            AnimatedVisibility(
+                visible = showLoaderButton,
+                enter =
+                    fadeIn(
+                        tween(FindroidMotion.DURATION_SHORT, easing = FindroidMotion.EasingEnter),
+                    ) +
+                        scaleIn(
+                            tween(
+                                FindroidMotion.DURATION_SHORT,
+                                easing = FindroidMotion.EasingEnter,
+                            ),
+                            initialScale = 0.3f,
+                        ),
+                exit =
+                    fadeOut(
+                        tween(FindroidMotion.DURATION_SHORT, easing = FindroidMotion.EasingExit),
+                    ) +
+                        scaleOut(
+                            tween(
+                                FindroidMotion.DURATION_SHORT,
+                                easing = FindroidMotion.EasingExit,
+                            ),
+                            targetScale = 0.3f,
+                        ),
+            ) {
                 Surface(
                     onClick = onRetryClick,
-                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                    enabled = !isLoading,
+                    modifier =
+                        Modifier.fillMaxHeight().aspectRatio(1f).graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                        },
+                    enabled = !isLoading && !isPulling,
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
@@ -120,6 +178,13 @@ fun HomeHeader(
                             isLoading -> {
                                 Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
                                     CircularProgressIndicator()
+                                }
+                            }
+                            isPulling -> {
+                                Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
+                                    CircularProgressIndicator(
+                                        progress = { pullProgress.coerceIn(0f, 1f) },
+                                    )
                                 }
                             }
                         }
@@ -147,6 +212,25 @@ private fun HomeHeaderLoadingPreview() {
             userImageUrl = null,
             isLoading = true,
             isError = false,
+            onServerClick = {},
+            onErrorClick = {},
+            onRetryClick = {},
+            onUserClick = {},
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun HomeHeaderPullingPreview() {
+    FindroidTheme {
+        HomeHeader(
+            serverName = dummyServer.name,
+            userName = "Bob",
+            userImageUrl = null,
+            isLoading = false,
+            isError = false,
+            pullProgress = 0.75f,
             onServerClick = {},
             onErrorClick = {},
             onRetryClick = {},

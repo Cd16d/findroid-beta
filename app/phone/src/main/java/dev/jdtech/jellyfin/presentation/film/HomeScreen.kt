@@ -1,5 +1,7 @@
 package dev.jdtech.jellyfin.presentation.film
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +27,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -32,20 +39,25 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.jdtech.jellyfin.LocalCastPlayerHeight
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSection
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeSuggestions
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyHomeView
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServer
+import dev.jdtech.jellyfin.core.presentation.theme.FindroidMotion
+import dev.jdtech.jellyfin.core.presentation.theme.rememberLazyListStateAtStart
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
 import dev.jdtech.jellyfin.film.presentation.home.HomeState
 import dev.jdtech.jellyfin.film.presentation.home.HomeViewModel
 import dev.jdtech.jellyfin.models.FindroidCollection
 import dev.jdtech.jellyfin.models.FindroidItem
+import dev.jdtech.jellyfin.models.HomeItem
 import dev.jdtech.jellyfin.presentation.components.ErrorDialog
 import dev.jdtech.jellyfin.presentation.film.components.HomeCarousel
 import dev.jdtech.jellyfin.presentation.film.components.HomeHeader
 import dev.jdtech.jellyfin.presentation.film.components.HomeSection
 import dev.jdtech.jellyfin.presentation.film.components.HomeView
+import dev.jdtech.jellyfin.presentation.film.components.PlaceholderScreen
 import dev.jdtech.jellyfin.presentation.film.components.ServerSelectionBottomSheet
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
@@ -62,7 +74,7 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(true) { viewModel.loadData() }
+    LaunchedEffect(true) { viewModel.loadData(refreshSuggestions = true, isAppOpen = true) }
 
     HomeScreenLayout(
         state = state,
@@ -102,54 +114,148 @@ private fun HomeScreenLayout(
     val showServerSelectionSheetState = rememberModalBottomSheetState()
     var showServerSelectionBottomSheet by remember { mutableStateOf(false) }
 
+    val isHomeEmpty =
+        state.suggestionsSection == null &&
+            state.resumeSection == null &&
+            state.nextUpSection == null &&
+            state.views.isEmpty()
+
+    val rows =
+        remember(state.suggestionsSection, state.resumeSection, state.nextUpSection, state.views) {
+            buildList {
+                state.suggestionsSection?.let { add(it) }
+                state.resumeSection?.let { add(it) }
+                state.nextUpSection?.let { add(it) }
+                addAll(state.views.distinctBy { it.id })
+            }
+        }
+    val listState = rememberLazyListStateAtStart(firstKey = rows.firstOrNull()?.id)
+
+    val pullRefreshState = rememberPullToRefreshState()
+    val haptic = LocalHapticFeedback.current
+    var hasVibratedOnThreshold by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pullRefreshState.distanceFraction) {
+        val fraction = pullRefreshState.distanceFraction
+        if (fraction >= 1f && !hasVibratedOnThreshold && !state.isLoading) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            hasVibratedOnThreshold = true
+        } else if (fraction < 0.1f) {
+            hasVibratedOnThreshold = false
+        }
+    }
+
+    val screenAlpha = remember { Animatable(0f) }
+    val screenOffsetY = remember { Animatable(16f) }
+    LaunchedEffect(Unit) {
+        launch {
+            screenAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec =
+                    tween(FindroidMotion.DURATION_MEDIUM, easing = FindroidMotion.EasingEnter),
+            )
+        }
+        launch {
+            screenOffsetY.animateTo(
+                targetValue = 0f,
+                animationSpec =
+                    tween(FindroidMotion.DURATION_MEDIUM, easing = FindroidMotion.EasingEnter),
+            )
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
-        PullToRefreshBox(isRefreshing = false, onRefresh = { onAction(HomeAction.Refresh) }) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = { onAction(HomeAction.Refresh) },
+            state = pullRefreshState,
+            indicator = {},
+        ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
+                modifier =
+                    Modifier.fillMaxSize()
+                        .graphicsLayer {
+                            alpha = screenAlpha.value
+                            translationY = screenOffsetY.value * density
+                        }
+                        .semantics { traversalIndex = 1f },
+                state = listState,
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
             ) {
-                state.suggestionsSection?.let { section ->
-                    item(key = section.id) {
-                        HomeCarousel(
-                            items = section.items,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                        )
+                items(rows, key = { it.id }, contentType = { it::class }) { row ->
+                    when (row) {
+                        is HomeItem.Suggestions -> {
+                            HomeCarousel(
+                                items = row.items,
+                                itemsPadding = itemsPadding,
+                                onAction = onAction,
+                                modifier =
+                                    Modifier.animateItem(
+                                        placementSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingStandard,
+                                            ),
+                                    ),
+                            )
+                        }
+                        is HomeItem.Section -> {
+                            HomeSection(
+                                section = row.homeSection,
+                                itemsPadding = itemsPadding,
+                                onAction = onAction,
+                                modifier =
+                                    Modifier.animateItem(
+                                        placementSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingStandard,
+                                            ),
+                                        fadeOutSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_SHORT,
+                                                easing = FindroidMotion.EasingExit,
+                                            ),
+                                    ),
+                                hideEpisodeSpoilers = state.hideEpisodeSpoilers,
+                            )
+                        }
+                        is HomeItem.ViewItem -> {
+                            HomeView(
+                                view = row,
+                                itemsPadding = itemsPadding,
+                                onAction = onAction,
+                                modifier =
+                                    Modifier.animateItem(
+                                        placementSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_MEDIUM,
+                                                easing = FindroidMotion.EasingStandard,
+                                            ),
+                                        fadeOutSpec =
+                                            tween(
+                                                FindroidMotion.DURATION_SHORT,
+                                                easing = FindroidMotion.EasingExit,
+                                            ),
+                                    ),
+                                hideEpisodeSpoilers = state.hideEpisodeSpoilers,
+                            )
+                        }
+                        else -> Unit
                     }
-                }
-                state.resumeSection?.let { section ->
-                    item(key = section.id) {
-                        HomeSection(
-                            section = section.homeSection,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                            modifier = Modifier.animateItem(),
-                            hideEpisodeSpoilers = state.hideEpisodeSpoilers,
-                        )
-                    }
-                }
-                state.nextUpSection?.let { section ->
-                    item(key = section.id) {
-                        HomeSection(
-                            section = section.homeSection,
-                            itemsPadding = itemsPadding,
-                            onAction = onAction,
-                            modifier = Modifier.animateItem(),
-                            hideEpisodeSpoilers = state.hideEpisodeSpoilers,
-                        )
-                    }
-                }
-                items(state.views.distinctBy { it.id }, key = { it.id }) { view ->
-                    HomeView(
-                        view = view,
-                        itemsPadding = itemsPadding,
-                        onAction = onAction,
-                        modifier = Modifier.animateItem(),
-                        hideEpisodeSpoilers = state.hideEpisodeSpoilers,
-                    )
                 }
             }
+        }
+
+        if (isHomeEmpty && !state.isLoading && state.error != null) {
+            PlaceholderScreen(
+                modifier = Modifier.fillMaxSize().padding(top = contentPaddingTop),
+                title = stringResource(CoreR.string.error_loading_data),
+                subtitle = state.error?.message,
+                buttonText = stringResource(CoreR.string.retry),
+                onButtonClick = { onAction(HomeAction.OnRetryClick) },
+            )
         }
 
         if (state.error != null && showErrorDialog) {
@@ -182,6 +288,7 @@ private fun HomeScreenLayout(
                 onErrorClick = { showErrorDialog = true },
                 onRetryClick = { onAction(HomeAction.OnRetryClick) },
                 onUserClick = { onAction(HomeAction.OnUserClick) },
+                pullProgress = pullRefreshState.distanceFraction,
             )
         }
     }

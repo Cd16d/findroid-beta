@@ -1,0 +1,49 @@
+# Baseline Profile for Findroid Phone Application
+# Accelerates Cold Boot, Home Screen rendering, Room DB access, and Compose UI
+
+# Application & Lifecycle Entry
+Ldev/jdtech/jellyfin/BaseApplication;
+Ldev/jdtech/jellyfin/MainActivity;
+Ldev/jdtech/jellyfin/NavigationRootKt;
+
+# Core Presentation & Theme
+Ldev/jdtech/jellyfin/presentation/theme/FindroidThemeKt;
+Ldev/jdtech/jellyfin/core/presentation/theme/FindroidMotion;
+
+# Home Screen & Components
+Ldev/jdtech/jellyfin/presentation/film/HomeScreenKt;
+Ldev/jdtech/jellyfin/presentation/film/components/HomeHeaderKt;
+Ldev/jdtech/jellyfin/presentation/film/components/HomeCarouselKt;
+Ldev/jdtech/jellyfin/presentation/film/components/HomeCarouselItemKt;
+Ldev/jdtech/jellyfin/presentation/film/components/ItemPosterKt;
+Ldev/jdtech/jellyfin/presentation/film/components/MovieCardKt;
+Ldev/jdtech/jellyfin/presentation/film/components/EpisodeCardKt;
+Ldev/jdtech/jellyfin/presentation/film/components/ShowCardKt;
+
+# ViewModels & State Management
+Ldev/jdtech/jellyfin/viewmodels/MainViewModel;
+Ldev/jdtech/jellyfin/viewmodels/MainState;
+Ldev/jdtech/jellyfin/film/presentation/home/HomeViewModel;
+Ldev/jdtech/jellyfin/film/presentation/home/HomeState;
+Ldev/jdtech/jellyfin/repository/HomeRepositoryImpl;
+Ldev/jdtech/jellyfin/repository/HomeData;
+
+# Database & Entities
+Ldev/jdtech/jellyfin/database/ServerDatabase;
+Ldev/jdtech/jellyfin/database/dao/HomeSectionDao;
+Ldev/jdtech/jellyfin/database/entity/HomeItemEntity;
+Ldev/jdtech/jellyfin/database/entity/HomeSectionEntity;
+Ldev/jdtech/jellyfin/database/entity/HomeSectionWithItems;
+
+# Image Loading & BlurHash Cache
+Ldev/jdtech/jellyfin/utils/ImageUtilsKt;
+Lcom/vanniktech/blurhash/BlurHash;
+Lcoil3/ImageLoader;
+Lcoil3/SingletonImageLoader;
+Lcoil3/compose/AsyncImageKt;
+
+# Jetpack Compose UI Engine Critical Paths
+Landroidx/compose/foundation/lazy/LazyColumnKt;
+Landroidx/compose/foundation/lazy/LazyRowKt;
+Landroidx/compose/material3/pulltorefresh/PullToRefreshBoxKt;
+Landroidx/compose/animation/AnimatedVisibilityKt;

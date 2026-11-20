@@ -788,10 +788,17 @@ class JellyfinRepositoryImpl(
             }
         }
 
-    override suspend fun getSuggestions(forceRefresh: Boolean): List<FindroidItem> {
+    override suspend fun getSuggestions(
+        forceRefresh: Boolean,
+        startIndex: Int,
+        limit: Int,
+    ): List<FindroidItem> {
         val currentUserId = jellyfinApi.userId
         if (
-            !forceRefresh && cachedSuggestions != null && cachedSuggestionsUserId == currentUserId
+            !forceRefresh &&
+                startIndex == 0 &&
+                cachedSuggestions != null &&
+                cachedSuggestionsUserId == currentUserId
         ) {
             return cachedSuggestions!!
         }
@@ -801,7 +808,8 @@ class JellyfinRepositoryImpl(
                 jellyfinApi.suggestionApi
                     .getSuggestions(
                         currentUserId!!,
-                        limit = 6,
+                        startIndex = startIndex,
+                        limit = limit,
                         type = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
                     )
                     .content
@@ -809,7 +817,7 @@ class JellyfinRepositoryImpl(
                     .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
                     .distinctBy { it.id }
 
-            if (suggestions.isNotEmpty()) {
+            if (suggestions.isNotEmpty() && startIndex == 0) {
                 cachedSuggestions = suggestions
                 cachedSuggestionsUserId = currentUserId
             }
@@ -1113,16 +1121,25 @@ class JellyfinRepositoryImpl(
                 playedPercentage < 10 -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
                     database.setPlayed(jellyfinApi.userId!!, itemId, false)
+                    database.updateHomeItemPlaybackProgress(jellyfinApi.userId!!, itemId, 0L, false)
                 }
 
                 playedPercentage > 90 -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, 0)
                     database.setPlayed(jellyfinApi.userId!!, itemId, true)
+                    database.updateHomeItemPlaybackProgress(jellyfinApi.userId!!, itemId, 0L, true)
+                    database.removeHomeResumeItem(jellyfinApi.userId!!, itemId)
                 }
 
                 else -> {
                     database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, positionTicks)
                     database.setPlayed(jellyfinApi.userId!!, itemId, false)
+                    database.updateHomeItemPlaybackProgress(
+                        jellyfinApi.userId!!,
+                        itemId,
+                        positionTicks,
+                        false,
+                    )
                 }
             }
             try {
@@ -1152,6 +1169,12 @@ class JellyfinRepositoryImpl(
         Timber.d("Posting progress of $itemId, position: $positionTicks")
         withContext(Dispatchers.IO) {
             database.setPlaybackPositionTicks(itemId, jellyfinApi.userId!!, positionTicks)
+            database.updateHomeItemPlaybackProgress(
+                jellyfinApi.userId!!,
+                itemId,
+                positionTicks,
+                false,
+            )
             try {
                 jellyfinApi.sessionApi.reportPlaybackProgress(
                     PlaybackProgressInfo(

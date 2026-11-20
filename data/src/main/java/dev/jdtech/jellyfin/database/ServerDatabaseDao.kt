@@ -127,6 +127,21 @@ interface ServerDatabaseDao {
     )
     suspend fun setPlaybackPositionTicks(itemId: UUID, userId: UUID, playbackPositionTicks: Long)
 
+    @Query(
+        "UPDATE home_items SET playbackPositionTicks = :ticks, played = :played WHERE userId = :userId AND itemId = :itemId",
+    )
+    suspend fun updateHomeItemPlaybackProgress(
+        userId: UUID,
+        itemId: UUID,
+        ticks: Long,
+        played: Boolean,
+    )
+
+    @Query(
+        "DELETE FROM home_items WHERE sectionId = 'resume' AND userId = :userId AND itemId = :itemId",
+    )
+    suspend fun removeHomeResumeItem(userId: UUID, itemId: UUID)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMediaStream(mediaStream: FindroidMediaStreamDto)
 

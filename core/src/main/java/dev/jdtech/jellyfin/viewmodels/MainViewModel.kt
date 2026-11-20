@@ -28,7 +28,30 @@ class MainViewModel
 @Inject
 constructor(private val appPreferences: AppPreferences, private val database: ServerDatabaseDao) :
     ViewModel() {
-    private val _state = MutableStateFlow(MainState())
+    private val _state =
+        MutableStateFlow(
+            run {
+                val currentServer = appPreferences.getValue(appPreferences.currentServer)
+                val isDynamic = appPreferences.getValue(appPreferences.dynamicColors)
+                val isOffline = appPreferences.getValue(appPreferences.offlineMode)
+                if (currentServer != null) {
+                    MainState(
+                        isLoading = false,
+                        isDynamicColors = isDynamic,
+                        hasServers = true,
+                        hasCurrentServer = true,
+                        hasCurrentUser = true,
+                        isOfflineMode = isOffline,
+                    )
+                } else {
+                    MainState(
+                        isLoading = true,
+                        isDynamicColors = isDynamic,
+                        isOfflineMode = isOffline,
+                    )
+                }
+            },
+        )
     val state = _state.asStateFlow()
 
     // SharedFlow buffer for physical volume key press events intercepted by activities and
@@ -87,8 +110,6 @@ constructor(private val appPreferences: AppPreferences, private val database: Se
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun check() {
         viewModelScope.launch {
-            _state.emit(MainState(isLoading = true))
-
             val setupFlags =
                 appPreferences.observe(appPreferences.currentServer).flatMapLatest { serverId ->
                     if (serverId == null) {

@@ -8,6 +8,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.jdtech.jellyfin.database.HomeSectionDao
 import dev.jdtech.jellyfin.database.MIGRATION_6_7
 import dev.jdtech.jellyfin.database.MIGRATION_9_10
 import dev.jdtech.jellyfin.database.ServerDatabase
@@ -19,12 +20,23 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Singleton
     @Provides
-    fun provideServerDatabaseDao(@ApplicationContext app: Context): ServerDatabaseDao {
+    fun provideServerDatabase(@ApplicationContext app: Context): ServerDatabase {
         return Room.databaseBuilder(app.applicationContext, ServerDatabase::class.java, "servers")
             .setDriver(AndroidSQLiteDriver())
             .addMigrations(MIGRATION_6_7, MIGRATION_9_10)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
-            .getServerDatabaseDao()
+    }
+
+    @Singleton
+    @Provides
+    fun provideServerDatabaseDao(serverDatabase: ServerDatabase): ServerDatabaseDao {
+        return serverDatabase.getServerDatabaseDao()
+    }
+
+    @Singleton
+    @Provides
+    fun provideHomeSectionDao(serverDatabase: ServerDatabase): HomeSectionDao {
+        return serverDatabase.getHomeSectionDao()
     }
 }
