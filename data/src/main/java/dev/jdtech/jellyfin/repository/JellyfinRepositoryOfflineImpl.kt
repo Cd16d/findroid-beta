@@ -266,7 +266,11 @@ class JellyfinRepositoryOfflineImpl(
         }
     }
 
-    override suspend fun getSuggestions(forceRefresh: Boolean): List<FindroidItem> {
+    override suspend fun getSuggestions(
+        forceRefresh: Boolean,
+        startIndex: Int,
+        limit: Int,
+    ): List<FindroidItem> {
         return emptyList()
     }
 

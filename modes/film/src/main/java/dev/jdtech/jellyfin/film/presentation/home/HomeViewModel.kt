@@ -97,8 +97,6 @@ constructor(
                                 resumeSection = homeData.resume,
                                 nextUpSection = homeData.nextUp,
                                 views = homeData.views,
-                                isLoading =
-                                    if (homeData.isEmpty && current.isLoading) true else false,
                             )
                         }
                     }
@@ -106,9 +104,14 @@ constructor(
         }
     }
 
-    fun loadData(forceRefreshSuggestions: Boolean = false) {
-        Timber.i("Loading data (forceRefreshSuggestions = %b)", forceRefreshSuggestions)
+    fun loadData(refreshSuggestions: Boolean = true, isAppOpen: Boolean = false) {
+        Timber.i(
+            "Loading data (refreshSuggestions = %b, isAppOpen = %b)",
+            refreshSuggestions,
+            isAppOpen,
+        )
         loadDataJob?.cancel()
+        _state.update { it.copy(isLoading = true) }
         loadDataJob =
             viewModelScope.launch(Dispatchers.Default) {
                 val hideEpisodeSpoilers =
@@ -138,6 +141,10 @@ constructor(
                     )
                 }
 
+                if (isAppOpen) {
+                    homeRepository.rotateSuggestionsBuffer(serverId, user.id)
+                }
+
                 // Cache user profile image to internal storage if not already present
                 if (user.primaryImageTag != null) {
                     val fileName = "primary_${user.primaryImageTag}"
@@ -149,7 +156,7 @@ constructor(
 
                 // Background revalidation (Stale-While-Revalidate)
                 val refreshResult =
-                    homeRepository.refreshHome(serverId, user.id, forceRefreshSuggestions)
+                    homeRepository.refreshHome(serverId, user.id, refreshSuggestions)
                 refreshResult.fold(
                     onSuccess = { _state.update { it.copy(isLoading = false, error = null) } },
                     onFailure = { error ->
@@ -167,9 +174,11 @@ constructor(
 
     fun onAction(action: HomeAction) {
         when (action) {
-            is HomeAction.OnRetryClick,
+            is HomeAction.OnRetryClick -> {
+                loadData(refreshSuggestions = true, isAppOpen = false)
+            }
             is HomeAction.Refresh -> {
-                loadData(forceRefreshSuggestions = true)
+                loadData(refreshSuggestions = false, isAppOpen = false)
             }
             else -> Unit
         }

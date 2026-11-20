@@ -4,6 +4,7 @@ import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.ForeignKey
 import androidx.room3.PrimaryKey
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity(
@@ -44,12 +45,15 @@ data class HomeItemEntity(
     val indexNumber: Int? = null,
     val parentIndexNumber: Int? = null,
     val productionYear: Int? = null,
+    val premiereDate: LocalDateTime? = null,
     val communityRating: Float? = null,
     val criticRating: Float? = null,
     val officialRating: String? = null,
     val status: String? = null,
     val primaryImageUri: String? = null,
     val primaryImageBlurHash: String? = null,
+    val showPrimaryImageUri: String? = null,
+    val showPrimaryImageBlurHash: String? = null,
     val backdropImageUri: String? = null,
     val backdropImageBlurHash: String? = null,
     val logoImageUri: String? = null,

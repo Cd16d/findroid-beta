@@ -62,6 +62,7 @@ fun HomeSection(
                     item = item,
                     direction = Direction.HORIZONTAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
+                    modifier = Modifier.animateItem(),
                     hideEpisodeSpoilers = hideEpisodeSpoilers,
                 )
             }

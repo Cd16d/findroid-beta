@@ -17,10 +17,12 @@ data class HomeData(
 interface HomeRepository {
     fun observeHomeData(serverId: String, userId: UUID): Flow<HomeData>
 
+    suspend fun rotateSuggestionsBuffer(serverId: String, userId: UUID): Boolean
+
     suspend fun refreshHome(
         serverId: String,
         userId: UUID,
-        forceRefreshSuggestions: Boolean = false,
+        refreshSuggestions: Boolean = true,
     ): Result<Unit>
 
     suspend fun updateOptimisticPlayback(

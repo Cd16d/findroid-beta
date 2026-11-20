@@ -130,7 +130,8 @@ fun ItemCard(
         val subtitleText =
             when (item) {
                 is FindroidMovie -> {
-                    item.premiereDate?.year.toString()
+                    val year = item.premiereDate?.year ?: item.productionYear
+                    if (year != null && year > 0) year.toString() else ""
                 }
 
                 is FindroidShow -> {
@@ -138,22 +139,7 @@ fun ItemCard(
                 }
 
                 is FindroidSeason -> {
-                    val year = item.premiereDate?.year ?: item.productionYear
-                    val seasonLabel =
-                        if (
-                            showParentTitle &&
-                                item.seriesName.isNotBlank() &&
-                                !item.name.equals(item.seriesName, ignoreCase = true)
-                        ) {
-                            item.name
-                        } else {
-                            item.name
-                        }
-                    if (year != null && year > 0) {
-                        "$year - $seasonLabel"
-                    } else {
-                        seasonLabel
-                    }
+                    item.name
                 }
 
                 is FindroidEpisode -> {

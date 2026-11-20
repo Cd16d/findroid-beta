@@ -89,6 +89,7 @@ fun HomeView(
                     item = item,
                     direction = Direction.VERTICAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
+                    modifier = Modifier.animateItem(),
                     hideEpisodeSpoilers = hideEpisodeSpoilers,
                 )
             }

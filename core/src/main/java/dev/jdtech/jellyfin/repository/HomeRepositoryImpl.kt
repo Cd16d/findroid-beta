@@ -118,17 +118,45 @@ constructor(
         )
     }
 
+    private var suggestionsOffset = 0
+
+    override suspend fun rotateSuggestionsBuffer(serverId: String, userId: UUID): Boolean {
+        val promoted = homeSectionDao.promoteSuggestionsBuffer(serverId, userId)
+        if (promoted) {
+            suggestionsOffset += SUGGESTIONS_BATCH_SIZE
+        }
+        return promoted
+    }
+
     override suspend fun refreshHome(
         serverId: String,
         userId: UUID,
-        forceRefreshSuggestions: Boolean,
+        refreshSuggestions: Boolean,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
                 coroutineScope {
                     val suggestionsDeferred = async {
-                        if (appPreferences.getValue(appPreferences.homeSuggestions)) {
-                            jellyfinRepository.getSuggestions(forceRefreshSuggestions)
+                        if (
+                            refreshSuggestions &&
+                                appPreferences.getValue(appPreferences.homeSuggestions)
+                        ) {
+                            val fetched =
+                                jellyfinRepository.getSuggestions(
+                                    forceRefresh = true,
+                                    startIndex = suggestionsOffset,
+                                    limit = SUGGESTIONS_BATCH_SIZE,
+                                )
+                            if (fetched.isEmpty() && suggestionsOffset > 0) {
+                                suggestionsOffset = 0
+                                jellyfinRepository.getSuggestions(
+                                    forceRefresh = true,
+                                    startIndex = 0,
+                                    limit = SUGGESTIONS_BATCH_SIZE,
+                                )
+                            } else {
+                                fetched
+                            }
                         } else {
                             emptyList()
                         }
@@ -176,24 +204,75 @@ constructor(
                     val sections = mutableListOf<HomeSectionEntity>()
                     val items = mutableListOf<HomeItemEntity>()
 
-                    if (suggestions.isNotEmpty()) {
-                        sections.add(
-                            HomeSectionEntity(
-                                id = "${serverId}_${userId}_$SECTION_ID_SUGGESTIONS",
-                                serverId = serverId,
-                                userId = userId,
-                                sectionId = SECTION_ID_SUGGESTIONS,
-                                sectionType = SECTION_TYPE_SUGGESTIONS,
-                                title = "",
-                                collectionType = null,
-                                orderIndex = 0,
-                            ),
-                        )
-                        items.addAll(
-                            suggestions.mapIndexed { idx, item ->
-                                item.toHomeItemEntity(serverId, userId, SECTION_ID_SUGGESTIONS, idx)
-                            },
-                        )
+                    if (refreshSuggestions && suggestions.isNotEmpty()) {
+                        val activeSuggestions =
+                            homeSectionDao.getItemsForSection(
+                                serverId,
+                                userId,
+                                SECTION_ID_SUGGESTIONS,
+                            )
+                        if (activeSuggestions.isEmpty()) {
+                            // First run / clean state: populate active suggestions immediately
+                            sections.add(
+                                HomeSectionEntity(
+                                    id = "${serverId}_${userId}_$SECTION_ID_SUGGESTIONS",
+                                    serverId = serverId,
+                                    userId = userId,
+                                    sectionId = SECTION_ID_SUGGESTIONS,
+                                    sectionType = SECTION_TYPE_SUGGESTIONS,
+                                    title = "",
+                                    collectionType = null,
+                                    orderIndex = 0,
+                                ),
+                            )
+                            items.addAll(
+                                suggestions.mapIndexed { idx, item ->
+                                    item.toHomeItemEntity(
+                                        serverId,
+                                        userId,
+                                        SECTION_ID_SUGGESTIONS,
+                                        idx,
+                                    )
+                                },
+                            )
+                            // Also pre-fetch buffer for next session
+                            suggestionsOffset = SUGGESTIONS_BATCH_SIZE
+                            val bufferBatch =
+                                jellyfinRepository.getSuggestions(
+                                    forceRefresh = true,
+                                    startIndex = suggestionsOffset,
+                                    limit = SUGGESTIONS_BATCH_SIZE,
+                                )
+                            if (bufferBatch.isNotEmpty()) {
+                                homeSectionDao.saveSuggestionsBuffer(
+                                    serverId,
+                                    userId,
+                                    bufferBatch.mapIndexed { idx, item ->
+                                        item.toHomeItemEntity(
+                                            serverId,
+                                            userId,
+                                            SECTION_ID_SUGGESTIONS_BUFFER,
+                                            idx,
+                                        )
+                                    },
+                                )
+                            }
+                        } else {
+                            // Active suggestions already exists: save this new batch into the
+                            // buffer
+                            homeSectionDao.saveSuggestionsBuffer(
+                                serverId,
+                                userId,
+                                suggestions.mapIndexed { idx, item ->
+                                    item.toHomeItemEntity(
+                                        serverId,
+                                        userId,
+                                        SECTION_ID_SUGGESTIONS_BUFFER,
+                                        idx,
+                                    )
+                                },
+                            )
+                        }
                     }
 
                     if (resume.isNotEmpty()) {
@@ -257,7 +336,13 @@ constructor(
                         )
                     }
 
-                    homeSectionDao.replaceAllHomeSections(serverId, userId, sections, items)
+                    homeSectionDao.replaceAllHomeSections(
+                        serverId = serverId,
+                        userId = userId,
+                        sections = sections,
+                        items = items,
+                        preserveSuggestions = !refreshSuggestions || suggestions.isEmpty(),
+                    )
                     Result.success(Unit)
                 }
             } catch (e: CancellationException) {
@@ -337,6 +422,10 @@ constructor(
             (this as? FindroidMovie)?.productionYear
                 ?: (this as? FindroidShow)?.productionYear
                 ?: (this as? FindroidSeason)?.productionYear
+        val premiereDate =
+            (this as? FindroidMovie)?.premiereDate
+                ?: (this as? FindroidEpisode)?.premiereDate
+                ?: (this as? FindroidSeason)?.premiereDate
         val communityRating =
             (this as? FindroidMovie)?.communityRating
                 ?: (this as? FindroidShow)?.communityRating
@@ -375,13 +464,15 @@ constructor(
             indexNumber = indexNumber,
             parentIndexNumber = parentIndexNumber,
             productionYear = productionYear,
+            premiereDate = premiereDate,
             communityRating = communityRating,
             criticRating = criticRating,
             officialRating = officialRating,
             status = status,
-            primaryImageUri =
-                images.primary?.uri?.toString() ?: images.showPrimary?.uri?.toString(),
-            primaryImageBlurHash = images.primary?.blurHash ?: images.showPrimary?.blurHash,
+            primaryImageUri = images.primary?.uri?.toString(),
+            primaryImageBlurHash = images.primary?.blurHash,
+            showPrimaryImageUri = images.showPrimary?.uri?.toString(),
+            showPrimaryImageBlurHash = images.showPrimary?.blurHash,
             backdropImageUri =
                 images.backdrop?.uri?.toString() ?: images.showBackdrop?.uri?.toString(),
             backdropImageBlurHash = images.backdrop?.blurHash ?: images.showBackdrop?.blurHash,
@@ -399,6 +490,10 @@ constructor(
                 backdrop =
                     backdropImageUri?.let { FindroidImage(Uri.parse(it), backdropImageBlurHash) },
                 logo = logoImageUri?.let { FindroidImage(Uri.parse(it), logoImageBlurHash) },
+                showPrimary =
+                    showPrimaryImageUri?.let {
+                        FindroidImage(Uri.parse(it), showPrimaryImageBlurHash)
+                    },
             )
         val localSources =
             if (isDownloaded) {
@@ -430,14 +525,14 @@ constructor(
                     canDownload = canDownload,
                     runtimeTicks = runtimeTicks,
                     playbackPositionTicks = playbackPositionTicks,
-                    premiereDate = null,
+                    premiereDate = premiereDate,
                     people = emptyList(),
                     genres = emptyList(),
                     communityRating = communityRating,
                     criticRating = criticRating,
                     officialRating = officialRating,
                     status = status ?: "Ended",
-                    productionYear = productionYear,
+                    productionYear = productionYear ?: premiereDate?.year,
                     endDate = null,
                     trailer = null,
                     unplayedItemCount = unplayedItemCount,
@@ -461,7 +556,7 @@ constructor(
                     canDownload = canDownload,
                     runtimeTicks = runtimeTicks,
                     playbackPositionTicks = playbackPositionTicks,
-                    premiereDate = null,
+                    premiereDate = premiereDate,
                     seriesId = seriesId ?: UUID.randomUUID(),
                     seriesName = seriesName ?: "",
                     seasonId = seasonId ?: UUID.randomUUID(),
@@ -495,7 +590,7 @@ constructor(
                     criticRating = criticRating,
                     officialRating = officialRating,
                     status = status ?: "Ended",
-                    productionYear = productionYear,
+                    productionYear = productionYear ?: premiereDate?.year,
                     endDate = null,
                     trailer = null,
                     images = itemImages,
@@ -511,7 +606,8 @@ constructor(
                     sources = localSources,
                     indexNumber = indexNumber ?: 0,
                     episodes = emptyList(),
-                    productionYear = productionYear,
+                    productionYear = productionYear ?: premiereDate?.year,
+                    premiereDate = premiereDate,
                     played = played,
                     favorite = favorite,
                     canPlay = canPlay,
@@ -558,6 +654,7 @@ constructor(
 
     companion object {
         const val SECTION_ID_SUGGESTIONS = "suggestions"
+        const val SECTION_ID_SUGGESTIONS_BUFFER = "suggestions_buffer"
         const val SECTION_ID_RESUME = "resume"
         const val SECTION_ID_NEXT_UP = "next_up"
 
@@ -565,5 +662,7 @@ constructor(
         const val SECTION_TYPE_RESUME = "RESUME"
         const val SECTION_TYPE_NEXT_UP = "NEXT_UP"
         const val SECTION_TYPE_VIEW = "VIEW"
+
+        const val SUGGESTIONS_BATCH_SIZE = 10
     }
 }

@@ -198,7 +198,11 @@ interface JellyfinRepository {
     suspend fun getRandomItem(): FindroidItem?
 
     /** Retrieves suggested media items for the current user. */
-    suspend fun getSuggestions(forceRefresh: Boolean = false): List<FindroidItem>
+    suspend fun getSuggestions(
+        forceRefresh: Boolean = false,
+        startIndex: Int = 0,
+        limit: Int = 10,
+    ): List<FindroidItem>
 
     /** Retrieves items that are in progress and can be resumed. */
     suspend fun getResumeItems(): List<FindroidItem>

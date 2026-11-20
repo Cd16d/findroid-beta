@@ -1,5 +1,6 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.models.FindroidEpisode
+import dev.jdtech.jellyfin.models.FindroidImage
 import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -63,8 +65,28 @@ fun ItemPoster(
                     }
                 }
                 Direction.VERTICAL -> {
-                    if (item is FindroidEpisode) item.images.showPrimary ?: item.images.primary
-                    else item.images.primary ?: item.images.showPrimary ?: item.images.backdrop
+                    if (item is FindroidEpisode) {
+                        item.images.showPrimary
+                            ?: item.images.primary?.uri?.let { primUri ->
+                                val primStr = primUri.toString()
+                                if (primStr.contains("/items/${item.id}/Images/Primary")) {
+                                    val seriesUri =
+                                        Uri.parse(
+                                            primStr
+                                                .replace(
+                                                    "/items/${item.id}/Images/Primary",
+                                                    "/items/${item.seriesId}/Images/Primary",
+                                                )
+                                                .substringBefore("?"),
+                                        )
+                                    FindroidImage(seriesUri, null)
+                                } else {
+                                    null
+                                }
+                            }
+                    } else {
+                        item.images.primary ?: item.images.showPrimary ?: item.images.backdrop
+                    }
                 }
             }
         }

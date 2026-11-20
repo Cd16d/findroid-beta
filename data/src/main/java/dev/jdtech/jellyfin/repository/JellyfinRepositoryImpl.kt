@@ -788,10 +788,17 @@ class JellyfinRepositoryImpl(
             }
         }
 
-    override suspend fun getSuggestions(forceRefresh: Boolean): List<FindroidItem> {
+    override suspend fun getSuggestions(
+        forceRefresh: Boolean,
+        startIndex: Int,
+        limit: Int,
+    ): List<FindroidItem> {
         val currentUserId = jellyfinApi.userId
         if (
-            !forceRefresh && cachedSuggestions != null && cachedSuggestionsUserId == currentUserId
+            !forceRefresh &&
+                startIndex == 0 &&
+                cachedSuggestions != null &&
+                cachedSuggestionsUserId == currentUserId
         ) {
             return cachedSuggestions!!
         }
@@ -801,7 +808,8 @@ class JellyfinRepositoryImpl(
                 jellyfinApi.suggestionApi
                     .getSuggestions(
                         currentUserId!!,
-                        limit = 6,
+                        startIndex = startIndex,
+                        limit = limit,
                         type = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
                     )
                     .content
@@ -809,7 +817,7 @@ class JellyfinRepositoryImpl(
                     .mapNotNull { it.toFindroidItem(this@JellyfinRepositoryImpl, database) }
                     .distinctBy { it.id }
 
-            if (suggestions.isNotEmpty()) {
+            if (suggestions.isNotEmpty() && startIndex == 0) {
                 cachedSuggestions = suggestions
                 cachedSuggestionsUserId = currentUserId
             }
