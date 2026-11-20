@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -25,11 +24,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -131,10 +131,17 @@ private fun HomeScreenLayout(
         }
     val listState = rememberLazyListStateAtStart(firstKey = rows.firstOrNull()?.id)
 
-    var isManualRefreshing by remember { mutableStateOf(false) }
-    LaunchedEffect(state.isLoading) {
-        if (!state.isLoading) {
-            isManualRefreshing = false
+    val pullRefreshState = rememberPullToRefreshState()
+    val haptic = LocalHapticFeedback.current
+    var hasVibratedOnThreshold by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pullRefreshState.distanceFraction) {
+        val fraction = pullRefreshState.distanceFraction
+        if (fraction >= 1f && !hasVibratedOnThreshold && !state.isLoading) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            hasVibratedOnThreshold = true
+        } else if (fraction < 0.1f) {
+            hasVibratedOnThreshold = false
         }
     }
 
@@ -157,23 +164,12 @@ private fun HomeScreenLayout(
         }
     }
 
-    val pullRefreshState = rememberPullToRefreshState()
-
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
         PullToRefreshBox(
-            isRefreshing = isManualRefreshing && state.isLoading,
-            onRefresh = {
-                isManualRefreshing = true
-                onAction(HomeAction.Refresh)
-            },
+            isRefreshing = state.isLoading,
+            onRefresh = { onAction(HomeAction.Refresh) },
             state = pullRefreshState,
-            indicator = {
-                PullToRefreshDefaults.Indicator(
-                    state = pullRefreshState,
-                    isRefreshing = isManualRefreshing && state.isLoading,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = contentPaddingTop),
-                )
-            },
+            indicator = {},
         ) {
             LazyColumn(
                 modifier =
@@ -292,6 +288,7 @@ private fun HomeScreenLayout(
                 onErrorClick = { showErrorDialog = true },
                 onRetryClick = { onAction(HomeAction.OnRetryClick) },
                 onUserClick = { onAction(HomeAction.OnUserClick) },
+                pullProgress = pullRefreshState.distanceFraction,
             )
         }
     }
