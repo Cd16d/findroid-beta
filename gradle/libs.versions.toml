@@ -12,6 +12,7 @@ androidx-media3 = "1.11.1"
 androidx-mediarouter = "1.8.1"
 androidx-navigation3 = "1.2.1"
 androidx-paging = "3.5.3"
+androidx-profileinstaller = "1.4.1"
 androidx-room3 = "3.0.3"
 androidx-savedstate = "1.5.0"
 androidx-tv-material3 = "1.1.0"
@@ -66,6 +67,7 @@ androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigat
 androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "androidx-navigation3" }
 androidx-paging = { group = "androidx.paging", name = "paging-runtime", version.ref = "androidx-paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "androidx-paging" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidx-profileinstaller" }
 androidx-room3-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "androidx-room3" }
 androidx-room3-compiler = { group = "androidx.room3", name = "room3-compiler", version.ref = "androidx-room3" }
 androidx-savedstate-compose = { group = "androidx.savedstate", name = "savedstate-compose", version.ref = "androidx-savedstate" }

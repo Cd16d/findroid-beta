@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.utils
 
 import android.net.Uri
+import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -63,24 +64,32 @@ fun Uri?.toOptimizedImageUri(
     }
 }
 
-/** Creates a [BitmapPainter] from a BlurHash string. */
+private val blurHashPainterCache = LruCache<String, BitmapPainter>(150)
+private val blurHashColorCache = LruCache<String, Color>(150)
+
+/** Creates a [BitmapPainter] from a BlurHash string with thread-safe LRU caching. */
 fun String?.toBlurHashPainter(
     width: Int = 64,
     height: Int = 36,
     punch: Float = 1.25f,
 ): BitmapPainter? {
-    if (!this.isNullOrEmpty()) {
-        val bitmap =
-            BlurHash.decode(
-                blurHash = this,
-                width = width,
-                height = height,
-                punch = punch,
-            )
-        return bitmap?.asImageBitmap()?.let { BitmapPainter(it) }
-    } else {
-        return null
+    if (this.isNullOrEmpty()) return null
+    val cacheKey = "${this}_${width}x${height}_$punch"
+    synchronized(blurHashPainterCache) {
+        blurHashPainterCache.get(cacheKey)?.let {
+            return it
+        }
     }
+    val bitmap =
+        BlurHash.decode(
+            blurHash = this,
+            width = width,
+            height = height,
+            punch = punch,
+        ) ?: return null
+    val painter = BitmapPainter(bitmap.asImageBitmap())
+    synchronized(blurHashPainterCache) { blurHashPainterCache.put(cacheKey, painter) }
+    return painter
 }
 
 /**
@@ -89,6 +98,11 @@ fun String?.toBlurHashPainter(
  */
 fun String?.toBlurHashColor(): Color? {
     if (this.isNullOrEmpty()) return null
+    synchronized(blurHashColorCache) {
+        blurHashColorCache.get(this)?.let {
+            return it
+        }
+    }
     return try {
         // Decode an 8x8 bitmap (64 pixels) for accurate spatial color sampling
         val bitmap = BlurHash.decode(blurHash = this, width = 8, height = 8) ?: return null
@@ -142,14 +156,18 @@ fun String?.toBlurHashColor(): Color? {
         }
         bitmap.recycle()
 
-        bestColor
-            ?: run {
-                // Graceful fallback to average if all pixels were filtered out (e.g. monochrome)
-                val avgR = (fallbackTotalRed / 64).toInt()
-                val avgG = (fallbackTotalGreen / 64).toInt()
-                val avgB = (fallbackTotalBlue / 64).toInt()
-                Color(red = avgR, green = avgG, blue = avgB)
-            }
+        val finalColor =
+            bestColor
+                ?: run {
+                    // Graceful fallback to average if all pixels were filtered out (e.g.
+                    // monochrome)
+                    val avgR = (fallbackTotalRed / 64).toInt()
+                    val avgG = (fallbackTotalGreen / 64).toInt()
+                    val avgB = (fallbackTotalBlue / 64).toInt()
+                    Color(red = avgR, green = avgG, blue = avgB)
+                }
+        synchronized(blurHashColorCache) { blurHashColorCache.put(this, finalColor) }
+        finalColor
     } catch (_: Exception) {
         null
     }

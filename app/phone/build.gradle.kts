@@ -150,6 +150,7 @@ dependencies {
 
     implementation(libs.androidx.core)
     implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.session)
