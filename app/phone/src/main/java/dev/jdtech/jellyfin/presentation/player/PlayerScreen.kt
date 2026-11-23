@@ -1119,20 +1119,20 @@ fun PlayerScreen(
                             currentPosition = newPos
                             viewModel.player.seekTo(newPos)
                         },
-                        hasPreviousItem = hasPreviousItem,
-                        hasNextItem = hasNextItem,
+                        hasPreviousItem = uiState.hasPreviousItem || hasPreviousItem,
+                        hasNextItem = uiState.hasNextItem || hasNextItem,
                         onPreviousItem =
                             if (isEpisode) {
                                 {
                                     videoPlayerState.resetTimeout()
-                                    viewModel.player.seekToPreviousMediaItem()
+                                    viewModel.skipToPreviousItem()
                                 }
                             } else null,
                         onNextItem =
                             if (isEpisode) {
                                 {
                                     videoPlayerState.resetTimeout()
-                                    viewModel.player.seekToNextMediaItem()
+                                    viewModel.skipToNextItem()
                                 }
                             } else null,
                         isPortrait = false,
@@ -1968,18 +1968,18 @@ fun PlayerScreen(
                                         if (isEpisode) {
                                             {
                                                 videoPlayerState.resetTimeout()
-                                                viewModel.player.seekToPreviousMediaItem()
+                                                viewModel.skipToPreviousItem()
                                             }
                                         } else null,
                                     onNextItem =
                                         if (isEpisode) {
                                             {
                                                 videoPlayerState.resetTimeout()
-                                                viewModel.player.seekToNextMediaItem()
+                                                viewModel.skipToNextItem()
                                             }
                                         } else null,
-                                    hasPreviousItem = hasPreviousItem,
-                                    hasNextItem = hasNextItem,
+                                    hasPreviousItem = uiState.hasPreviousItem || hasPreviousItem,
+                                    hasNextItem = uiState.hasNextItem || hasNextItem,
                                     isPortrait = false,
                                 )
                             }
@@ -2083,18 +2083,18 @@ fun PlayerScreen(
                                         if (isEpisode) {
                                             {
                                                 videoPlayerState.resetTimeout()
-                                                viewModel.player.seekToPreviousMediaItem()
+                                                viewModel.skipToPreviousItem()
                                             }
                                         } else null,
                                     onNextItem =
                                         if (isEpisode) {
                                             {
                                                 videoPlayerState.resetTimeout()
-                                                viewModel.player.seekToNextMediaItem()
+                                                viewModel.skipToNextItem()
                                             }
                                         } else null,
-                                    hasPreviousItem = hasPreviousItem,
-                                    hasNextItem = hasNextItem,
+                                    hasPreviousItem = uiState.hasPreviousItem || hasPreviousItem,
+                                    hasNextItem = uiState.hasNextItem || hasNextItem,
                                     isPortrait = true,
                                     modifier =
                                         Modifier.graphicsLayer { alpha = centerControlsAlpha },

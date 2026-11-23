@@ -46,6 +46,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     private var currentSeasonIndex: Int? = null
     private var currentSeasonId: UUID? = null
     private var cachedSeasons: List<FindroidSeason>? = null
+    private val loadedSeasonIds: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
     private val hydratedEpisodeIds: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
 
     /** The index of the currently active media item in the playlist. */
@@ -134,6 +135,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         Timber.d("Retrieving initial player item")
 
         cachedSeasons = null
+        loadedSeasonIds.clear()
         hydratedEpisodeIds.clear()
 
         val initialItem =
@@ -163,6 +165,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     seriesId = itemId
                     currentSeasonId = season.id
                     currentSeasonIndex = season.indexNumber
+                    loadedSeasonIds.add(season.id)
 
                     val episodes =
                         repository
@@ -187,6 +190,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     seriesId = season.seriesId
                     currentSeasonId = season.id
                     currentSeasonIndex = season.indexNumber
+                    loadedSeasonIds.add(season.id)
 
                     val episodes =
                         repository
@@ -212,6 +216,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     seriesId = episode.seriesId
                     currentSeasonId = episode.seasonId
                     currentSeasonIndex = episode.parentIndexNumber
+                    loadedSeasonIds.add(episode.seasonId)
 
                     val episodes =
                         repository
@@ -352,16 +357,176 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         }
     }
 
+    /**
+     * Seeds known series seasons so boundary checks are immediately accurate without refetching.
+     */
+    fun cacheSeasons(seasons: List<FindroidSeason>) {
+        if (seasons.isNotEmpty() && cachedSeasons == null) {
+            cachedSeasons = seasons
+        }
+    }
+
+    /**
+     * Returns whether an episode exists before [currentItemId] in the active series playlist,
+     * independent of whether its stream URL has finished resolving into the player queue.
+     */
+    fun hasPreviousInPlaylist(currentItemId: UUID? = null): Boolean {
+        val (idx, boundarySeasonIdx) =
+            synchronized(items) {
+                val resolved =
+                    if (currentItemId != null) {
+                        items.indexOfFirst { it.id == currentItemId }
+                    } else {
+                        currentItemIndex
+                    }
+                val firstSeason = (items.firstOrNull() as? FindroidEpisode)?.parentIndexNumber
+                resolved to (firstSeason ?: currentSeasonIndex)
+            }
+        if (idx > 0) return true
+        if (idx != 0 || seriesId == null) return false
+        val seasonIdx = boundarySeasonIdx ?: return false
+        if (seasonIdx <= 1) return false
+        val seasons = cachedSeasons
+        return seasons?.any { it.indexNumber in 1 until seasonIdx } ?: true
+    }
+
+    /**
+     * Returns whether an episode exists after [currentItemId] in the active series playlist,
+     * independent of whether its stream URL has finished resolving into the player queue.
+     */
+    fun hasNextInPlaylist(currentItemId: UUID? = null): Boolean {
+        val (idx, lastIdx, boundarySeasonIdx) =
+            synchronized(items) {
+                val resolved =
+                    if (currentItemId != null) {
+                        items.indexOfFirst { it.id == currentItemId }
+                    } else {
+                        currentItemIndex
+                    }
+                val lastSeason = (items.lastOrNull() as? FindroidEpisode)?.parentIndexNumber
+                Triple(resolved, items.lastIndex, lastSeason ?: currentSeasonIndex)
+            }
+        if (idx in 0 until lastIdx) return true
+        if (idx < 0 || seriesId == null) return false
+        val seasonIdx = boundarySeasonIdx ?: return false
+        val seasons = cachedSeasons ?: return false
+        return if (seasonIdx > 0) {
+            seasons.any { it.indexNumber > seasonIdx }
+        } else {
+            seasons.any { it.indexNumber > 0 }
+        }
+    }
+
+    /**
+     * Retrieves the [PlayerItem] immediately preceding [anchorItemId] in the active playlist,
+     * lazily loading the preceding season if [anchorItemId] is at the start of the loaded items.
+     */
+    suspend fun getPreviousPlayerItemBefore(
+        anchorItemId: UUID,
+        maxStreamingBitrate: Int? = null,
+        deviceProfile: DeviceProfile? = null,
+        enableDirectPlay: Boolean = true,
+    ): PlayerItem? {
+        var anchorIdx = synchronized(items) { items.indexOfFirst { it.id == anchorItemId } }
+        if (anchorIdx < 0) return null
+
+        if (anchorIdx == 0) {
+            val loaded = loadPreviousSeasonEpisodes()
+            anchorIdx = synchronized(items) { items.indexOfFirst { it.id == anchorItemId } }
+            if (!loaded || anchorIdx <= 0) {
+                return null
+            }
+        }
+
+        val item = synchronized(items) { items.getOrNull(anchorIdx - 1) } ?: return null
+        return convertAndCachePlayerItem(
+            item = item,
+            maxStreamingBitrate = maxStreamingBitrate,
+            deviceProfile = deviceProfile,
+            enableDirectPlay = enableDirectPlay,
+        )
+    }
+
+    /**
+     * Retrieves the [PlayerItem] immediately following [anchorItemId] in the active playlist,
+     * lazily loading the next season if [anchorItemId] is at the end of the loaded items.
+     */
+    suspend fun getNextPlayerItemAfter(
+        anchorItemId: UUID,
+        maxStreamingBitrate: Int? = null,
+        deviceProfile: DeviceProfile? = null,
+        enableDirectPlay: Boolean = true,
+    ): PlayerItem? {
+        var anchorIdx = synchronized(items) { items.indexOfFirst { it.id == anchorItemId } }
+        if (anchorIdx < 0) return null
+
+        val lastIdx = synchronized(items) { items.lastIndex }
+        if (anchorIdx >= lastIdx) {
+            val loaded = loadNextSeasonEpisodes()
+            anchorIdx = synchronized(items) { items.indexOfFirst { it.id == anchorItemId } }
+            val updatedLastIdx = synchronized(items) { items.lastIndex }
+            if (!loaded || anchorIdx < 0 || anchorIdx >= updatedLastIdx) {
+                return null
+            }
+        }
+
+        val item = synchronized(items) { items.getOrNull(anchorIdx + 1) } ?: return null
+        return convertAndCachePlayerItem(
+            item = item,
+            maxStreamingBitrate = maxStreamingBitrate,
+            deviceProfile = deviceProfile,
+            enableDirectPlay = enableDirectPlay,
+        )
+    }
+
+    private suspend fun convertAndCachePlayerItem(
+        item: FindroidItem,
+        maxStreamingBitrate: Int?,
+        deviceProfile: DeviceProfile?,
+        enableDirectPlay: Boolean,
+    ): PlayerItem? {
+        val cached = synchronized(playerItems) { playerItems.firstOrNull { it.itemId == item.id } }
+        if (cached != null) {
+            return cached
+        }
+        return try {
+            val converted =
+                item.toPlayerItem(
+                    mediaSourceIndex = null,
+                    playbackPosition = 0L,
+                    maxStreamingBitrate = maxStreamingBitrate,
+                    deviceProfile = deviceProfile,
+                    enableDirectPlay = enableDirectPlay,
+                )
+            synchronized(playerItems) {
+                if (playerItems.none { it.itemId == converted.itemId }) {
+                    playerItems.add(converted)
+                }
+            }
+            converted
+        } catch (e: Exception) {
+            Timber.e("Failed to convert playlist item ${item.id}: $e")
+            null
+        }
+    }
+
     private suspend fun loadNextSeasonEpisodes(): Boolean {
         val sId = seriesId ?: return false
-        val curSeasonIdx = currentSeasonIndex ?: return false
+        val boundarySeasonIdx =
+            synchronized(items) {
+                (items.lastOrNull() as? FindroidEpisode)?.parentIndexNumber ?: currentSeasonIndex
+            } ?: return false
         try {
             val seasons = cachedSeasons ?: repository.getSeasons(sId).also { cachedSeasons = it }
             val nextSeason =
-                if (curSeasonIdx > 0) {
-                    seasons.filter { it.indexNumber > curSeasonIdx }.minByOrNull { it.indexNumber }
+                if (boundarySeasonIdx > 0) {
+                    seasons
+                        .filter { it.indexNumber > boundarySeasonIdx && it.id !in loadedSeasonIds }
+                        .minByOrNull { it.indexNumber }
                 } else {
-                    seasons.filter { it.indexNumber > 0 }.minByOrNull { it.indexNumber }
+                    seasons
+                        .filter { it.indexNumber > 0 && it.id !in loadedSeasonIds }
+                        .minByOrNull { it.indexNumber }
                 } ?: return false
 
             val nextEpisodes =
@@ -376,9 +541,8 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             if (nextEpisodes.isEmpty()) return false
 
             val newItems = nextEpisodes.flatMap { it.toPlaylist() }
+            loadedSeasonIds.add(nextSeason.id)
             synchronized(items) { items.addAll(newItems) }
-            currentSeasonIndex = nextSeason.indexNumber
-            currentSeasonId = nextSeason.id
             return true
         } catch (e: Exception) {
             Timber.e(e, "Failed to load next season episodes")
@@ -388,15 +552,20 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
 
     private suspend fun loadPreviousSeasonEpisodes(): Boolean {
         val sId = seriesId ?: return false
-        val curSeasonIdx = currentSeasonIndex ?: return false
+        val boundarySeasonIdx =
+            synchronized(items) {
+                (items.firstOrNull() as? FindroidEpisode)?.parentIndexNumber ?: currentSeasonIndex
+            } ?: return false
         // Intentionally skip Season 0 (Specials) when traversing backwards from Season 1
-        if (curSeasonIdx <= 1) return false
+        if (boundarySeasonIdx <= 1) return false
 
         try {
             val seasons = cachedSeasons ?: repository.getSeasons(sId).also { cachedSeasons = it }
             val prevSeason =
                 seasons
-                    .filter { it.indexNumber in 1 until curSeasonIdx }
+                    .filter {
+                        it.indexNumber in 1 until boundarySeasonIdx && it.id !in loadedSeasonIds
+                    }
                     .maxByOrNull { it.indexNumber } ?: return false
 
             val prevEpisodes =
@@ -411,10 +580,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             if (prevEpisodes.isEmpty()) return false
 
             val prevItems = prevEpisodes.flatMap { it.toPlaylist() }
+            loadedSeasonIds.add(prevSeason.id)
             synchronized(items) { items.addAll(0, prevItems) }
             currentItemIndex += prevItems.size
-            currentSeasonIndex = prevSeason.indexNumber
-            currentSeasonId = prevSeason.id
             return true
         } catch (e: Exception) {
             Timber.e(e, "Failed to load previous season episodes")

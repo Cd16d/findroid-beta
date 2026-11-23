@@ -828,6 +828,10 @@ fun PlayerScreen(
                         currentSkipButtonStringRes = uiState.currentSkipButtonStringRes,
                         onSkipSegment = { if (segment != null) viewModel.skipSegment(segment) },
                         hideEpisodeSpoilers = uiState.hideEpisodeSpoilers,
+                        hasPreviousItem = uiState.hasPreviousItem,
+                        hasNextItem = uiState.hasNextItem,
+                        onPreviousItem = { viewModel.skipToPreviousItem() },
+                        onNextItem = { viewModel.skipToNextItem() },
                     )
                 },
             )
@@ -880,6 +884,10 @@ fun VideoPlayerControls(
     currentSkipButtonStringRes: Int = CoreR.string.skip,
     onSkipSegment: () -> Unit = {},
     hideEpisodeSpoilers: Boolean = false,
+    hasPreviousItem: Boolean = false,
+    hasNextItem: Boolean = false,
+    onPreviousItem: () -> Unit = { player.seekToPreviousMediaItem() },
+    onNextItem: () -> Unit = { player.seekToNextMediaItem() },
 ) {
     var isShelfFocused by remember { mutableStateOf(false) }
 
@@ -967,8 +975,8 @@ fun VideoPlayerControls(
                         VideoPlayerMediaButton(
                             icon = painterResource(id = CoreR.drawable.ic_skip_back),
                             onClick = {
-                                if (player.hasPreviousMediaItem()) {
-                                    player.seekToPreviousMediaItem()
+                                if (hasPreviousItem || player.hasPreviousMediaItem()) {
+                                    onPreviousItem()
                                 } else {
                                     player.seekTo(
                                         (player.currentPosition - 10_000L).coerceAtLeast(0L),
@@ -1033,8 +1041,8 @@ fun VideoPlayerControls(
                             VideoPlayerMediaButton(
                                 icon = painterResource(id = CoreR.drawable.ic_skip_forward),
                                 onClick = {
-                                    if (player.hasNextMediaItem()) {
-                                        player.seekToNextMediaItem()
+                                    if (hasNextItem || player.hasNextMediaItem()) {
+                                        onNextItem()
                                     } else {
                                         val targetPos =
                                             if (player.duration > 0L) {

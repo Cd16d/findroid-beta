@@ -51,6 +51,7 @@ import dev.jdtech.jellyfin.player.core.domain.models.PlaybackInfoData
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerChapter
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerImages
 import dev.jdtech.jellyfin.player.core.domain.models.PlayerItem
+import dev.jdtech.jellyfin.player.core.domain.models.PlayerMediaType
 import dev.jdtech.jellyfin.player.core.domain.models.SleepTimerMode
 import dev.jdtech.jellyfin.player.core.domain.models.SleepTimerStatus
 import dev.jdtech.jellyfin.player.core.domain.models.Track
@@ -85,7 +86,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -185,6 +188,8 @@ constructor(
         val isDialogueBoostEnabled: Boolean = false,
         val subtitleDelayMs: Long = 0L,
         val isExternalSubtitleLoaded: Boolean = false,
+        val hasPreviousItem: Boolean = false,
+        val hasNextItem: Boolean = false,
     )
 
     private var items: MutableList<PlayerItem> = mutableListOf()
@@ -192,6 +197,7 @@ constructor(
     private var playbackProgressJob: Job? = null
     private var initializePlayerJob: Job? = null
     private var loadMetadataJob: Job? = null
+    private var queueRunwayJob: Job? = null
     var selectedAudioStreamIndex: Int? = null
         private set
 
@@ -544,6 +550,7 @@ constructor(
             }
         _uiState.update { it.copy(selectedQuality = rememberedQuality) }
 
+        queueRunwayJob?.cancel()
         initializePlayerJob?.cancel()
         initializePlayerJob = viewModelScope.launch {
             val selectedOption = _uiState.value.selectedQuality
@@ -772,8 +779,12 @@ constructor(
 
             player.setMediaItems(initialQueue.map { it.toMediaItem() }, activeIndex, startPosition)
             currentPlayingMediaId = updatedStartItem.itemId.toString()
+            updateQueueAvailability(updatedStartItem.itemId)
             player.prepare()
             player.play()
+            if (updatedStartItem.mediaType == PlayerMediaType.EPISODE) {
+                ensureQueueRunway(updatedStartItem.itemId)
+            }
         }
         loadItemMetadata(itemId)
     }
@@ -789,7 +800,10 @@ constructor(
                     val seasons: List<FindroidSeason> =
                         if (item is FindroidEpisode) {
                             try {
-                                repository.getSeasons(seriesId = item.seriesId)
+                                repository.getSeasons(seriesId = item.seriesId).also {
+                                    playlistManager.cacheSeasons(it)
+                                    updateQueueAvailability()
+                                }
                             } catch (e: Exception) {
                                 if (e !is CancellationException) {
                                     Timber.e(e, "Error loading seasons for series ${item.seriesId}")
@@ -2438,7 +2452,34 @@ constructor(
                 loadItemMetadata(item.itemId)
 
                 playlistManager.setCurrentMediaItemIndex(item.itemId)
+                updateQueueAvailability(item.itemId)
+                if (item.mediaType == PlayerMediaType.EPISODE) {
+                    ensureQueueRunway(item.itemId)
+                }
+            } catch (e: Exception) {
+                Timber.e(e)
+            }
+        }
+    }
 
+    private fun updateQueueAvailability(currentItemId: UUID? = null) {
+        val activeId =
+            currentItemId
+                ?: currentPlayingMediaId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+        val hasPrev =
+            player.hasPreviousMediaItem() || playlistManager.hasPreviousInPlaylist(activeId)
+        val hasNext = player.hasNextMediaItem() || playlistManager.hasNextInPlaylist(activeId)
+        _uiState.update { it.copy(hasPreviousItem = hasPrev, hasNextItem = hasNext) }
+    }
+
+    /**
+     * Maintains a background ±[QUEUE_RUNWAY] episode buffer ([N-2, N-1, N, N+1, N+2]) around
+     * [anchorItemId] without blocking playback startup or transitions.
+     */
+    private fun ensureQueueRunway(anchorItemId: UUID): Job {
+        queueRunwayJob?.cancel()
+        val job = viewModelScope.launch {
+            try {
                 val selectedOption = _uiState.value.selectedQuality
                 val optionBitrate = selectedOption.bitrateBps
                 val requestedBitrate: Int? =
@@ -2464,38 +2505,131 @@ constructor(
                         maxHeight = selectedOption.maxHeight,
                     )
 
-                val currentIdx = items.indexOfFirst { it.itemId == item.itemId }
-                // 1. Backward Prepend: If playing at the beginning of loaded queue (index 0)
-                if (currentIdx == 0) {
-                    val previousItem =
-                        playlistManager.getPreviousPlayerItem(
-                            maxStreamingBitrate = effectiveBitrate,
-                            deviceProfile = deviceProfile,
-                            enableDirectPlay = enableDirectPlay,
-                        )
-                    if (previousItem != null && items.none { it.itemId == previousItem.itemId }) {
-                        items.add(0, previousItem)
-                        player.addMediaItem(0, previousItem.toMediaItem())
-                    }
-                }
+                var reachedStart = false
+                var reachedEnd = false
 
-                // 2. Forward Append: If playing at or near the end of loaded queue
-                if (currentIdx != -1 && currentIdx >= items.lastIndex - 1) {
-                    val nextItem =
-                        playlistManager.getNextPlayerItem(
-                            maxStreamingBitrate = effectiveBitrate,
-                            deviceProfile = deviceProfile,
-                            enableDirectPlay = enableDirectPlay,
-                        )
-                    if (nextItem != null && items.none { it.itemId == nextItem.itemId }) {
-                        items.add(nextItem)
-                        player.addMediaItem(nextItem.toMediaItem())
+                repeat(QUEUE_RUNWAY) {
+                    val currentIdx = items.indexOfFirst { it.itemId == anchorItemId }
+                    if (currentIdx < 0) return@launch
+
+                    val needPrev = !reachedStart && currentIdx < QUEUE_RUNWAY
+                    val needNext = !reachedEnd && (items.lastIndex - currentIdx) < QUEUE_RUNWAY
+                    if (!needPrev && !needNext) return@repeat
+
+                    val headId = if (needPrev) items.firstOrNull()?.itemId else null
+                    val tailId = if (needNext) items.lastOrNull()?.itemId else null
+
+                    val (prevItem, nextItem) =
+                        coroutineScope {
+                            val prevDeferred = headId?.let { id ->
+                                async {
+                                    playlistManager.getPreviousPlayerItemBefore(
+                                        anchorItemId = id,
+                                        maxStreamingBitrate = effectiveBitrate,
+                                        deviceProfile = deviceProfile,
+                                        enableDirectPlay = enableDirectPlay,
+                                    )
+                                }
+                            }
+                            val nextDeferred = tailId?.let { id ->
+                                async {
+                                    playlistManager.getNextPlayerItemAfter(
+                                        anchorItemId = id,
+                                        maxStreamingBitrate = effectiveBitrate,
+                                        deviceProfile = deviceProfile,
+                                        enableDirectPlay = enableDirectPlay,
+                                    )
+                                }
+                            }
+                            prevDeferred?.await() to nextDeferred?.await()
+                        }
+
+                    if (needPrev) {
+                        if (prevItem == null) {
+                            reachedStart = true
+                        } else if (items.none { it.itemId == prevItem.itemId }) {
+                            items.add(0, prevItem)
+                            player.addMediaItem(0, prevItem.toMediaItem())
+                        } else {
+                            reachedStart = true
+                        }
                     }
+
+                    if (needNext) {
+                        if (nextItem == null) {
+                            reachedEnd = true
+                        } else if (items.none { it.itemId == nextItem.itemId }) {
+                            items.add(nextItem)
+                            player.addMediaItem(nextItem.toMediaItem())
+                        } else {
+                            reachedEnd = true
+                        }
+                    }
+
+                    updateQueueAvailability(anchorItemId)
                 }
 
                 Timber.tag("PlayerItems").d(items.map { it.indexNumber }.toString())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Timber.e(e)
+                Timber.e(e, "Failed to maintain ±$QUEUE_RUNWAY queue runway")
+            }
+        }
+        queueRunwayJob = job
+        return job
+    }
+
+    /** Seeks to the previous episode immediately, or awaits an in-flight backward runway fetch. */
+    fun skipToPreviousItem() {
+        if (player.hasPreviousMediaItem()) {
+            player.seekToPreviousMediaItem()
+            return
+        }
+        val activeId =
+            currentPlayingMediaId?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return
+        if (!playlistManager.hasPreviousInPlaylist(activeId)) {
+            updateQueueAvailability(activeId)
+            return
+        }
+        viewModelScope.launch {
+            queueRunwayJob?.join()
+            if (player.hasPreviousMediaItem()) {
+                player.seekToPreviousMediaItem()
+            } else {
+                ensureQueueRunway(activeId).join()
+                if (player.hasPreviousMediaItem()) {
+                    player.seekToPreviousMediaItem()
+                } else {
+                    updateQueueAvailability(activeId)
+                }
+            }
+        }
+    }
+
+    /** Seeks to the next episode immediately, or awaits an in-flight forward runway fetch. */
+    fun skipToNextItem() {
+        if (player.hasNextMediaItem()) {
+            player.seekToNextMediaItem()
+            return
+        }
+        val activeId =
+            currentPlayingMediaId?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return
+        if (!playlistManager.hasNextInPlaylist(activeId)) {
+            updateQueueAvailability(activeId)
+            return
+        }
+        viewModelScope.launch {
+            queueRunwayJob?.join()
+            if (player.hasNextMediaItem()) {
+                player.seekToNextMediaItem()
+            } else {
+                ensureQueueRunway(activeId).join()
+                if (player.hasNextMediaItem()) {
+                    player.seekToNextMediaItem()
+                } else {
+                    updateQueueAvailability(activeId)
+                }
             }
         }
     }
@@ -2519,7 +2653,7 @@ constructor(
                     playSessionId = playSessionId,
                 )
                 if (appPreferences.getValue(appPreferences.playerAutoplayNext)) {
-                    player.seekToNextMediaItem()
+                    skipToNextItem()
                     player.play()
                 } else {
                     eventsChannel.send(PlayerEvents.NavigateBack)
@@ -2565,6 +2699,7 @@ constructor(
     override fun onAudioSessionIdChanged(audioSessionId: Int) {}
 
     override fun onCleared() {
+        queueRunwayJob?.cancel()
         stopPlaybackProgressJob()
         Timber.d("Clearing Player ViewModel")
         externalSubtitleCacheFiles.forEach { runCatching { it.delete() } }
@@ -2841,7 +2976,7 @@ constructor(
 
     fun skipSegment(segment: FindroidSegment) {
         if (shouldSkipToNextEpisode(segment)) {
-            player.seekToNextMediaItem()
+            skipToNextItem()
         } else {
             player.seekTo(segment.endTicks)
         }
@@ -2853,7 +2988,7 @@ constructor(
         return appPreferences.getValue(appPreferences.playerAutoplayNext) &&
             SegmentUtils.shouldSkipToNextEpisode(
                 segment = segment,
-                hasNextMediaItem = player.hasNextMediaItem(),
+                hasNextMediaItem = _uiState.value.hasNextItem || player.hasNextMediaItem(),
                 playerDurationMillis = player.duration,
                 nextEpisodeThreshold =
                     appPreferences.getValue(appPreferences.playerMediaSegmentsNextEpisodeThreshold),
@@ -2888,6 +3023,10 @@ constructor(
                 updatePlaybackProgress()
             }
         }
+    }
+
+    private companion object {
+        const val QUEUE_RUNWAY = 2
     }
 }
 
