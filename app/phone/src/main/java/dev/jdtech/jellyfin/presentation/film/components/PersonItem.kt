@@ -2,7 +2,7 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +38,7 @@ fun PersonItem(person: FindroidItemPerson, onClick: () -> Unit, modifier: Modifi
         modifier =
             modifier.width(110.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick),
     ) {
-        BoxWithConstraints(
+        Box(
             modifier =
                 Modifier.clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceContainer)
@@ -48,7 +48,7 @@ fun PersonItem(person: FindroidItemPerson, onClick: () -> Unit, modifier: Modifi
         ) {
             val image = person.image
 
-            val imageUri = image.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+            val imageUri = image.uri.toOptimizedImageUri(widthDp = 110.dp, heightDp = 160.dp)
 
             val blurPlaceholder = remember(image.blurHash) { image.blurHash.toBlurHashPainter() }
 

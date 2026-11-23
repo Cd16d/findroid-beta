@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.presentation.home.HomeViewModel
 import dev.jdtech.jellyfin.models.getProfileImageModel
@@ -31,6 +32,7 @@ constructor(
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
     private val downloader: Downloader,
+    private val userAvatarStore: UserAvatarStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AccountState())
@@ -44,6 +46,11 @@ constructor(
         viewModelScope.launch(Dispatchers.Default) {
             appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
                 loadUser(serverId)
+                val baseUrl = repository.getBaseUrl()
+                if (!appPreferences.getValue(appPreferences.offlineMode) && baseUrl.isNotBlank()) {
+                    userAvatarStore.syncAllUsersForServer(serverId, baseUrl)
+                    loadUser(serverId)
+                }
             }
         }
     }
@@ -54,16 +61,21 @@ constructor(
 
         val baseUrl = repository.getBaseUrl()
 
-        val imageUrl = user?.getProfileImageModel(context, baseUrl)
+        val imageUrl = user?.let {
+            userAvatarStore.getLocalAvatarFile(it.id, it.primaryImageTag)
+                ?: it.getProfileImageModel(context, baseUrl)
+        }
 
-        _state.emit(
-            _state.value.copy(
-                user = user,
-                userImageUrl = imageUrl,
-                otherUsers = otherUsers,
-                baseUrl = baseUrl,
-            ),
-        )
+        _state.update { current ->
+            val next =
+                current.copy(
+                    user = user,
+                    userImageUrl = imageUrl,
+                    otherUsers = otherUsers,
+                    baseUrl = baseUrl,
+                )
+            if (next == current) current else next
+        }
     }
 
     private fun authorizeQuickConnect(code: String) {
@@ -78,8 +90,19 @@ constructor(
         viewModelScope.launch {
             HomeViewModel.clearCache()
             repository.setCurrentUser(userId)
+            val baseUrl = repository.getBaseUrl()
             val imageTag = repository.refreshUser(userId)
-            downloader.downloadUserImage(userId, imageTag)
+            val updatedUser = database.getUser(userId)
+            if (baseUrl.isNotBlank()) {
+                userAvatarStore.ensureUserAvatar(
+                    userId = userId,
+                    baseUrl = baseUrl,
+                    serverTag = imageTag ?: updatedUser?.primaryImageTag,
+                    accessToken = updatedUser?.accessToken,
+                )
+            } else {
+                downloader.downloadUserImage(userId, imageTag)
+            }
             eventsChannel.send(AccountEvent.UserSwitched)
         }
     }

@@ -7,6 +7,7 @@ import androidx.room3.ForeignKey
 import androidx.room3.PrimaryKey
 import java.io.File
 import java.util.UUID
+import kotlin.math.roundToInt
 
 @Entity(
     tableName = "users",
@@ -31,10 +32,12 @@ data class User(
 fun User.getProfileImageModel(context: Context, baseUrl: String): Any? {
     val fileName = if (primaryImageTag != null) "primary_$primaryImageTag" else "primary"
     val localFile = File(context.filesDir, "images/users/$id/$fileName")
-    return if (localFile.exists()) {
+    return if (localFile.exists() && localFile.length() > 0L) {
         localFile
     } else if (baseUrl.isNotEmpty()) {
-        "$baseUrl/Users/$id/Images/Primary" +
-            (if (primaryImageTag != null) "?tag=$primaryImageTag" else "")
+        val px = (56f * context.resources.displayMetrics.density).roundToInt().coerceAtLeast(112)
+        val cleanBaseUrl = baseUrl.trim().trimEnd('/')
+        "$cleanBaseUrl/Users/$id/Images/Primary?maxWidth=$px&maxHeight=$px&quality=90" +
+            (if (primaryImageTag != null) "&tag=$primaryImageTag" else "")
     } else null
 }

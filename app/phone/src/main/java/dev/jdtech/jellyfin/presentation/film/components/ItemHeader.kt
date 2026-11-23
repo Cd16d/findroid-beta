@@ -9,9 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +31,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -100,8 +100,9 @@ fun ItemHeader(
                     else -> item.images.backdrop
                 }
 
+            val headerWidth = LocalWindowInfo.current.containerDpSize.width
             val backdropUri =
-                image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+                image?.uri.toOptimizedImageUri(widthDp = headerWidth, heightDp = 288.dp)
 
             val blurPlaceholder =
                 remember(image?.blurHash) {
@@ -178,8 +179,9 @@ fun ItemHeader(
                     else -> item.images.backdrop
                 }
 
+            val headerWidth = LocalWindowInfo.current.containerDpSize.width
             val backdropUri =
-                image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+                image?.uri.toOptimizedImageUri(widthDp = headerWidth, heightDp = 288.dp)
 
             val blurPlaceholder =
                 remember(image?.blurHash) {
@@ -220,7 +222,7 @@ private fun ItemHeaderBase(
     showLogo: Boolean = false,
     hideEpisodeSpoilers: Boolean = false,
     isRevealed: Boolean = false,
-    backdropImage: @Composable (BoxWithConstraintsScope.() -> Unit),
+    backdropImage: @Composable (BoxScope.() -> Unit),
     content: @Composable (BoxScope.() -> Unit) = {},
 ) {
     val backgroundColor = MaterialTheme.colorScheme.background
@@ -239,7 +241,7 @@ private fun ItemHeaderBase(
             label = "headerScrim",
         )
 
-    BoxWithConstraints(modifier = Modifier.height(288.dp).clipToBounds()) {
+    Box(modifier = Modifier.height(288.dp).clipToBounds()) {
         backdropImage()
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(Color.Black.copy(alpha = scrimAlpha))

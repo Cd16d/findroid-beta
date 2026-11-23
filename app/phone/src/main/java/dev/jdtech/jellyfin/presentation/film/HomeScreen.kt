@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -102,9 +106,46 @@ private fun HomeScreenLayout(
     val showServerSelectionSheetState = rememberModalBottomSheetState()
     var showServerSelectionBottomSheet by remember { mutableStateOf(false) }
 
+    val pullToRefreshState = rememberPullToRefreshState()
+    val lazyListState = rememberLazyListState()
+    val hapticFeedback = LocalHapticFeedback.current
+
+    var suppressPullIndicator by remember { mutableStateOf(false) }
+    var thresholdHapticTriggered by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pullToRefreshState.distanceFraction, state.isLoading, suppressPullIndicator) {
+        val fraction = pullToRefreshState.distanceFraction
+        if (suppressPullIndicator && !state.isLoading && fraction <= 0.01f) {
+            suppressPullIndicator = false
+        }
+        if (
+            !state.isLoading &&
+                !suppressPullIndicator &&
+                fraction >= 1f &&
+                !thresholdHapticTriggered
+        ) {
+            thresholdHapticTriggered = true
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+        } else if (fraction < 0.85f) {
+            thresholdHapticTriggered = false
+        }
+    }
+
+    val headerPullProgress =
+        if (suppressPullIndicator || state.isLoading) 0f else pullToRefreshState.distanceFraction
+
     Box(modifier = Modifier.fillMaxSize().semantics { isTraversalGroup = true }) {
-        PullToRefreshBox(isRefreshing = false, onRefresh = { onAction(HomeAction.Refresh) }) {
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            state = pullToRefreshState,
+            onRefresh = {
+                suppressPullIndicator = true
+                onAction(HomeAction.Refresh)
+            },
+            indicator = {},
+        ) {
             LazyColumn(
+                state = lazyListState,
                 modifier = Modifier.fillMaxSize().semantics { traversalIndex = 1f },
                 contentPadding = PaddingValues(top = contentPaddingTop, bottom = paddingBottom),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
@@ -178,6 +219,7 @@ private fun HomeScreenLayout(
                 userImageUrl = state.userImageUrl,
                 isLoading = state.isLoading,
                 isError = state.error != null,
+                pullProgress = headerPullProgress,
                 onServerClick = { showServerSelectionBottomSheet = true },
                 onErrorClick = { showErrorDialog = true },
                 onRetryClick = { onAction(HomeAction.OnRetryClick) },

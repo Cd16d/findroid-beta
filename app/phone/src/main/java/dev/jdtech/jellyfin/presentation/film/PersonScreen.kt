@@ -3,7 +3,6 @@ package dev.jdtech.jellyfin.presentation.film
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -211,7 +210,7 @@ private fun PersonScreenLayout(state: PersonState, onAction: (PersonAction) -> U
 
 @Composable
 private fun PersonImage(person: FindroidPerson, modifier: Modifier = Modifier) {
-    BoxWithConstraints(
+    Box(
         modifier =
             modifier
                 .height(320.dp)
@@ -222,7 +221,7 @@ private fun PersonImage(person: FindroidPerson, modifier: Modifier = Modifier) {
     ) {
         val image = person.images.primary
 
-        val imageUri = image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+        val imageUri = image?.uri.toOptimizedImageUri(widthDp = 214.dp, heightDp = 320.dp)
 
         val blurPlaceholder = remember(image?.blurHash) { image?.blurHash.toBlurHashPainter() }
 

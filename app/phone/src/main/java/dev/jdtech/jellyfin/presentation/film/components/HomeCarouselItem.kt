@@ -3,7 +3,7 @@ package dev.jdtech.jellyfin.presentation.film.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,9 +20,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
@@ -35,7 +37,11 @@ import dev.jdtech.jellyfin.utils.toBlurHashPainter
 import dev.jdtech.jellyfin.utils.toOptimizedImageUri
 
 @Composable
-fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
+fun HomeCarouselItem(
+    item: FindroidItem,
+    onAction: (HomeAction) -> Unit,
+    targetWidth: Dp = Dp.Unspecified,
+) {
     val colorStops =
         arrayOf(
             0.0f to Color.Black.copy(alpha = 0.1f),
@@ -43,7 +49,22 @@ fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
             1f to Color.Black.copy(alpha = 0.6f),
         )
 
-    BoxWithConstraints(
+    val containerWidth = LocalWindowInfo.current.containerDpSize.width
+    val effectiveWidth =
+        if (targetWidth != Dp.Unspecified) {
+            targetWidth
+        } else {
+            val nPages =
+                when {
+                    containerWidth >= 840.dp -> 3
+                    containerWidth >= 600.dp -> 2
+                    else -> 1
+                }
+            (containerWidth / nPages).coerceAtLeast(1.dp)
+        }
+    val effectiveHeight = effectiveWidth * 9f / 16f
+
+    Box(
         modifier =
             Modifier.aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large).clickable {
                 onAction(HomeAction.OnItemClick(item))
@@ -51,7 +72,8 @@ fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
     ) {
         val image = item.images.backdrop
 
-        val imageUri = image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+        val imageUri =
+            image?.uri.toOptimizedImageUri(widthDp = effectiveWidth, heightDp = effectiveHeight)
 
         val blurPlaceholder = remember(image?.blurHash) { image?.blurHash.toBlurHashPainter() }
 
@@ -73,8 +95,7 @@ fun HomeCarouselItem(item: FindroidItem, onAction: (HomeAction) -> Unit) {
                         horizontal = MaterialTheme.spacings.default,
                         vertical = MaterialTheme.spacings.medium,
                     )
-                    .align(Alignment.BottomStart)
-                    .onGloballyPositioned { coordinates -> coordinates.size },
+                    .align(Alignment.BottomStart),
         ) {
             val genres =
                 when (item) {

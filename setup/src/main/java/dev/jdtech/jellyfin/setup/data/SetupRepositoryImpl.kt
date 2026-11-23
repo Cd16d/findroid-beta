@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.setup.data
 
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.BrandingInfo
@@ -32,6 +33,7 @@ class SetupRepositoryImpl(
     private val jellyfinApi: JellyfinApi,
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
+    private val userAvatarStore: UserAvatarStore,
 ) : SetupRepository {
     override fun discoverServers(): Flow<ServerDiscoveryInfo> {
         return jellyfinApi.jellyfin.discovery.discoverLocalServers()
@@ -255,6 +257,15 @@ class SetupRepositoryImpl(
         jellyfinApi.apply {
             api.update(accessToken = authenticationResult.accessToken)
             userId = authenticationResult.user?.id
+        }
+
+        runCatching {
+            userAvatarStore.ensureUserAvatar(
+                userId = user.id,
+                baseUrl = jellyfinApi.api.baseUrl.orEmpty(),
+                serverTag = user.primaryImageTag,
+                accessToken = user.accessToken,
+            )
         }
     }
 

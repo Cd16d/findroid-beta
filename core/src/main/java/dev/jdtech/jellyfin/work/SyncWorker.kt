@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import okhttp3.OkHttpClient
@@ -22,6 +23,7 @@ constructor(
     val database: ServerDatabaseDao,
     val appPreferences: AppPreferences,
     private val okHttpClient: OkHttpClient,
+    private val userAvatarStore: UserAvatarStore,
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -43,6 +45,7 @@ constructor(
                 serverWithAddressesAndUsers.addresses.firstOrNull {
                     it.id == server.currentServerAddressId
                 } ?: continue
+            userAvatarStore.syncAllUsersForServer(server.id, serverAddress.address)
             for (user in serverWithAddressesAndUsers.users) {
                 jellyfinApi.apply {
                     api.update(baseUrl = serverAddress.address, accessToken = user.accessToken)

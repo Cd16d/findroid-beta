@@ -383,6 +383,7 @@ fun PlayerEpisodeCard(
                     direction = Direction.HORIZONTAL,
                     modifier = Modifier.fillMaxSize(),
                     blurOnly = isEpisodeSpoiler,
+                    targetWidth = 114.dp,
                 )
 
                 if (episode.played) {

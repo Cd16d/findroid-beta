@@ -276,6 +276,7 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
                                     direction = Direction.HORIZONTAL,
                                     modifier = Modifier.clip(MaterialTheme.shapes.medium),
                                     blurOnly = isEpisodeSpoiler && !isNextUpRevealed,
+                                    targetWidth = 360.dp,
                                 )
                             }
                             Spacer(Modifier.height(MaterialTheme.spacings.extraSmall))

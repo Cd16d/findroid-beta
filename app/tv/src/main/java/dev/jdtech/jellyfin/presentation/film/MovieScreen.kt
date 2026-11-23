@@ -3,7 +3,6 @@ package dev.jdtech.jellyfin.presentation.film
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,7 +91,8 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
     Box(modifier = Modifier.fillMaxSize()) {
         state.movie?.let { movie ->
             var size by remember { mutableStateOf(Size.Zero) }
-            BoxWithConstraints(
+            val windowSize = LocalWindowInfo.current.containerDpSize
+            Box(
                 modifier =
                     Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
                         size = coordinates.size.toSize()
@@ -99,7 +100,12 @@ private fun MovieScreenLayout(state: MovieState, onAction: (MovieAction) -> Unit
             ) {
                 val image = movie.images.backdrop
                 val imageUri =
-                    image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+                    image
+                        ?.uri
+                        .toOptimizedImageUri(
+                            widthDp = windowSize.width,
+                            heightDp = windowSize.height,
+                        )
 
                 val blurPlaceholder =
                     remember(image?.blurHash) { image?.blurHash.toBlurHashPainter() }

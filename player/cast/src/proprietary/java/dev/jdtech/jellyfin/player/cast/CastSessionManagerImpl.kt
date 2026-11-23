@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.player.cast
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.mediarouter.media.MediaControlIntent
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
@@ -17,8 +18,11 @@ import dev.jdtech.jellyfin.api.JellyfinApi
 import dev.jdtech.jellyfin.player.cast.models.CastConnectionState
 import dev.jdtech.jellyfin.player.cast.models.Device
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,17 +60,12 @@ constructor(
     private val appPreferences: AppPreferences,
 ) : CastSessionManager {
 
-    private var _castContext: CastContext? = null
+    @Volatile private var _castContext: CastContext? = null
     private val castContext: CastContext?
-        get() {
-            if (_castContext != null) return _castContext
-            return try {
-                CastContext.getSharedInstance(context).also { _castContext = it }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to get CastContext")
-                null
-            }
-        }
+        get() = _castContext
+
+    private val _isCastReady = MutableStateFlow(false)
+    override val isCastReady: StateFlow<Boolean> = _isCastReady.asStateFlow()
 
     override val isSupported: Boolean
         get() =
@@ -96,6 +95,7 @@ constructor(
     }
 
     private var isInitialized = false
+    private val isInitInProgress = AtomicBoolean(false)
 
     private val routeCallback =
         object : MediaRouter.Callback() {
@@ -214,35 +214,50 @@ constructor(
     }
 
     override fun init() {
-        if (isInitialized) return
-        val context = castContext ?: return
+        if (isInitialized || !isInitInProgress.compareAndSet(false, true)) return
         try {
-            context.addCastStateListener(castStateListener)
-            context.sessionManager.addSessionManagerListener(
-                sessionManagerListener,
-                CastSession::class.java,
-            )
-            isInitialized = true
+            CastContext.getSharedInstance(context, Dispatchers.IO.asExecutor())
+                .addOnSuccessListener(ContextCompat.getMainExecutor(context)) { castCtx ->
+                    if (!isInitInProgress.get()) return@addOnSuccessListener
+                    try {
+                        _castContext = castCtx
+                        castCtx.addCastStateListener(castStateListener)
+                        castCtx.sessionManager.addSessionManagerListener(
+                            sessionManagerListener,
+                            CastSession::class.java,
+                        )
+                        isInitialized = true
 
-            val currentSession = context.sessionManager.currentCastSession
-            if (currentSession != null && currentSession.isConnected) {
-                _connectionState.value = CastConnectionState.CONNECTED
-                updateConnectedDevice()
-            } else {
-                _connectionState.value =
-                    when (context.castState) {
-                        CastState.CONNECTED -> CastConnectionState.CONNECTED
-                        CastState.CONNECTING -> CastConnectionState.CONNECTING
-                        else -> CastConnectionState.DISCONNECTED
+                        val currentSession = castCtx.sessionManager.currentCastSession
+                        if (currentSession != null && currentSession.isConnected) {
+                            _connectionState.value = CastConnectionState.CONNECTED
+                            updateConnectedDevice()
+                        } else {
+                            _connectionState.value =
+                                when (castCtx.castState) {
+                                    CastState.CONNECTED -> CastConnectionState.CONNECTED
+                                    CastState.CONNECTING -> CastConnectionState.CONNECTING
+                                    else -> CastConnectionState.DISCONNECTED
+                                }
+                            if (_connectionState.value == CastConnectionState.CONNECTED) {
+                                updateConnectedDevice()
+                            }
+                        }
+
+                        updateDiscovery()
+                        _isCastReady.value = true
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to attach Cast listeners")
+                        isInitInProgress.set(false)
                     }
-                if (_connectionState.value == CastConnectionState.CONNECTED) {
-                    updateConnectedDevice()
                 }
-            }
-
-            updateDiscovery()
+                .addOnFailureListener { e ->
+                    Timber.e(e, "Failed to initialize CastContext asynchronously")
+                    isInitInProgress.set(false)
+                }
         } catch (e: Exception) {
             Timber.e(e, "Failed to initialize CastSessionManager")
+            isInitInProgress.set(false)
         }
     }
 
@@ -341,7 +356,9 @@ constructor(
         } catch (e: Exception) {
             Timber.e(e, "Error releasing CastSessionManager")
         } finally {
+            isInitInProgress.set(false)
             isInitialized = false
+            _isCastReady.value = false
         }
     }
 }

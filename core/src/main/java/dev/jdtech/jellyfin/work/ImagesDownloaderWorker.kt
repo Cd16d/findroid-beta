@@ -1,15 +1,18 @@
 package dev.jdtech.jellyfin.work
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import dev.jdtech.jellyfin.cache.UserAvatarBitmapCache
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import java.io.File
 import java.io.IOException
 import java.util.UUID
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -40,17 +43,20 @@ constructor(
 
     private suspend fun downloadUserImage(userId: UUID, imageTag: String?) {
         withContext(Dispatchers.IO) {
-            val baseUrl = repository.getBaseUrl()
+            val baseUrl = repository.getBaseUrl().trim().trimEnd('/')
             if (baseUrl.isBlank()) return@withContext
 
+            val px =
+                (56f * appContext.resources.displayMetrics.density).roundToInt().coerceAtLeast(112)
             val imageUrl =
-                "$baseUrl/Users/$userId/Images/Primary" +
-                    (if (imageTag != null) "?tag=$imageTag" else "")
+                "$baseUrl/Users/$userId/Images/Primary?maxWidth=$px&maxHeight=$px&quality=90" +
+                    (if (imageTag != null) "&tag=$imageTag" else "")
             val basePath = "images/users/$userId"
             val fileName = if (imageTag != null) "primary_$imageTag" else "primary"
 
             if (imageTag != null) {
                 val baseDir = File(appContext.filesDir, basePath)
+                UserAvatarBitmapCache.evictPrefix(baseDir.absolutePath)
                 baseDir
                     .listFiles { _, name -> name.startsWith("primary_") && name != fileName }
                     ?.forEach { it.delete() }
@@ -68,6 +74,7 @@ constructor(
         if (file.exists() && file.length() > 0) return
 
         val request = Request.Builder().url(url).build()
+        val tmpFile = File(baseDir, "$fileName.tmp")
 
         try {
             baseDir.mkdirs()
@@ -78,11 +85,24 @@ constructor(
                 }
 
                 response.body.byteStream().use { input ->
-                    file.outputStream().use { output -> input.copyTo(output) }
+                    tmpFile.outputStream().use { output -> input.copyTo(output) }
                 }
+            }
+            if (tmpFile.exists() && tmpFile.length() > 0) {
+                if (file.exists()) file.delete()
+                if (!tmpFile.renameTo(file)) {
+                    tmpFile.copyTo(file, overwrite = true)
+                    tmpFile.delete()
+                }
+                BitmapFactory.decodeFile(file.absolutePath)?.let {
+                    UserAvatarBitmapCache.put(file.absolutePath, it)
+                }
+            } else {
+                tmpFile.delete()
             }
         } catch (e: IOException) {
             Timber.e(e)
+            runCatching { tmpFile.delete() }
         }
     }
 

@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,6 +42,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -124,7 +124,8 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         state.show?.let { show ->
             var size by remember { mutableStateOf(Size.Zero) }
-            BoxWithConstraints(
+            val windowSize = LocalWindowInfo.current.containerDpSize
+            Box(
                 modifier =
                     Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
                         size = coordinates.size.toSize()
@@ -132,7 +133,12 @@ private fun ShowScreenLayout(state: ShowState, onAction: (ShowAction) -> Unit) {
             ) {
                 val image = show.images.backdrop
                 val imageUri =
-                    image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+                    image
+                        ?.uri
+                        .toOptimizedImageUri(
+                            widthDp = windowSize.width,
+                            heightDp = windowSize.height,
+                        )
 
                 val blurPlaceholder =
                     remember(image?.blurHash) { image?.blurHash.toBlurHashPainter() }

@@ -6,12 +6,15 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.cache.HomeCacheStore
+import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepositoryImpl
 import dev.jdtech.jellyfin.repository.JellyfinRepositoryOfflineImpl
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import javax.inject.Singleton
+import okhttp3.OkHttpClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -58,4 +61,21 @@ object RepositoryModule {
             false -> jellyfinRepositoryImpl
         }
     }
+
+    @Singleton
+    @Provides
+    fun provideHomeCacheStore(
+        application: Application,
+        appPreferences: AppPreferences,
+        serverDatabase: ServerDatabaseDao,
+    ): HomeCacheStore = HomeCacheStore(application, appPreferences, serverDatabase)
+
+    @Singleton
+    @Provides
+    fun provideUserAvatarStore(
+        application: Application,
+        okHttpClient: OkHttpClient,
+        serverDatabase: ServerDatabaseDao,
+        appPreferences: AppPreferences,
+    ): UserAvatarStore = UserAvatarStore(application, okHttpClient, serverDatabase, appPreferences)
 }

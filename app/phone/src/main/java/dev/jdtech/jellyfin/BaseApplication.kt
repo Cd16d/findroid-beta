@@ -22,12 +22,18 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
+import dev.jdtech.jellyfin.cache.HomeCacheStore
+import dev.jdtech.jellyfin.cache.UserAvatarStore
+import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.domain.Constants
+import dev.jdtech.jellyfin.utils.NetworkPrewarmer
 import dev.jdtech.jellyfin.work.MpvCleanupWorker
 import dev.jdtech.jellyfin.work.SyncWorker
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import timber.log.Timber
@@ -39,6 +45,14 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     @Inject lateinit var okHttpClient: OkHttpClient
+
+    @Inject @ApplicationScope lateinit var applicationScope: CoroutineScope
+
+    @Inject lateinit var networkPrewarmer: NetworkPrewarmer
+
+    @Inject lateinit var homeCacheStore: HomeCacheStore
+
+    @Inject lateinit var userAvatarStore: UserAvatarStore
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -65,12 +79,18 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
             DynamicColors.applyToActivitiesIfAvailable(this)
         }
 
-        val workManager = WorkManager.getInstance(applicationContext)
-
-        scheduleUserDataSync(workManager)
-
-        if (!appPreferences.getValue(appPreferences.mpvMigrated)) {
-            scheduleMpvCleanup(workManager)
+        // Pre-warm cache, avatars, DNS/TLS sockets, and background WorkManager outside main thread
+        applicationScope.launch {
+            launch { homeCacheStore.preloadActiveUserCache() }
+            launch { userAvatarStore.preloadActiveServerAvatars() }
+            launch { networkPrewarmer.prewarm() }
+            launch {
+                val workManager = WorkManager.getInstance(applicationContext)
+                scheduleUserDataSync(workManager)
+                if (!appPreferences.getValue(appPreferences.mpvMigrated)) {
+                    scheduleMpvCleanup(workManager)
+                }
+            }
         }
     }
 

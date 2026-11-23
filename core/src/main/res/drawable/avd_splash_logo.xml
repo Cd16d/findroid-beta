@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+
+            <group
+                android:name="logo_group"
+                android:pivotX="54"
+                android:pivotY="54"
+                android:scaleX="0.36"
+                android:scaleY="0.36">
+                <group
+                    android:translateX="4"
+                    android:translateY="4">
+                    <path
+                        android:name="logo_outline"
+                        android:fillAlpha="0"
+                        android:pathData="M17.58,83.49C13.14,77.08 39.4,26.72 49.94,26.72c10.54,0 36.12,50.42 32.36,57.19 -4.01,7.22 -58.69,8.28 -64.71,-0.41zM1.67,3.85c3.89,4.44 7.5,8.91 9.68,13.5 0.28,0.59 1,1.22 1.64,1.38l12.94,3.23a0.44,0.44 91.39,0 1,0.13 0.81l-8.31,5.23c-0.55,0.35 -0.75,1.1 -0.47,1.69 1.88,3.91 2.72,8.03 2.52,12.34 -0.22,4.56 -3.57,11.24 -5.85,15.2 -7.04,12.22 -10.73,22.36 -12.55,31.35 -0.3,1.5 -0.4,3.97 0.08,5.42 0.47,1.41 1.13,2.47 1.94,3.27 3.05,3.03 10.84,2.71 15.22,2.71l58.33,0c3.23,0 8.48,-0.42 11.47,-1.64 4.76,-1.94 7.97,-4.99 9.64,-9.14 1.61,-4.02 0.52,-11.16 -0.91,-15.27 -9.7,-27.9 -38.14,-71.19 -78.13,-73.87 -1.89,-0.13 -4.95,-0.08 -6.83,0.13 -4.95,0.54 -8.52,1.68 -10.21,2.32 -0.61,0.23 -0.75,0.84 -0.31,1.34zM33.59,74.26c-2.23,-3.22 10.95,-28.49 16.23,-28.49 5.29,0 18.12,25.3 16.23,28.69 -2.01,3.62 -29.45,4.15 -32.47,-0.21z"
+                        android:strokeAlpha="1"
+                        android:strokeColor="@color/logo_primary"
+                        android:strokeLineCap="round"
+                        android:strokeLineJoin="round"
+                        android:strokeWidth="2.4"
+                        android:trimPathEnd="0"
+                        android:trimPathStart="0" />
+
+                    <path
+                        android:name="logo_fill"
+                        android:fillAlpha="0"
+                        android:pathData="M17.58,83.49C13.14,77.08 39.4,26.72 49.94,26.72c10.54,0 36.12,50.42 32.36,57.19 -4.01,7.22 -58.69,8.28 -64.71,-0.41zM1.67,3.85c3.89,4.44 7.5,8.91 9.68,13.5 0.28,0.59 1,1.22 1.64,1.38l12.94,3.23a0.44,0.44 91.39,0 1,0.13 0.81l-8.31,5.23c-0.55,0.35 -0.75,1.1 -0.47,1.69 1.88,3.91 2.72,8.03 2.52,12.34 -0.22,4.56 -3.57,11.24 -5.85,15.2 -7.04,12.22 -10.73,22.36 -12.55,31.35 -0.3,1.5 -0.4,3.97 0.08,5.42 0.47,1.41 1.13,2.47 1.94,3.27 3.05,3.03 10.84,2.71 15.22,2.71l58.33,0c3.23,0 8.48,-0.42 11.47,-1.64 4.76,-1.94 7.97,-4.99 9.64,-9.14 1.61,-4.02 0.52,-11.16 -0.91,-15.27 -9.7,-27.9 -38.14,-71.19 -78.13,-73.87 -1.89,-0.13 -4.95,-0.08 -6.83,0.13 -4.95,0.54 -8.52,1.68 -10.21,2.32 -0.61,0.23 -0.75,0.84 -0.31,1.34zM33.59,74.26c-2.23,-3.22 10.95,-28.49 16.23,-28.49 5.29,0 18.12,25.3 16.23,28.69 -2.01,3.62 -29.45,4.15 -32.47,-0.21z">
+                        <aapt:attr name="android:fillColor">
+                            <gradient
+                                android:endX="76.73"
+                                android:endY="76.73"
+                                android:startX="29.1"
+                                android:startY="26.46"
+                                android:type="linear">
+                                <item
+                                    android:color="@color/logo_primary"
+                                    android:offset="0" />
+                                <item
+                                    android:color="@color/logo_secondary"
+                                    android:offset="1" />
+                            </gradient>
+                        </aapt:attr>
+                    </path>
+                </group>
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="logo_outline">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+                <objectAnimator
+                    android:duration="420"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
+                    android:propertyName="trimPathEnd"
+                    android:startOffset="0"
+                    android:valueFrom="0"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="220"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
+                    android:propertyName="strokeAlpha"
+                    android:startOffset="380"
+                    android:valueFrom="1"
+                    android:valueTo="0"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <target android:name="logo_fill">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="400"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="fillAlpha"
+                android:startOffset="220"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="logo_group">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+                <set android:ordering="sequentially">
+                    <objectAnimator
+                        android:duration="480"
+                        android:interpolator="@android:interpolator/fast_out_slow_in"
+                        android:propertyName="scaleX"
+                        android:valueFrom="0.36"
+                        android:valueTo="0.47"
+                        android:valueType="floatType" />
+                    <objectAnimator
+                        android:duration="220"
+                        android:interpolator="@android:interpolator/fast_out_slow_in"
+                        android:propertyName="scaleX"
+                        android:valueFrom="0.47"
+                        android:valueTo="0.44"
+                        android:valueType="floatType" />
+                </set>
+                <set android:ordering="sequentially">
+                    <objectAnimator
+                        android:duration="480"
+                        android:interpolator="@android:interpolator/fast_out_slow_in"
+                        android:propertyName="scaleY"
+                        android:valueFrom="0.36"
+                        android:valueTo="0.47"
+                        android:valueType="floatType" />
+                    <objectAnimator
+                        android:duration="220"
+                        android:interpolator="@android:interpolator/fast_out_slow_in"
+                        android:propertyName="scaleY"
+                        android:valueFrom="0.47"
+                        android:valueTo="0.44"
+                        android:valueType="floatType" />
+                </set>
+            </set>
+        </aapt:attr>
+    </target>
+
+</animated-vector>
