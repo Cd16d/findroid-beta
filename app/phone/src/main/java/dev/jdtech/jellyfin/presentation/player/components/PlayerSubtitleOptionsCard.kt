@@ -39,10 +39,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -424,10 +426,18 @@ private fun SubtitleDelaySliderSection(
                 label = "subtitleThumbHeight",
             )
 
+        val sliderState = remember { SliderState(value = sliderFraction, trackRange = 0f..1f) }
+        LaunchedEffect(sliderFraction) {
+            if (sliderState.value != sliderFraction) {
+                sliderState.value = sliderFraction
+            }
+        }
+
         Slider(
-            value = sliderFraction,
+            state = sliderState,
             onValueChange = { f ->
                 val snapped = fractionToDelay(f, minDelay, maxDelay)
+                sliderState.value = delayToFraction(snapped, minDelay, maxDelay)
                 val isAtCenter = snapped == 0L
                 if (isAtCenter && !wasAtCenter) {
                     haptics.chapterSnap()
@@ -435,7 +445,6 @@ private fun SubtitleDelaySliderSection(
                 wasAtCenter = isAtCenter
                 onDelayChange(snapped)
             },
-            valueRange = 0f..1f,
             interactionSource = sliderInteractionSource,
             colors =
                 SliderDefaults.colors(

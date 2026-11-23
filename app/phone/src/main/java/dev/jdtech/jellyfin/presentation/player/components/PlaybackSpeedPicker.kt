@@ -28,10 +28,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -371,10 +373,18 @@ private fun SpeedSliderSection(
                 label = "speedThumbHeight",
             )
 
+        val sliderState = remember { SliderState(value = sliderFraction, trackRange = 0f..1f) }
+        LaunchedEffect(sliderFraction) {
+            if (sliderState.value != sliderFraction) {
+                sliderState.value = sliderFraction
+            }
+        }
+
         Slider(
-            value = sliderFraction,
+            state = sliderState,
             onValueChange = { f ->
                 val snapped = fractionToSpeed(f, minSpeed, maxSpeed)
+                sliderState.value = speedToFraction(snapped, minSpeed, maxSpeed)
                 val isAtCenter = abs(snapped - 1.0f) < 0.01f
                 if (isAtCenter && !wasAtCenter) {
                     haptics.chapterSnap()
@@ -382,7 +392,6 @@ private fun SpeedSliderSection(
                 wasAtCenter = isAtCenter
                 onSpeedChange(snapped)
             },
-            valueRange = 0f..1f,
             interactionSource = sliderInteractionSource,
             colors =
                 SliderDefaults.colors(

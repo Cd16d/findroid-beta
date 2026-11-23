@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -285,10 +286,19 @@ fun VolumeSlider(
         )
 
     val volumeContentDescription = stringResource(CoreR.string.audio)
+    val sliderState = remember { SliderState(value = localVolume, trackRange = 0f..1f) }
+    LaunchedEffect(localVolume) {
+        if (sliderState.value != localVolume) {
+            sliderState.value = localVolume
+        }
+    }
 
     Slider(
-        value = localVolume,
-        onValueChange = { localVolume = it.coerceIn(0f, 1f) },
+        state = sliderState,
+        onValueChange = {
+            localVolume = it.coerceIn(0f, 1f)
+            sliderState.value = localVolume
+        },
         onValueChangeFinished = {
             val clamped = localVolume.coerceIn(0f, 1f)
             onValueChange(clamped)
@@ -298,7 +308,6 @@ fun VolumeSlider(
         },
         interactionSource = sliderInteractionSource,
         modifier = modifier.semantics { contentDescription = volumeContentDescription },
-        valueRange = 0f..1f,
         colors = colors,
         track = { sliderState ->
             val iconSize = VolumeSliderDefaults.InsetIconDpSize

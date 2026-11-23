@@ -1873,8 +1873,8 @@ class MPVPlayer(
     @Volatile private var appliedDialogueBoostChannelCount = -1
 
     /**
-     * Enables or disables loudness-compensated, vocal-focused dialogue enhancement via MPV's
-     * FFmpeg lavfi filtergraph.
+     * Enables or disables loudness-compensated, vocal-focused dialogue enhancement via MPV's FFmpeg
+     * lavfi filtergraph.
      */
     fun setDialogueBoost(enabled: Boolean) {
         Timber.i(

@@ -68,7 +68,7 @@ class DialogueAudioProcessor : BaseAudioProcessor() {
         return inputAudioFormat
     }
 
-    override fun onFlush() {
+    override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
         resetFilters()
     }
 
@@ -289,7 +289,8 @@ class DialogueAudioProcessor : BaseAudioProcessor() {
         val absX = abs(x)
         if (absX <= LIMITER_THRESHOLD) return x
         val excess = absX - LIMITER_THRESHOLD
-        val compressed = LIMITER_THRESHOLD + LIMITER_HEADROOM * (excess / (excess + LIMITER_HEADROOM))
+        val compressed =
+            LIMITER_THRESHOLD + LIMITER_HEADROOM * (excess / (excess + LIMITER_HEADROOM))
         return if (x >= 0f) compressed else -compressed
     }
 
@@ -407,7 +408,12 @@ class DialogueAudioProcessor : BaseAudioProcessor() {
                 )
             }
 
-            fun highShelf(sampleRate: Int, freqHz: Double, q: Double, gainDb: Double): BiquadFilter {
+            fun highShelf(
+                sampleRate: Int,
+                freqHz: Double,
+                q: Double,
+                gainDb: Double,
+            ): BiquadFilter {
                 if (freqHz >= sampleRate * MAX_NYQUIST_RATIO) return passthrough()
                 val omega = 2.0 * PI * freqHz / sampleRate
                 val sinW = sin(omega)
