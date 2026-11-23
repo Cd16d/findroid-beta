@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -73,6 +75,53 @@ interface CastNavigationScope {
         modifier: Modifier,
         content: @Composable () -> Unit,
     )
+}
+
+/**
+ * Stable snapshot-state holder for [CastNavigationScope]. Using [mutableStateOf] fields on a single
+ * remembered instance guarantees [CastContentLayout] recomposes directly when Cast readiness or
+ * connection state changes, even when intermediate scaffolds (such as `NavigationSuiteScaffold`)
+ * skip recomposition.
+ */
+@Stable
+private class CastNavigationState(
+    initialShowCastButton: Boolean,
+    initialIsCastButtonExpanded: Boolean,
+    initialShowNavSuite: Boolean,
+    initialShowTabletExpandedPlayer: Boolean,
+    initialIsExpandedScreen: Boolean,
+    initialShowTabletMiniPlayer: Boolean,
+    private val onCastButtonClick: () -> Unit,
+    private val onOpenExpandedPlayer: () -> Unit,
+    private val onCloseExpandedPlayer: () -> Unit,
+    private val scrollConnection: NestedScrollConnection,
+) : CastNavigationScope {
+    var showCastButton by mutableStateOf(initialShowCastButton)
+    var isCastButtonExpanded by mutableStateOf(initialIsCastButtonExpanded)
+    var showNavSuite by mutableStateOf(initialShowNavSuite)
+    var showTabletExpandedPlayer by mutableStateOf(initialShowTabletExpandedPlayer)
+    var isExpandedScreen by mutableStateOf(initialIsExpandedScreen)
+    var showTabletMiniPlayer by mutableStateOf(initialShowTabletMiniPlayer)
+
+    @Composable
+    override fun CastContentLayout(
+        modifier: Modifier,
+        content: @Composable () -> Unit,
+    ) {
+        CastContentLayoutInternal(
+            showCastButton = showCastButton,
+            isCastButtonExpanded = isCastButtonExpanded,
+            showNavSuite = showNavSuite,
+            showTabletExpandedPlayer = showTabletExpandedPlayer,
+            isExpandedScreen = isExpandedScreen,
+            showTabletMiniPlayer = showTabletMiniPlayer,
+            onCastButtonClick = onCastButtonClick,
+            onOpenExpandedPlayer = onOpenExpandedPlayer,
+            onCloseExpandedPlayer = onCloseExpandedPlayer,
+            modifier = modifier.nestedScroll(scrollConnection),
+            content = content,
+        )
+    }
 }
 
 /**
@@ -184,40 +233,44 @@ fun CastNavigationHost(
         }
     }
 
-    val scope =
-        remember(
-            showCastButton,
-            connectionState,
-            isCastButtonExpanded,
-            showNavSuite,
-            showCastExpandedPlayer,
-            isExpandedScreen,
-            showCastMiniPlayer,
-            castScrollConnection,
-        ) {
-            object : CastNavigationScope {
-                @Composable
-                override fun CastContentLayout(
-                    modifier: Modifier,
-                    content: @Composable () -> Unit,
-                ) {
-                    CastContentLayoutInternal(
-                        showCastButton =
-                            showCastButton && connectionState != CastConnectionState.CONNECTED,
-                        isCastButtonExpanded = isCastButtonExpanded,
-                        showNavSuite = showNavSuite,
-                        showTabletExpandedPlayer = showCastExpandedPlayer && isExpandedScreen,
-                        isExpandedScreen = isExpandedScreen,
-                        showTabletMiniPlayer = showCastMiniPlayer,
-                        onCastButtonClick = { showCastSheet = true },
-                        onOpenExpandedPlayer = { showCastExpandedPlayer = true },
-                        onCloseExpandedPlayer = { showCastExpandedPlayer = false },
-                        modifier = modifier.nestedScroll(castScrollConnection),
-                        content = content,
-                    )
-                }
-            }
+    val effectiveShowCastButton = showCastButton && connectionState != CastConnectionState.CONNECTED
+    val effectiveShowTabletExpandedPlayer = showCastExpandedPlayer && isExpandedScreen
+
+    val scope = remember {
+        CastNavigationState(
+            initialShowCastButton = effectiveShowCastButton,
+            initialIsCastButtonExpanded = isCastButtonExpanded,
+            initialShowNavSuite = showNavSuite,
+            initialShowTabletExpandedPlayer = effectiveShowTabletExpandedPlayer,
+            initialIsExpandedScreen = isExpandedScreen,
+            initialShowTabletMiniPlayer = showCastMiniPlayer,
+            onCastButtonClick = { showCastSheet = true },
+            onOpenExpandedPlayer = { showCastExpandedPlayer = true },
+            onCloseExpandedPlayer = { showCastExpandedPlayer = false },
+            scrollConnection = castScrollConnection,
+        )
+    }
+
+    SideEffect {
+        if (scope.showCastButton != effectiveShowCastButton) {
+            scope.showCastButton = effectiveShowCastButton
         }
+        if (scope.isCastButtonExpanded != isCastButtonExpanded) {
+            scope.isCastButtonExpanded = isCastButtonExpanded
+        }
+        if (scope.showNavSuite != showNavSuite) {
+            scope.showNavSuite = showNavSuite
+        }
+        if (scope.showTabletExpandedPlayer != effectiveShowTabletExpandedPlayer) {
+            scope.showTabletExpandedPlayer = effectiveShowTabletExpandedPlayer
+        }
+        if (scope.isExpandedScreen != isExpandedScreen) {
+            scope.isExpandedScreen = isExpandedScreen
+        }
+        if (scope.showTabletMiniPlayer != showCastMiniPlayer) {
+            scope.showTabletMiniPlayer = showCastMiniPlayer
+        }
+    }
 
     CompositionLocalProvider(LocalCastPlayerHeight provides castPlayerHeight) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -265,7 +318,7 @@ private fun CastContentLayoutInternal(
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f).then(modifier)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight().then(modifier)) {
                 content()
 
                 if (showCastButton) {
