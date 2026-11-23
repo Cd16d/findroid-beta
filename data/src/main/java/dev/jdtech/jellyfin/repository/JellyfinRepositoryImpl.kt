@@ -871,7 +871,7 @@ class JellyfinRepositoryImpl(
                     limit = 24,
                     seriesId = seriesId,
                     enableResumable = false,
-                    fields = listOf(ItemFields.OVERVIEW, ItemFields.GENRES),
+                    fields = listOf(ItemFields.OVERVIEW),
                 )
                 .content
                 .items

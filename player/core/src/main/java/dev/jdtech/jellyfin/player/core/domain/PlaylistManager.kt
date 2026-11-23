@@ -24,12 +24,12 @@ import dev.jdtech.jellyfin.player.core.domain.utils.StreamUtils
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.utils.isPartName
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.DeviceProfile
-import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PlayMethod
 import timber.log.Timber
@@ -46,6 +46,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     private var currentSeasonIndex: Int? = null
     private var currentSeasonId: UUID? = null
     private var cachedSeasons: List<FindroidSeason>? = null
+    private val hydratedEpisodeIds: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
 
     /** The index of the currently active media item in the playlist. */
     var currentItemIndex: Int = 0
@@ -133,6 +134,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
         Timber.d("Retrieving initial player item")
 
         cachedSeasons = null
+        hydratedEpisodeIds.clear()
 
         val initialItem =
             when (itemKind) {
@@ -167,7 +169,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                             .getEpisodes(
                                 seriesId = itemId,
                                 seasonId = season.id,
-                                fields = listOf(ItemFields.CHAPTERS, ItemFields.TRICKPLAY),
+                                fields = null,
                             )
                             .filter { !it.missing }
 
@@ -191,7 +193,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                             .getEpisodes(
                                 seriesId = season.seriesId,
                                 seasonId = season.id,
-                                fields = listOf(ItemFields.CHAPTERS, ItemFields.TRICKPLAY),
+                                fields = null,
                             )
                             .filter { !it.missing }
 
@@ -206,6 +208,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                 }
                 BaseItemKind.EPISODE -> {
                     val episode = repository.getEpisode(itemId)
+                    hydratedEpisodeIds.add(episode.id)
                     seriesId = episode.seriesId
                     currentSeasonId = episode.seasonId
                     currentSeasonIndex = episode.parentIndexNumber
@@ -215,11 +218,17 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                             .getEpisodes(
                                 seriesId = episode.seriesId,
                                 seasonId = episode.seasonId,
-                                fields = listOf(ItemFields.CHAPTERS, ItemFields.TRICKPLAY),
+                                fields = null,
                             )
                             .filter { !it.missing }
 
-                    items = episodes.flatMap { it.toPlaylist() }.toMutableList()
+                    items =
+                        episodes
+                            .flatMap { stub ->
+                                val resolved = if (stub.id == episode.id) episode else stub
+                                resolved.toPlaylist()
+                            }
+                            .toMutableList()
                     episode
                 }
                 else -> null
@@ -360,14 +369,14 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     .getEpisodes(
                         seriesId = sId,
                         seasonId = nextSeason.id,
-                        fields = listOf(ItemFields.CHAPTERS, ItemFields.TRICKPLAY),
+                        fields = null,
                     )
                     .filter { !it.missing }
 
             if (nextEpisodes.isEmpty()) return false
 
             val newItems = nextEpisodes.flatMap { it.toPlaylist() }
-            items.addAll(newItems)
+            synchronized(items) { items.addAll(newItems) }
             currentSeasonIndex = nextSeason.indexNumber
             currentSeasonId = nextSeason.id
             return true
@@ -380,6 +389,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     private suspend fun loadPreviousSeasonEpisodes(): Boolean {
         val sId = seriesId ?: return false
         val curSeasonIdx = currentSeasonIndex ?: return false
+        // Intentionally skip Season 0 (Specials) when traversing backwards from Season 1
         if (curSeasonIdx <= 1) return false
 
         try {
@@ -394,14 +404,14 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     .getEpisodes(
                         seriesId = sId,
                         seasonId = prevSeason.id,
-                        fields = listOf(ItemFields.CHAPTERS, ItemFields.TRICKPLAY),
+                        fields = null,
                     )
                     .filter { !it.missing }
 
             if (prevEpisodes.isEmpty()) return false
 
             val prevItems = prevEpisodes.flatMap { it.toPlaylist() }
-            items.addAll(0, prevItems)
+            synchronized(items) { items.addAll(0, prevItems) }
             currentItemIndex += prevItems.size
             currentSeasonIndex = prevSeason.indexNumber
             currentSeasonId = prevSeason.id
@@ -463,18 +473,47 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
     ): PlayerItem {
         Timber.d("Converting FindroidItem ${this.id} to PlayerItem")
 
-        val mediaSources =
-            try {
-                repository.getMediaSources(
-                    itemId = id,
-                    includePath = true,
-                    maxStreamingBitrate = maxStreamingBitrate,
-                    deviceProfile = deviceProfile,
-                    enableDirectPlay = enableDirectPlay,
-                )
-            } catch (e: Exception) {
-                Timber.e(e, "Error fetching media sources for $id")
-                emptyList()
+        val (hydratedItem, mediaSources) =
+            coroutineScope {
+                val itemDeferred =
+                    if (this@toPlayerItem is FindroidEpisode && id !in hydratedEpisodeIds) {
+                        async {
+                            try {
+                                repository.getEpisode(id).also { hydrated ->
+                                    hydratedEpisodeIds.add(id)
+                                    synchronized(items) {
+                                        val idx = items.indexOfFirst { it.id == id }
+                                        if (idx >= 0) {
+                                            items[idx] = hydrated
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Timber.w(
+                                    e,
+                                    "Failed to hydrate full metadata for episode $id; using stub",
+                                )
+                                this@toPlayerItem
+                            }
+                        }
+                    } else {
+                        null
+                    }
+                val sourcesDeferred = async {
+                    try {
+                        repository.getMediaSources(
+                            itemId = id,
+                            includePath = true,
+                            maxStreamingBitrate = maxStreamingBitrate,
+                            deviceProfile = deviceProfile,
+                            enableDirectPlay = enableDirectPlay,
+                        )
+                    } catch (e: Exception) {
+                        Timber.e(e, "Error fetching media sources for $id")
+                        emptyList()
+                    }
+                }
+                (itemDeferred?.await() ?: this@toPlayerItem) to sourcesDeferred.await()
             }
         val mediaSource =
             if (mediaSourceIndex == null) {
@@ -578,9 +617,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                     }
             }
         val trickplayInfo =
-            when (this) {
+            when (hydratedItem) {
                 is FindroidSources -> {
-                    this.trickplayInfo?.get(mediaSource.id)?.let {
+                    hydratedItem.trickplayInfo?.get(mediaSource.id)?.let {
                         TrickplayInfo(
                             width = it.width,
                             height = it.height,
@@ -595,18 +634,28 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
                 else -> null
             }
 
-        val mainName = (this as? FindroidPart)?.parentName ?: name
+        val mainName = (hydratedItem as? FindroidPart)?.parentName ?: hydratedItem.name
 
         val partName = if (mediaSource.name.isPartName()) mediaSource.name else null
 
         val episodeInfo =
-            when (this) {
+            when (hydratedItem) {
                 is FindroidPart -> {
-                    EpisodeInfo(parentIndexNumber, indexNumber, indexNumberEnd, null)
+                    EpisodeInfo(
+                        hydratedItem.parentIndexNumber,
+                        hydratedItem.indexNumber,
+                        hydratedItem.indexNumberEnd,
+                        null,
+                    )
                 }
 
                 is FindroidEpisode -> {
-                    EpisodeInfo(parentIndexNumber, indexNumber, indexNumberEnd, seriesName)
+                    EpisodeInfo(
+                        hydratedItem.parentIndexNumber,
+                        hydratedItem.indexNumber,
+                        hydratedItem.indexNumberEnd,
+                        hydratedItem.seriesName,
+                    )
                 }
 
                 else -> {
@@ -615,9 +664,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             }
 
         val mediaType =
-            when (this) {
+            when (hydratedItem) {
                 is FindroidPart -> {
-                    if (parentIndexNumber == null) {
+                    if (hydratedItem.parentIndexNumber == null) {
                         PlayerMediaType.MOVIE
                     } else {
                         PlayerMediaType.EPISODE
@@ -629,7 +678,7 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
 
         return PlayerItem(
             name = mainName,
-            itemId = id,
+            itemId = hydratedItem.id,
             partName = partName,
             mediaType = mediaType,
             mediaSourceId = mediaSource.id,
@@ -640,9 +689,9 @@ class PlaylistManager @Inject internal constructor(private val repository: Jelly
             indexNumberEnd = episodeInfo.indexNumberEnd,
             seriesName = episodeInfo.seriesName,
             externalSubtitles = externalSubtitles,
-            chapters = chapters.toPlayerChapters(),
+            chapters = hydratedItem.chapters.toPlayerChapters(),
             trickplayInfo = trickplayInfo,
-            images = images.toPlayerImages(),
+            images = hydratedItem.images.toPlayerImages(),
             playSessionId = mediaSource.playSessionId,
         )
     }

@@ -333,9 +333,10 @@ constructor(
                         Timber.e(e, "Failed to load home data")
                         _state.update { it.copy(error = e, isLoading = false) }
                     } else {
-                        // Silent background SWR failure should not disrupt cached content
+                        // Keep cached Home navigable while surfacing an unobtrusive error/retry
+                        // status in the header
                         Timber.w(e, "Background SWR refresh failed; keeping cached home state")
-                        _state.update { it.copy(isLoading = false) }
+                        _state.update { it.copy(error = e, isLoading = false) }
                     }
                 }
             }
