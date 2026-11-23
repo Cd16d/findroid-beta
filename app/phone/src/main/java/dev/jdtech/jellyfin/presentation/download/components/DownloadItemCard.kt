@@ -142,6 +142,7 @@ fun DownloadItemCard(
                         item = item,
                         direction = Direction.VERTICAL,
                         modifier = Modifier.fillMaxSize(),
+                        targetWidth = 64.dp,
                     )
 
                     if (state.status == DownloadStatus.DOWNLOADED) {

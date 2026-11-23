@@ -198,6 +198,7 @@ fun DownloadEpisodeTile(
                             direction = Direction.HORIZONTAL,
                             modifier = Modifier.fillMaxHeight(),
                             blurOnly = isEpisodeSpoiler && !isRevealed,
+                            targetWidth = 150.dp,
                         )
                     }
 

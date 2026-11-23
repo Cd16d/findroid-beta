@@ -1,5 +1,7 @@
 package dev.jdtech.jellyfin.core.presentation.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -20,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +34,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import dev.jdtech.jellyfin.cache.UserAvatarBitmapCache
 import dev.jdtech.jellyfin.core.R as CoreR
+import java.io.File
 
 /** Harmonized Material 3 palette for user avatars based on name hash. */
 private val AvatarPalette =
@@ -83,11 +91,23 @@ fun UserAvatar(
             else -> true
         }
 
-    var isImageSuccess by remember(imageUrl) { mutableStateOf(false) }
+    val cachedBitmap =
+        remember(imageUrl) {
+            if (imageUrl is File && imageUrl.exists() && imageUrl.length() > 0L) {
+                UserAvatarBitmapCache.get(imageUrl.absolutePath)
+                    ?: BitmapFactory.decodeFile(imageUrl.absolutePath)?.also {
+                        UserAvatarBitmapCache.put(imageUrl.absolutePath, it)
+                    }
+            } else {
+                null
+            }
+        }
+
+    var isImageSuccess by remember(imageUrl) { mutableStateOf(cachedBitmap != null) }
     var isImageError by remember(imageUrl) { mutableStateOf(false) }
 
     val backgroundColor =
-        if (isImageSuccess && !isImageError) {
+        if ((cachedBitmap != null || isImageSuccess) && !isImageError) {
             MaterialTheme.colorScheme.surfaceContainerHigh
         } else if (initial != null) {
             getAvatarColor(cleanName)
@@ -101,37 +121,58 @@ fun UserAvatar(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            if (!isImageSuccess || isImageError) {
-                if (initial != null) {
-                    Text(
-                        text = initial.toString(),
-                        style =
-                            TextStyle(
-                                fontSize = (size.value * 0.44f).coerceAtLeast(10f).sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                            ),
-                        textAlign = TextAlign.Center,
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(CoreR.drawable.ic_user),
-                        contentDescription = contentDescription,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size((size * 0.5f).coerceAtLeast(12.dp)),
-                    )
-                }
-            }
-
-            if (hasValidImage && !isImageError) {
-                AsyncImage(
-                    model = imageUrl,
+            if (cachedBitmap != null) {
+                Image(
+                    bitmap = cachedBitmap.asImageBitmap(),
                     contentDescription = contentDescription,
                     contentScale = ContentScale.Crop,
-                    onSuccess = { isImageSuccess = true },
-                    onError = { isImageError = true },
                     modifier = Modifier.fillMaxSize(),
                 )
+            } else {
+                if (!isImageSuccess || isImageError) {
+                    if (initial != null) {
+                        Text(
+                            text = initial.toString(),
+                            style =
+                                TextStyle(
+                                    fontSize = (size.value * 0.44f).coerceAtLeast(10f).sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                ),
+                            textAlign = TextAlign.Center,
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_user),
+                            contentDescription = contentDescription,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size((size * 0.5f).coerceAtLeast(12.dp)),
+                        )
+                    }
+                }
+
+                if (hasValidImage && !isImageError) {
+                    val context = LocalContext.current
+                    val model =
+                        remember(imageUrl, context) {
+                            if (imageUrl is File) {
+                                ImageRequest.Builder(context)
+                                    .data(imageUrl)
+                                    .crossfade(false)
+                                    .build()
+                            } else {
+                                imageUrl
+                            }
+                        }
+                    AsyncImage(
+                        model = model,
+                        contentDescription = contentDescription,
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { isImageSuccess = true },
+                        onError = { isImageError = true },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }

@@ -338,6 +338,7 @@ private fun MainNavigation(
     }
 
     val connectionState by castSessionViewModel.connectionState.collectAsStateWithLifecycle()
+    val isCastReady by castSessionViewModel.sessionManager.isCastReady.collectAsStateWithLifecycle()
     val connectedDevice by
         castSessionViewModel.sessionManager.connectedDevice.collectAsStateWithLifecycle()
 
@@ -363,7 +364,10 @@ private fun MainNavigation(
         }
 
     val showCastButton =
-        isCastSupportedRoute && !isOfflineMode && castSessionViewModel.sessionManager.isSupported
+        isCastReady &&
+            isCastSupportedRoute &&
+            !isOfflineMode &&
+            castSessionViewModel.sessionManager.isSupported
 
     val showCastPlayerPhone by
         remember(

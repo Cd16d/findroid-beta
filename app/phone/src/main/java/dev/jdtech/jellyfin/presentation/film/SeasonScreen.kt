@@ -292,6 +292,7 @@ private fun SeasonScreenLayout(
                                         direction = Direction.VERTICAL,
                                         modifier =
                                             Modifier.width(120.dp).clip(MaterialTheme.shapes.small),
+                                        targetWidth = 120.dp,
                                     )
                                     if (isSeasonFullyDownloaded) {
                                         DownloadedBadge(

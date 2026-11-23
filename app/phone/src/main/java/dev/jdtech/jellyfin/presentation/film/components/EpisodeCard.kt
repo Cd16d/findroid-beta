@@ -91,6 +91,7 @@ fun EpisodeCard(
                     direction = Direction.HORIZONTAL,
                     modifier = Modifier.clip(MaterialTheme.shapes.small),
                     blurOnly = isEpisodeSpoiler && !isRevealed,
+                    targetWidth = 150.dp,
                 )
             }
             Row(

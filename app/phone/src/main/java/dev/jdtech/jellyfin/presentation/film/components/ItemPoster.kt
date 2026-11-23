@@ -3,7 +3,6 @@ package dev.jdtech.jellyfin.presentation.film.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -16,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.R as CoreR
@@ -51,6 +51,7 @@ fun ItemPoster(
     direction: Direction,
     modifier: Modifier = Modifier,
     blurOnly: Boolean = false,
+    targetWidth: Dp = if (direction == Direction.HORIZONTAL) 260.dp else 150.dp,
 ) {
     val image =
         remember(item, direction) {
@@ -69,13 +70,17 @@ fun ItemPoster(
             }
         }
 
-    BoxWithConstraints(
+    val targetHeight =
+        if (direction == Direction.HORIZONTAL) targetWidth * 9f / 16f else targetWidth * 3f / 2f
+
+    Box(
         modifier =
             modifier
                 .aspectRatio(if (direction == Direction.HORIZONTAL) 16f / 9f else 2f / 3f)
                 .background(MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        val imageUri = image?.uri.toOptimizedImageUri(widthDp = maxWidth, heightDp = maxHeight)
+        val imageUri =
+            image?.uri.toOptimizedImageUri(widthDp = targetWidth, heightDp = targetHeight)
 
         val blurPlaceholder =
             remember(image?.blurHash, direction) {

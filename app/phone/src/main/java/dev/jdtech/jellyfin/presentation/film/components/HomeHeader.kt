@@ -2,8 +2,14 @@ package dev.jdtech.jellyfin.presentation.film.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,9 +28,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,6 +46,12 @@ import dev.jdtech.jellyfin.core.presentation.components.UserAvatar
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyServer
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
+
+private enum class HeaderActionMode {
+    ERROR,
+    LOADING,
+    PULLING,
+}
 
 @Composable
 fun HomeHeader(
@@ -47,7 +65,39 @@ fun HomeHeader(
     onUserClick: () -> Unit,
     modifier: Modifier = Modifier,
     userName: String = "",
+    pullProgress: Float = 0f,
 ) {
+    val isPulling = pullProgress > 0.02f && !isLoading && !isError
+    val currentMode =
+        when {
+            isError -> HeaderActionMode.ERROR
+            isLoading -> HeaderActionMode.LOADING
+            isPulling -> HeaderActionMode.PULLING
+            else -> null
+        }
+    var displayedMode by remember { mutableStateOf(HeaderActionMode.LOADING) }
+    var displayedPullProgress by remember { mutableFloatStateOf(0f) }
+    if (currentMode != null) {
+        displayedMode = currentMode
+    }
+    if (isPulling) {
+        displayedPullProgress = pullProgress
+    }
+
+    val showActionSlot = currentMode != null
+    val rawPullScale = (0.1f + pullProgress * 0.9f).coerceIn(0.1f, 1.15f)
+    val actionScale by
+        animateFloatAsState(
+            targetValue = if (isPulling) rawPullScale else 1f,
+            animationSpec =
+                if (isPulling) {
+                    snap()
+                } else {
+                    spring(stiffness = Spring.StiffnessMediumLow)
+                },
+            label = "headerRefreshScale",
+        )
+
     Row(
         modifier = modifier.fillMaxWidth().height(56.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -100,26 +150,43 @@ fun HomeHeader(
                 }
             }
 
-            AnimatedVisibility(visible = isLoading || isError, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(
+                visible = showActionSlot,
+                enter = fadeIn(animationSpec = tween(durationMillis = 120)),
+                exit =
+                    fadeOut(animationSpec = tween(durationMillis = 260)) +
+                        scaleOut(targetScale = 0f, animationSpec = tween(durationMillis = 260)),
+            ) {
                 Surface(
                     onClick = onRetryClick,
-                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
-                    enabled = !isLoading,
+                    modifier =
+                        Modifier.fillMaxHeight().aspectRatio(1f).graphicsLayer {
+                            scaleX = actionScale
+                            scaleY = actionScale
+                        },
+                    enabled = isError,
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
                     Box {
-                        when {
-                            isError -> {
+                        when (displayedMode) {
+                            HeaderActionMode.ERROR -> {
                                 Icon(
                                     painter = painterResource(CoreR.drawable.ic_rotate_ccw),
                                     contentDescription = null,
                                     modifier = Modifier.align(Alignment.Center),
                                 )
                             }
-                            isLoading -> {
+                            HeaderActionMode.LOADING -> {
                                 Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
                                     CircularProgressIndicator()
+                                }
+                            }
+                            HeaderActionMode.PULLING -> {
+                                Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
+                                    CircularProgressIndicator(
+                                        progress = { displayedPullProgress.coerceIn(0f, 1f) },
+                                    )
                                 }
                             }
                         }
@@ -139,8 +206,46 @@ fun HomeHeader(
 
 @Composable
 @Preview(showBackground = true)
+private fun HomeHeaderIdlePreview() {
+    FindroidTheme(darkTheme = true) {
+        HomeHeader(
+            serverName = dummyServer.name,
+            userName = "Bob",
+            userImageUrl = null,
+            isLoading = false,
+            isError = false,
+            pullProgress = 0f,
+            onServerClick = {},
+            onErrorClick = {},
+            onRetryClick = {},
+            onUserClick = {},
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun HomeHeaderPullingPreview() {
+    FindroidTheme(darkTheme = true) {
+        HomeHeader(
+            serverName = dummyServer.name,
+            userName = "Bob",
+            userImageUrl = null,
+            isLoading = false,
+            isError = false,
+            pullProgress = 0.65f,
+            onServerClick = {},
+            onErrorClick = {},
+            onRetryClick = {},
+            onUserClick = {},
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
 private fun HomeHeaderLoadingPreview() {
-    FindroidTheme {
+    FindroidTheme(darkTheme = true) {
         HomeHeader(
             serverName = dummyServer.name,
             userName = "Bob",
@@ -158,7 +263,7 @@ private fun HomeHeaderLoadingPreview() {
 @Composable
 @Preview(showBackground = true)
 private fun HomeHeaderErrorPreview() {
-    FindroidTheme {
+    FindroidTheme(darkTheme = true) {
         HomeHeader(
             serverName = dummyServer.name,
             userName = "Bob",
