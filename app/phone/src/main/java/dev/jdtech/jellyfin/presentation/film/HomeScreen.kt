@@ -12,9 +12,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -103,7 +104,11 @@ private fun HomeScreenLayout(
     val contentPaddingTop = safePadding.top + 88.dp
 
     var showErrorDialog by rememberSaveable { mutableStateOf(false) }
-    val showServerSelectionSheetState = rememberModalBottomSheetState()
+    val showServerSelectionSheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
     var showServerSelectionBottomSheet by remember { mutableStateOf(false) }
 
     val pullToRefreshState = rememberPullToRefreshState()

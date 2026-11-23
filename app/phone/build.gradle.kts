@@ -24,6 +24,7 @@ val keystoreProps: Properties? =
 android {
     namespace = "dev.jdtech.jellyfin"
     compileSdk = Versions.COMPILE_SDK
+    compileSdkMinor = Versions.COMPILE_SDK_MINOR
     buildToolsVersion = Versions.BUILD_TOOLS
 
     if (envKeystoreFile != null || keystoreProps != null) {

@@ -487,6 +487,9 @@ constructor(
         val initialDialogueBoost =
             appPreferences.getValue(appPreferences.playerDialogueClarityDefault)
         dialogueAudioProcessor.isEnabled = initialDialogueBoost
+        if (isMpv) {
+            (player as? MPVPlayer)?.setDialogueBoost(initialDialogueBoost)
+        }
         _uiState.update { it.copy(isDialogueBoostEnabled = initialDialogueBoost) }
 
         if (appPreferences.getValue(appPreferences.playerPlaybackSpeedRemember)) {
@@ -2347,9 +2350,6 @@ constructor(
             loadedExternalSubtitles.clear()
             _uiState.update { it.copy(isExternalSubtitleLoaded = false) }
             hasAttemptedDefaultSubtitleSelection = false
-        }
-        if (_uiState.value.isDialogueBoostEnabled) {
-            setDialogueBoost(true)
         }
         val currentSleepMode = _uiState.value.sleepTimerStatus.mode
         if (currentSleepMode is SleepTimerMode.EndOfMedia) {

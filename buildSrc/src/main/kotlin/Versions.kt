@@ -5,6 +5,7 @@ object Versions {
     const val APP_NAME = "1.2.0"
 
     const val COMPILE_SDK = 37
+    const val COMPILE_SDK_MINOR = 1
     const val TARGET_SDK = 37
     const val MIN_SDK = 28 // Needed for TV sticks
     const val BUILD_TOOLS = "37.0.0"

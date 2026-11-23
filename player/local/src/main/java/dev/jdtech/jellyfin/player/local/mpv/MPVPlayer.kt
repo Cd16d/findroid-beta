@@ -236,6 +236,7 @@ class MPVPlayer(
                 Property("dheight", MpvFormat.MPV_FORMAT_INT64),
                 Property("width", MpvFormat.MPV_FORMAT_INT64),
                 Property("height", MpvFormat.MPV_FORMAT_INT64),
+                Property("audio-params/channel-count", MpvFormat.MPV_FORMAT_INT64),
             )
             .forEach { (name, format) -> mpvLib.observeProperty(name, format) }
 
@@ -333,6 +334,7 @@ class MPVPlayer(
 
     // MPV Custom
     private var isPlayerReady: Boolean = false
+    private var currentSurfaceView: SurfaceView? = null
     private var isSeekable: Boolean = false
     private var currentMediaItemIndex: Int = 0
     private var currentPositionMs: Long? = null
@@ -434,6 +436,18 @@ class MPVPlayer(
                     "dheight",
                     "width",
                     "height" -> checkAndUpdateVideoSize()
+                    "audio-params/channel-count" -> {
+                        val channels = value.toInt()
+                        if (channels > 0 && channels != currentAudioChannelCount) {
+                            currentAudioChannelCount = channels
+                            if (
+                                isDialogueBoostActive &&
+                                    appliedDialogueBoostChannelCount != channels
+                            ) {
+                                applyDialogueBoostFilter(channels)
+                            }
+                        }
+                    }
                     "playlist-count" -> {
                         listeners.sendEvent(EVENT_TIMELINE_CHANGED) { listener ->
                             listener.onTimelineChanged(
@@ -1244,9 +1258,11 @@ class MPVPlayer(
                 }
             }
             if (isDialogueBoostActive) {
+                initialCommands.add(arrayOf("af", "remove", "@dialogue_boost"))
                 initialCommands.add(
-                    arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
+                    arrayOf("af", "add", buildDialogueBoostFilter(currentAudioChannelCount)),
                 )
+                appliedDialogueBoostChannelCount = currentAudioChannelCount
             }
             // Only set the playlist index when the index is not the currently playing item.
             // Otherwise, playback will be restarted.
@@ -1315,6 +1331,9 @@ class MPVPlayer(
         }
         resetInternalState()
         handler.removeCallbacksAndMessages(null)
+        // Remove the surface callbacks before destroying mpv.
+        currentSurfaceView?.holder?.removeCallback(surfaceHolder)
+        currentSurfaceView = null
         try {
             commandExecutor.shutdownNow()
             commandExecutor.awaitTermination(500, java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -1560,6 +1579,8 @@ class MPVPlayer(
      * @param surfaceView The surface view.
      */
     override fun setVideoSurfaceView(surfaceView: SurfaceView?) {
+        currentSurfaceView?.holder?.removeCallback(surfaceHolder)
+        currentSurfaceView = surfaceView
         surfaceView?.holder?.addCallback(surfaceHolder)
     }
 
@@ -1570,7 +1591,10 @@ class MPVPlayer(
      * @param surfaceView The texture view to clear.
      */
     override fun clearVideoSurfaceView(surfaceView: SurfaceView?) {
-        surfaceView?.holder?.removeCallback(surfaceHolder)
+        if (surfaceView === currentSurfaceView) {
+            surfaceView?.holder?.removeCallback(surfaceHolder)
+            currentSurfaceView = null
+        }
     }
 
     /**
@@ -1844,24 +1868,64 @@ class MPVPlayer(
         mpvLib.setPropertyDouble("sub-delay", delayMs / 1000.0)
     }
 
-    private var isDialogueBoostActive = false
+    @Volatile private var isDialogueBoostActive = false
+    @Volatile private var currentAudioChannelCount = 0
+    @Volatile private var appliedDialogueBoostChannelCount = -1
 
-    /** Enables or disables dialogue enhancement via MPV audio filters. */
+    /**
+     * Enables or disables loudness-compensated, vocal-focused dialogue enhancement via MPV's
+     * FFmpeg lavfi filtergraph.
+     */
     fun setDialogueBoost(enabled: Boolean) {
-        Timber.i("MPV setDialogueBoost: $enabled (audioSessionId: $mpvAudioSessionId)")
+        Timber.i(
+            "MPV setDialogueBoost: $enabled (audioSessionId: $mpvAudioSessionId, channels: $currentAudioChannelCount)",
+        )
         isDialogueBoostActive = enabled
-        commandExecutor.execute {
-            if (isReleased) return@execute
-            try {
-                if (enabled) {
-                    mpvLib.command(
-                        arrayOf("af", "add", "@dialogue_boost:dynaudnorm=f=150:g=15:m=10:p=0.95"),
-                    )
-                } else {
+        if (enabled) {
+            applyDialogueBoostFilter(currentAudioChannelCount)
+        } else {
+            appliedDialogueBoostChannelCount = -1
+            commandExecutor.execute {
+                if (isReleased) return@execute
+                try {
                     mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
-                }
-            } catch (_: Exception) {}
+                } catch (_: Exception) {}
+            }
         }
+    }
+
+    private fun applyDialogueBoostFilter(channelCount: Int) {
+        commandExecutor.execute {
+            if (isReleased || !isDialogueBoostActive) return@execute
+            try {
+                mpvLib.command(arrayOf("af", "remove", "@dialogue_boost"))
+            } catch (_: Exception) {}
+            try {
+                mpvLib.command(arrayOf("af", "add", buildDialogueBoostFilter(channelCount)))
+                appliedDialogueBoostChannelCount = channelCount
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to apply MPV dialogue boost filter")
+            }
+        }
+    }
+
+    private fun buildDialogueBoostFilter(channelCount: Int): String {
+        val spatialStage =
+            when (channelCount) {
+                // Mid +1.2 dB (1.15x), Side -2.85 dB (0.72x): L'=0.935L+0.215R, R'=0.215L+0.935R
+                2 -> "pan=stereo|c0=0.935*c0+0.215*c1|c1=0.215*c0+0.935*c1,"
+                6 -> "pan=5.1|c0=0.75*c0|c1=0.75*c1|c2=1.35*c2|c3=0.65*c3|c4=0.75*c4|c5=0.75*c5,"
+                8 ->
+                    "pan=7.1|c0=0.75*c0|c1=0.75*c1|c2=1.35*c2|c3=0.65*c3|c4=0.75*c4|c5=0.75*c5|c6=0.75*c6|c7=0.75*c7,"
+                else -> ""
+            }
+        return "@dialogue_boost:lavfi=[" +
+            spatialStage +
+            "lowshelf=f=180:t=q:w=0.707:g=-3," +
+            "equalizer=f=2500:t=q:w=0.9:g=4," +
+            "highshelf=f=8500:t=q:w=0.707:g=-1.5," +
+            "acompressor=threshold=-20dB:ratio=2.2:attack=15:release=150:knee=6:makeup=1.0," +
+            "alimiter=limit=0.95:attack=5:release=50]"
     }
 
     /** Adds and optionally selects an external subtitle track file. */
