@@ -3,22 +3,13 @@ package dev.jdtech.jellyfin
 import android.app.Activity
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
@@ -26,15 +17,12 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -46,7 +34,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,18 +61,12 @@ import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.models.VolumeKeyEvent
+import dev.jdtech.jellyfin.navigation.AccountMenuHost
 import dev.jdtech.jellyfin.navigation.navigateOrReuse
 import dev.jdtech.jellyfin.navigation.resumedAction
 import dev.jdtech.jellyfin.navigation.setupEntries
 import dev.jdtech.jellyfin.navigation.truncateTo
-import dev.jdtech.jellyfin.player.cast.models.CastConnectionState
-import dev.jdtech.jellyfin.player.cast.presentation.CastSessionViewModel
-import dev.jdtech.jellyfin.presentation.account.AccountMenuWrapper
-import dev.jdtech.jellyfin.presentation.cast.CastExpandedPlayer
-import dev.jdtech.jellyfin.presentation.cast.CastMiniPlayer
-import dev.jdtech.jellyfin.presentation.cast.components.CastBottomSheet
-import dev.jdtech.jellyfin.presentation.cast.components.CastButton
-import dev.jdtech.jellyfin.presentation.cast.components.CastPlayerContainer
+import dev.jdtech.jellyfin.presentation.cast.CastNavigationHost
 import dev.jdtech.jellyfin.presentation.download.DownloadsScreen
 import dev.jdtech.jellyfin.presentation.download.ShowDownloadsScreen
 import dev.jdtech.jellyfin.presentation.film.CollectionScreen
@@ -106,13 +87,11 @@ import dev.jdtech.jellyfin.presentation.settings.SettingsFileEditScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
 import dev.jdtech.jellyfin.presentation.settings.SmartDownloadsScreen
 import dev.jdtech.jellyfin.presentation.setup.permission.PermissionScreen
-import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionAction
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionViewModel
 import dev.jdtech.jellyfin.utils.restart
-import dev.jdtech.jellyfin.viewmodels.MainViewModel
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -255,8 +234,6 @@ private fun MainNavigation(
     permissionApplicable: Boolean,
 ) {
     val context = LocalContext.current
-    val mainViewModel: MainViewModel = hiltViewModel(context as ViewModelStoreOwner)
-    val castSessionViewModel: CastSessionViewModel = hiltViewModel(context as ViewModelStoreOwner)
     val searchViewModel: SearchViewModel = hiltViewModel(context as ViewModelStoreOwner)
 
     val navigationItems =
@@ -303,12 +280,8 @@ private fun MainNavigation(
     val isExcluded = isExcludedFromNavigation(currentRoute)
 
     var isBottomBarVisible by remember { mutableStateOf(true) }
-    var castExpanded by remember { mutableStateOf(true) }
 
-    LaunchedEffect(currentRoute) {
-        isBottomBarVisible = true
-        castExpanded = true
-    }
+    LaunchedEffect(currentRoute) { isBottomBarVisible = true }
 
     val showNavSuite =
         when {
@@ -330,85 +303,6 @@ private fun MainNavigation(
 
     var isAccountMenuOpen by remember { mutableStateOf(false) }
 
-    var showCastSheet by remember { mutableStateOf(false) }
-    var showCastExpandedPlayer by remember { mutableStateOf(false) }
-
-    LaunchedEffect(showCastExpandedPlayer) {
-        mainViewModel.setCastPlayerOpen(showCastExpandedPlayer)
-    }
-
-    val connectionState by castSessionViewModel.connectionState.collectAsStateWithLifecycle()
-    val isCastReady by castSessionViewModel.sessionManager.isCastReady.collectAsStateWithLifecycle()
-    val connectedDevice by
-        castSessionViewModel.sessionManager.connectedDevice.collectAsStateWithLifecycle()
-
-    LaunchedEffect(connectedDevice?.id) { showCastExpandedPlayer = false }
-
-    LaunchedEffect(connectionState) {
-        if (connectionState != CastConnectionState.CONNECTED) {
-            showCastExpandedPlayer = false
-        }
-    }
-    val isCastSupportedRoute =
-        when (currentRoute) {
-            is HomeRoute,
-            is MovieRoute,
-            is ShowRoute,
-            is SeasonRoute,
-            is EpisodeRoute,
-            is PersonRoute,
-            is LibraryRoute,
-            is CollectionRoute,
-            is FavoritesRoute -> true
-            else -> false
-        }
-
-    val showCastButton =
-        isCastReady &&
-            isCastSupportedRoute &&
-            !isOfflineMode &&
-            castSessionViewModel.sessionManager.isSupported
-
-    val showCastPlayerPhone by
-        remember(
-            connectionState,
-            isExpandedScreen,
-            isCastSupportedRoute,
-            showCastExpandedPlayer,
-        ) {
-            derivedStateOf {
-                connectionState == CastConnectionState.CONNECTED &&
-                    !isExpandedScreen &&
-                    (isCastSupportedRoute || showCastExpandedPlayer)
-            }
-        }
-
-    val showCastMiniPlayer by
-        remember(
-            connectionState,
-            showCastExpandedPlayer,
-            isExpandedScreen,
-            isCastSupportedRoute,
-        ) {
-            derivedStateOf {
-                val connected = connectionState == CastConnectionState.CONNECTED
-                connected && isExpandedScreen && !showCastExpandedPlayer && isCastSupportedRoute
-            }
-        }
-
-    val castPlayerHeight by
-        remember(showCastPlayerPhone, showCastExpandedPlayer, isMediumScreen) {
-            derivedStateOf {
-                if (showCastPlayerPhone && !showCastExpandedPlayer && !isMediumScreen) {
-                    // Collapsed pill (72.dp) + bottom spacing (16.dp) + matching top spacing
-                    // (16.dp)
-                    104.dp
-                } else {
-                    MaterialTheme.spacings.default
-                }
-            }
-        }
-
     val nestedScrollConnection =
         remember(isNavRail, isTabRoot) {
             object : NestedScrollConnection {
@@ -418,12 +312,10 @@ private fun MainNavigation(
                     source: NestedScrollSource,
                 ): Offset {
                     if (consumed.y < -15f) {
-                        castExpanded = false
                         if (!isNavRail && !isTabRoot) {
                             isBottomBarVisible = false
                         }
                     } else if (consumed.y > 15f || available.y > 15f) {
-                        castExpanded = true
                         if (!isNavRail) {
                             isBottomBarVisible = true
                         }
@@ -442,153 +334,69 @@ private fun MainNavigation(
         )
     }
 
-    CompositionLocalProvider(LocalCastPlayerHeight provides castPlayerHeight) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            AccountMenuWrapper(
-                isMenuOpen = isAccountMenuOpen,
-                onCloseMenu = { isAccountMenuOpen = false },
-                onNavigateToSettings = {
-                    navigator.navigate(SettingsRoute(indexes = listOf(CoreR.string.title_settings)))
-                    isAccountMenuOpen = false
-                },
-                onNavigateToAbout = {
-                    navigator.navigate(AboutRoute)
-                    isAccountMenuOpen = false
-                },
-                onAddUser = {
-                    navigator.navigate(LoginRoute())
-                    isAccountMenuOpen = false
-                },
-                onManageAccounts = {
-                    navigator.navigate(UsersRoute)
-                    isAccountMenuOpen = false
-                },
-                onSwitchUser = {
-                    navigator.navigateHome()
-                    isAccountMenuOpen = false
-                },
-                modifier = Modifier.zIndex(if (isAccountMenuOpen) 10f else 0f),
-            ) {
-                NavigationSuiteScaffold(
-                    navigationItems = {
-                        val haptics = LocalHapticFeedback.current
-                        navigationItems.forEach { item ->
-                            NavigationSuiteItem(
-                                selected = topLevelRoute == item.route,
-                                onClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (topLevelRoute == item.route) {
-                                        if (navigationState.currentBackStack().size > 1) {
-                                            navigationState.currentBackStack().truncateTo(1)
-                                        }
-                                        if (item.route == SearchRoute) {
-                                            searchViewModel.onAction(SearchAction.OnTabReselected)
-                                        }
-                                    } else {
-                                        navigator.navigate(item.route)
+    AccountMenuHost(
+        isMenuOpen = isAccountMenuOpen,
+        onCloseMenu = { isAccountMenuOpen = false },
+        navigator = navigator,
+    ) {
+        CastNavigationHost(
+            currentRoute = currentRoute,
+            isOfflineMode = isOfflineMode,
+            isExpandedScreen = isExpandedScreen,
+            isMediumScreen = isMediumScreen,
+            isNavRail = isNavRail,
+            showNavSuite = showNavSuite,
+            isAccountMenuOpen = isAccountMenuOpen,
+        ) {
+            NavigationSuiteScaffold(
+                navigationItems = {
+                    val haptics = LocalHapticFeedback.current
+                    navigationItems.forEach { item ->
+                        NavigationSuiteItem(
+                            selected = topLevelRoute == item.route,
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (topLevelRoute == item.route) {
+                                    if (navigationState.currentBackStack().size > 1) {
+                                        navigationState.currentBackStack().truncateTo(1)
                                     }
-                                },
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(item.icon),
-                                        contentDescription = stringResource(item.title),
-                                    )
-                                },
-                                enabled = item.enabled,
-                                label = { Text(text = stringResource(item.title)) },
-                                navigationSuiteType = customNavSuiteType,
-                            )
-                        }
-                    },
-                    navigationItemVerticalArrangement = Arrangement.Center,
-                    navigationSuiteType = customNavSuiteType,
-                    state = navigationSuiteScaffoldState,
-                ) {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        Box(modifier = Modifier.weight(1f).nestedScroll(nestedScrollConnection)) {
-                            NavDisplay(
-                                entries =
-                                    navigationState.toDecoratedEntries(
-                                        entryDecorators,
-                                        entryProvider,
-                                    ),
-                                onBack = { navigator.goBack() },
-                                transitionSpec = { GLOBAL_TRANSITION_SPEC },
-                                popTransitionSpec = { GLOBAL_TRANSITION_SPEC },
-                                predictivePopTransitionSpec = { _ -> GLOBAL_TRANSITION_SPEC },
-                            )
-
-                            if (
-                                showCastButton && connectionState != CastConnectionState.CONNECTED
-                            ) {
-                                CastButton(
-                                    expanded = castExpanded,
-                                    onClick = { showCastSheet = true },
-                                    modifier = Modifier.align(Alignment.BottomEnd),
-                                    handleBottomInsets = !showNavSuite,
+                                    if (item.route == SearchRoute) {
+                                        searchViewModel.onAction(SearchAction.OnTabReselected)
+                                    }
+                                } else {
+                                    navigator.navigate(item.route)
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(item.icon),
+                                    contentDescription = stringResource(item.title),
                                 )
-                            }
-                        }
-
-                        AnimatedVisibility(
-                            visible = showCastExpandedPlayer && isExpandedScreen,
-                            enter =
-                                slideInHorizontally(initialOffsetX = { it }) +
-                                    expandHorizontally(expandFrom = Alignment.End) +
-                                    fadeIn(),
-                            exit =
-                                slideOutHorizontally(targetOffsetX = { it }) +
-                                    shrinkHorizontally(shrinkTowards = Alignment.End) +
-                                    fadeOut(),
-                        ) {
-                            CastExpandedPlayer(
-                                onDeviceClick = { showCastSheet = true },
-                                onClose = { showCastExpandedPlayer = false },
-                            )
-                        }
-                    }
-
-                    // Tablet Cast Mini Player
-                    if (isExpandedScreen) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.BottomEnd,
-                        ) {
-                            AnimatedVisibility(
-                                visible = showCastMiniPlayer,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 200)),
-                            ) {
-                                CastMiniPlayer(
-                                    onClick = { showCastExpandedPlayer = true },
-                                    handleBottomInsets = !showNavSuite,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (showCastSheet) {
-                    CastBottomSheet(onDismissRequest = { showCastSheet = false })
-                }
-
-                // Phone Cast Player (Morphing Shared Container Transform)
-                if (!isExpandedScreen) {
-                    AnimatedVisibility(
-                        visible = showCastPlayerPhone,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 300)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 200)),
-                    ) {
-                        CastPlayerContainer(
-                            isExpanded = showCastExpandedPlayer,
-                            onExpandedChange = { expanded -> showCastExpandedPlayer = expanded },
-                            onDeviceClick = { showCastSheet = true },
-                            showNavSuite = showNavSuite,
-                            isNavRail = isNavRail,
-                            isMediumScreen = isMediumScreen,
-                            modifier = Modifier.zIndex(if (isAccountMenuOpen) 0f else 2f),
+                            },
+                            enabled = item.enabled,
+                            label = { Text(text = stringResource(item.title)) },
+                            navigationSuiteType = customNavSuiteType,
                         )
                     }
+                },
+                navigationItemVerticalArrangement = Arrangement.Center,
+                navigationSuiteType = customNavSuiteType,
+                state = navigationSuiteScaffoldState,
+            ) {
+                CastContentLayout(
+                    modifier = Modifier.nestedScroll(nestedScrollConnection),
+                ) {
+                    NavDisplay(
+                        entries =
+                            navigationState.toDecoratedEntries(
+                                entryDecorators,
+                                entryProvider,
+                            ),
+                        onBack = { navigator.goBack() },
+                        transitionSpec = { GLOBAL_TRANSITION_SPEC },
+                        popTransitionSpec = { GLOBAL_TRANSITION_SPEC },
+                        predictivePopTransitionSpec = { _ -> GLOBAL_TRANSITION_SPEC },
+                    )
                 }
             }
         }
