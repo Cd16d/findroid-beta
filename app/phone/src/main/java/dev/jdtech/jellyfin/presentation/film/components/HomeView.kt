@@ -15,6 +15,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -51,6 +52,9 @@ fun HomeView(
     modifier: Modifier = Modifier,
     hideEpisodeSpoilers: Boolean = false,
 ) {
+    val distinctItems = remember(view.view.items) { view.view.items.distinctBy { it.id } }
+    val listState = rememberAutoScrollToStartRowState(distinctItems)
+
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxWidth().height(42.dp).padding(itemsPadding)) {
             Text(
@@ -81,14 +85,16 @@ fun HomeView(
         }
         Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
         LazyRow(
+            state = listState,
             contentPadding = itemsPadding,
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
         ) {
-            items(view.view.items.distinctBy { it.id }, key = { it.id }) { item ->
+            items(distinctItems, key = { it.id }) { item ->
                 ItemCard(
                     item = item,
                     direction = Direction.VERTICAL,
                     onClick = { onAction(HomeAction.OnItemClick(item)) },
+                    modifier = Modifier.animateItem(),
                     hideEpisodeSpoilers = hideEpisodeSpoilers,
                 )
             }

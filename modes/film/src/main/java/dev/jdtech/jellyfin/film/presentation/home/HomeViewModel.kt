@@ -26,6 +26,7 @@ import dev.jdtech.jellyfin.models.getProfileImageModel
 import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import dev.jdtech.jellyfin.utils.prefetchCarouselImages
 import dev.jdtech.jellyfin.utils.toView
 import java.io.IOException
 import java.util.UUID
@@ -462,6 +463,13 @@ constructor(
                     val items = repository.getSuggestions(forceRefresh = true)
                     if (items.isNotEmpty() && activeSession == targetSession) {
                         homeCacheStore.saveBufferedSuggestions(serverId, userId, items)
+                        if (appPreferences.getValue(appPreferences.imageCache)) {
+                            prefetchCarouselImages(
+                                context = context,
+                                items = items,
+                                includeLogos = appPreferences.getValue(appPreferences.tvShowLogos),
+                            )
+                        }
                     }
                 }
                     .onFailure { e ->

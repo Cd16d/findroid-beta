@@ -31,7 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,7 @@ import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.utils.toBlurHashPainter
+import dev.jdtech.jellyfin.utils.toCarouselBackdropUri
 import dev.jdtech.jellyfin.utils.toOptimizedImageUri
 import org.jellyfin.sdk.model.api.ImageType
 
@@ -72,9 +74,8 @@ fun HomeCarouselItem(
     isFocused: Boolean = false,
 ) {
     Box(modifier = modifier.fillMaxSize().background(PlayerBackground)) {
-        val windowSize = LocalWindowInfo.current.containerDpSize
-        val screenWidth = windowSize.width
-        val screenHeight = windowSize.height
+        val context = LocalContext.current
+        val configuration = LocalConfiguration.current
 
         val backdropImage =
             item.images.backdrop
@@ -82,12 +83,13 @@ fun HomeCarouselItem(
                 ?: item.images.primary
                 ?: item.images.showPrimary
         val imageUri =
-            backdropImage
-                ?.uri
-                .toOptimizedImageUri(
-                    widthDp = screenWidth,
-                    heightDp = screenHeight,
-                )
+            remember(
+                backdropImage?.uri,
+                configuration.screenWidthDp,
+                configuration.screenHeightDp,
+            ) {
+                backdropImage?.uri.toCarouselBackdropUri(context)
+            }
         val blurPlaceholder =
             remember(backdropImage?.blurHash) { backdropImage?.blurHash?.toBlurHashPainter() }
 
