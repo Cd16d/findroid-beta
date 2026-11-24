@@ -102,23 +102,6 @@ constructor(
             PreferenceGroup(
                 preferences =
                     listOf(
-                        PreferenceSwitch(
-                            nameStringResource = R.string.offline_mode,
-                            descriptionStringRes = R.string.offline_mode_summary,
-                            iconDrawableId = R.drawable.ic_server_off,
-                            supportedDeviceTypes = listOf(DeviceType.PHONE),
-                            onClick = {
-                                viewModelScope.launch {
-                                    eventsChannel.send(SettingsEvent.RestartActivity)
-                                }
-                            },
-                            backendPreference = appPreferences.offlineMode,
-                        ),
-                    ),
-            ),
-            PreferenceGroup(
-                preferences =
-                    listOf(
                         PreferenceCategory(
                             nameStringResource = R.string.users,
                             iconDrawableId = R.drawable.ic_user,

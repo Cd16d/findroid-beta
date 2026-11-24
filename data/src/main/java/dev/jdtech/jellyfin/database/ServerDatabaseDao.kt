@@ -94,8 +94,76 @@ interface ServerDatabaseDao {
     )
     suspend fun getServerCurrentAddress(serverId: String): ServerAddress?
 
-    @Query("SELECT * FROM serverAddresses WHERE serverId = :serverId")
+    @Query(
+        "SELECT * FROM serverAddresses WHERE serverId = :serverId ORDER BY isLocal DESC, priority ASC",
+    )
     fun observeServerAddresses(serverId: String): Flow<List<ServerAddress>>
+
+    @Update suspend fun updateServerAddress(address: ServerAddress)
+
+    @Update suspend fun updateServerAddresses(addresses: List<ServerAddress>)
+
+    @Query("UPDATE servers SET autoSwitchEnabled = :enabled WHERE id = :serverId")
+    suspend fun updateServerAutoSwitch(serverId: String, enabled: Boolean)
+
+    @Query("UPDATE servers SET currentServerAddressId = :addressId WHERE id = :serverId")
+    suspend fun updateServerCurrentAddress(serverId: String, addressId: UUID)
+
+    @Query("UPDATE serverAddresses SET isLocal = 0 WHERE serverId = :serverId")
+    suspend fun clearLocalAddresses(serverId: String)
+
+    @Query(
+        "SELECT * FROM serverAddresses WHERE serverId = :serverId ORDER BY isLocal DESC, priority ASC",
+    )
+    suspend fun getServerAddressesOrdered(serverId: String): List<ServerAddress>
+
+    @Transaction
+    suspend fun setLocalServerAddress(serverId: String, addressUrl: String): ServerAddress {
+        val normalized = addressUrl.trim().trimEnd('/')
+        val existing = getServerAddressesOrdered(serverId)
+        val currentLocal = existing.firstOrNull { it.isLocal }
+        val matchingOther = existing.firstOrNull {
+            !it.isLocal && it.address.equals(normalized, ignoreCase = true)
+        }
+
+        clearLocalAddresses(serverId)
+        return when {
+            matchingOther != null -> {
+                val updated = matchingOther.copy(address = normalized, isLocal = true, priority = 0)
+                updateServerAddress(updated)
+                updated
+            }
+            currentLocal != null -> {
+                val updated = currentLocal.copy(address = normalized, isLocal = true, priority = 0)
+                updateServerAddress(updated)
+                updated
+            }
+            else -> {
+                val created =
+                    ServerAddress(
+                        id = UUID.randomUUID(),
+                        serverId = serverId,
+                        address = normalized,
+                        isLocal = true,
+                        priority = 0,
+                    )
+                insertServerAddress(created)
+                created
+            }
+        }
+    }
+
+    @Transaction
+    suspend fun reorderExternalAddresses(serverId: String, orderedIds: List<UUID>) {
+        val existing =
+            getServerAddressesOrdered(serverId).filter { !it.isLocal }.associateBy { it.id }
+        val updated = orderedIds.mapIndexedNotNull { index, id ->
+            existing[id]?.copy(priority = index)
+        }
+        if (updated.isNotEmpty()) {
+            updateServerAddresses(updated)
+        }
+    }
 
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertMovie(movie: FindroidMovieDto)
 

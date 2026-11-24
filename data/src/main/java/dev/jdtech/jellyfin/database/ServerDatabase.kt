@@ -42,7 +42,7 @@ import dev.jdtech.jellyfin.models.UserDownloadDto
             FindroidPartDto::class,
             UserDownloadDto::class,
         ],
-    version = 10,
+    version = 11,
     autoMigrations =
         [
             AutoMigration(from = 2, to = 3),
@@ -51,6 +51,7 @@ import dev.jdtech.jellyfin.models.UserDownloadDto
             AutoMigration(from = 5, to = 6, spec = ServerDatabase.IntrosMigration::class),
             AutoMigration(from = 7, to = 8),
             AutoMigration(from = 8, to = 9),
+            AutoMigration(from = 10, to = 11),
         ],
 )
 @ColumnTypeConverters(Converters::class)

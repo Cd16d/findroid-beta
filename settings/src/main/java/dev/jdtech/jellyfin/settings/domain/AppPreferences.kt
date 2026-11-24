@@ -257,9 +257,6 @@ class AppPreferences @Inject constructor(val sharedPreferences: SharedPreference
     val notificationsPermissionDecided = Preference("pref_notifications_permission_decided", false)
     val localNetworkPermissionDecided = Preference("pref_local_network_permission_decided", false)
 
-    // Offline mode
-    val offlineMode = Preference("pref_offline_mode", false)
-
     // Migrations
     val mpvMigrated = Preference("mpv_migrated", false)
 

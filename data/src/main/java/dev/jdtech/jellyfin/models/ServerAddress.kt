@@ -22,4 +22,6 @@ data class ServerAddress(
     @PrimaryKey val id: UUID,
     @ColumnInfo(index = true) val serverId: String,
     val address: String,
+    @ColumnInfo(defaultValue = "0") val isLocal: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val priority: Int = 0,
 )
