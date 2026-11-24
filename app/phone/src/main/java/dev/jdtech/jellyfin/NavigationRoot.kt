@@ -81,6 +81,7 @@ import dev.jdtech.jellyfin.presentation.film.ShowScreen
 import dev.jdtech.jellyfin.presentation.settings.AboutScreen
 import dev.jdtech.jellyfin.presentation.settings.DeviceScreen
 import dev.jdtech.jellyfin.presentation.settings.DownloadPresetsScreen
+import dev.jdtech.jellyfin.presentation.settings.SettingsAdaptiveScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsFileEditScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsServerNetworkScreen
@@ -89,6 +90,7 @@ import dev.jdtech.jellyfin.presentation.settings.SettingsUsersScreen
 import dev.jdtech.jellyfin.presentation.settings.SmartDownloadsScreen
 import dev.jdtech.jellyfin.presentation.setup.permission.PermissionScreen
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
+import dev.jdtech.jellyfin.settings.R as SettingsR
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionAction
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionViewModel
 import java.util.UUID
@@ -614,22 +616,40 @@ private fun EntryProviderScope<NavKey>.mainEntries(
         )
     }
     entry<SettingsRoute> { key ->
-        SettingsScreen(
-            indexes = key.indexes,
-            navigateToSettings =
-                resumedAction { indexes -> navigator.navigate(SettingsRoute(indexes = indexes)) },
-            navigateToSettingsFileEdit =
-                resumedAction { filePath ->
-                    navigator.navigate(SettingsFileEditRoute(filePath = filePath))
-                },
-            navigateToServers = dropUnlessResumed { navigator.navigate(SettingsServersRoute) },
-            navigateToUsers = dropUnlessResumed { navigator.navigate(SettingsUsersRoute()) },
-            navigateToAbout = dropUnlessResumed { navigator.navigate(AboutRoute) },
-            navigateToDevice = dropUnlessResumed { navigator.navigate(DeviceRoute) },
-            navigateToDownloadPresets =
-                dropUnlessResumed { navigator.navigate(DownloadPresetsRoute) },
-            navigateBack = dropUnlessResumed { navigator.goBack() },
-        )
+        val isSettingsRoot =
+            key.indexes.size == 1 &&
+                (key.indexes.first() == CoreR.string.title_settings ||
+                    key.indexes.first() == SettingsR.string.title_settings)
+        if (isSettingsRoot) {
+            SettingsAdaptiveScreen(
+                navigateToAddServer = dropUnlessResumed { navigator.navigate(AddServerRoute) },
+                navigateToLogin =
+                    resumedAction { username ->
+                        navigator.navigate(LoginRoute(username = username))
+                    },
+                navigateToHome = dropUnlessResumed { navigator.navigateHome() },
+                navigateBack = dropUnlessResumed { navigator.goBack() },
+            )
+        } else {
+            SettingsScreen(
+                indexes = key.indexes,
+                navigateToSettings =
+                    resumedAction { indexes ->
+                        navigator.navigate(SettingsRoute(indexes = indexes))
+                    },
+                navigateToSettingsFileEdit =
+                    resumedAction { filePath ->
+                        navigator.navigate(SettingsFileEditRoute(filePath = filePath))
+                    },
+                navigateToServers = dropUnlessResumed { navigator.navigate(SettingsServersRoute) },
+                navigateToUsers = dropUnlessResumed { navigator.navigate(SettingsUsersRoute()) },
+                navigateToAbout = dropUnlessResumed { navigator.navigate(AboutRoute) },
+                navigateToDevice = dropUnlessResumed { navigator.navigate(DeviceRoute) },
+                navigateToDownloadPresets =
+                    dropUnlessResumed { navigator.navigate(DownloadPresetsRoute) },
+                navigateBack = dropUnlessResumed { navigator.goBack() },
+            )
+        }
     }
     entry<SettingsServersRoute> {
         SettingsServersScreen(

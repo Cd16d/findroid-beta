@@ -42,12 +42,15 @@ private fun getItemShape(index: Int, total: Int): Shape = CentralShapes.getGroup
  * @param group Group model containing a header title and list of preference items.
  * @param onAction Callback triggered when user updates or interacts with a preference item.
  * @param modifier Optional modifier applied to the card container layout. Defaults to [Modifier].
+ * @param selectedCategoryId Optional string resource ID of the currently active category for
+ *   two-pane sidebar highlighting.
  */
 @Composable
 fun SettingsGroupCard(
     group: PreferenceGroup,
     onAction: (SettingsAction) -> Unit,
     modifier: Modifier = Modifier,
+    selectedCategoryId: Int? = null,
 ) {
     Column {
         group.nameStringResource?.let {
@@ -61,15 +64,22 @@ fun SettingsGroupCard(
         Column(modifier = modifier) {
             val total = group.preferences.size
             group.preferences.forEachIndexed { index, preference ->
+                val isSelected =
+                    selectedCategoryId != null &&
+                        preference is PreferenceCategory &&
+                        preference.nameStringResource == selectedCategoryId
                 Surface(
                     shape = getItemShape(index, total),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    color =
+                        if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     when (preference) {
                         is PreferenceCategory ->
                             SettingsCategoryCard(
                                 preference = preference,
+                                isSelected = isSelected,
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         is PreferenceSwitch ->

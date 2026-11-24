@@ -74,6 +74,7 @@ fun SettingsServersScreen(
     onAddServerClick: () -> Unit,
     onServerActivated: () -> Unit,
     navigateBack: () -> Unit,
+    showBack: Boolean = true,
     viewModel: SettingsServersViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -93,6 +94,7 @@ fun SettingsServersScreen(
         navigateToServerUsers = navigateToServerUsers,
         onAddServerClick = onAddServerClick,
         navigateBack = navigateBack,
+        showBack = showBack,
         onAction = viewModel::onAction,
     )
 }
@@ -105,6 +107,7 @@ private fun SettingsServersLayout(
     navigateToServerUsers: (serverId: String) -> Unit,
     onAddServerClick: () -> Unit,
     navigateBack: () -> Unit,
+    showBack: Boolean = true,
     onAction: (SettingsServersAction) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -116,11 +119,13 @@ private fun SettingsServersLayout(
             TopAppBar(
                 title = { Text(stringResource(SetupR.string.servers)) },
                 navigationIcon = {
-                    IconButton(onClick = navigateBack) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_arrow_left),
-                            contentDescription = null,
-                        )
+                    if (showBack) {
+                        IconButton(onClick = navigateBack) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_arrow_left),
+                                contentDescription = null,
+                            )
+                        }
                     }
                 },
                 actions = {

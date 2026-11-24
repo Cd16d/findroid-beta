@@ -88,6 +88,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DownloadPresetsScreen(
     navigateBack: () -> Unit,
+    handleStartInsets: Boolean = true,
     viewModel: DownloadPresetsViewModel = hiltViewModel(),
 ) {
     val presets by viewModel.presets.collectAsStateWithLifecycle()
@@ -95,6 +96,7 @@ fun DownloadPresetsScreen(
     DownloadPresetsScreenContent(
         presets = presets,
         navigateBack = navigateBack,
+        handleStartInsets = handleStartInsets,
         onAction = viewModel::onAction,
     )
 }
@@ -104,12 +106,13 @@ fun DownloadPresetsScreen(
 private fun DownloadPresetsScreenContent(
     presets: List<DownloadQualityPreset>,
     navigateBack: () -> Unit,
+    handleStartInsets: Boolean = true,
     onAction: (DownloadPresetsAction) -> Boolean = { true },
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val safePadding = rememberSafePadding()
+    val safePadding = rememberSafePadding(handleStartInsets = handleStartInsets)
     val paddingStart = safePadding.start + MaterialTheme.spacings.medium
     val paddingEnd = safePadding.end + MaterialTheme.spacings.medium
     val paddingBottom = safePadding.bottom + MaterialTheme.spacings.medium

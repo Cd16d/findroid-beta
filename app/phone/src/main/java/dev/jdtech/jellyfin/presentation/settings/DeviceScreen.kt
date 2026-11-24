@@ -54,6 +54,7 @@ import dev.jdtech.jellyfin.utils.DeviceCodecsOverview
 @Composable
 fun DeviceScreen(
     navigateBack: () -> Unit,
+    showBack: Boolean = true,
     viewModel: DeviceViewModel = hiltViewModel(),
 ) {
     val deviceName by viewModel.deviceName.collectAsStateWithLifecycle()
@@ -63,6 +64,7 @@ fun DeviceScreen(
         overview = viewModel.codecsOverview,
         onUpdateDeviceName = viewModel::updateDeviceName,
         navigateBack = navigateBack,
+        showBack = showBack,
     )
 }
 
@@ -73,6 +75,7 @@ fun DeviceScreenContent(
     overview: DeviceCodecsOverview,
     onUpdateDeviceName: (String) -> Unit,
     navigateBack: () -> Unit,
+    showBack: Boolean = true,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -85,11 +88,13 @@ fun DeviceScreenContent(
             TopAppBar(
                 title = { Text(stringResource(SettingsR.string.settings_category_device)) },
                 navigationIcon = {
-                    IconButton(onClick = navigateBack) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_arrow_left),
-                            contentDescription = null,
-                        )
+                    if (showBack) {
+                        IconButton(onClick = navigateBack) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_arrow_left),
+                                contentDescription = null,
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior,
