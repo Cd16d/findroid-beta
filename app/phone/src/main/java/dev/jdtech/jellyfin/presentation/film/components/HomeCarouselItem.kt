@@ -20,11 +20,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyMovie
 import dev.jdtech.jellyfin.film.presentation.home.HomeAction
@@ -34,6 +34,7 @@ import dev.jdtech.jellyfin.models.FindroidShow
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.utils.toBlurHashPainter
+import dev.jdtech.jellyfin.utils.toCarouselBackdropUri
 import dev.jdtech.jellyfin.utils.toOptimizedImageUri
 
 @Composable
@@ -49,20 +50,8 @@ fun HomeCarouselItem(
             1f to Color.Black.copy(alpha = 0.6f),
         )
 
-    val containerWidth = LocalWindowInfo.current.containerDpSize.width
-    val effectiveWidth =
-        if (targetWidth != Dp.Unspecified) {
-            targetWidth
-        } else {
-            val nPages =
-                when {
-                    containerWidth >= 840.dp -> 3
-                    containerWidth >= 600.dp -> 2
-                    else -> 1
-                }
-            (containerWidth / nPages).coerceAtLeast(1.dp)
-        }
-    val effectiveHeight = effectiveWidth * 9f / 16f
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
 
     Box(
         modifier =
@@ -73,7 +62,18 @@ fun HomeCarouselItem(
         val image = item.images.backdrop
 
         val imageUri =
-            image?.uri.toOptimizedImageUri(widthDp = effectiveWidth, heightDp = effectiveHeight)
+            if (targetWidth != Dp.Unspecified) {
+                image
+                    ?.uri
+                    .toOptimizedImageUri(
+                        widthDp = targetWidth,
+                        heightDp = targetWidth * 9f / 16f,
+                    )
+            } else {
+                remember(image?.uri, configuration.screenWidthDp, configuration.screenHeightDp) {
+                    image?.uri.toCarouselBackdropUri(context)
+                }
+            }
 
         val blurPlaceholder = remember(image?.blurHash) { image?.blurHash.toBlurHashPainter() }
 
