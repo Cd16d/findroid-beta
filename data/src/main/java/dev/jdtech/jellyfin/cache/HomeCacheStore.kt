@@ -18,6 +18,7 @@ import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ import timber.log.Timber
 
 @Serializable
 data class HomeCacheSnapshot(
+    val cacheVersion: Int = 1,
     val serverId: String,
     val serverName: String,
     val userId: String,
@@ -43,6 +45,8 @@ data class HomeCacheSnapshot(
     val views: List<CachedHomeView> = emptyList(),
     val updatedAtMs: Long = 0L,
 )
+
+private const val CURRENT_CACHE_VERSION = 2
 
 @Serializable
 data class CachedHomeView(
@@ -117,12 +121,32 @@ class HomeCacheStore(
 
     private val inMemorySnapshots = ConcurrentHashMap<String, HomeCacheSnapshot>()
     private val promotedSessions = ConcurrentHashMap.newKeySet<String>()
+    private val hasCompletedInitialLaunch = AtomicBoolean(false)
     private val writeMutex = Mutex()
 
     @Volatile private var activeCacheKey: String? = null
 
     private val _isPreloadComplete = MutableStateFlow(false)
     val isPreloadComplete: StateFlow<Boolean> = _isPreloadComplete.asStateFlow()
+
+    /**
+     * Notifies the store of a fresh Activity launch (`savedInstanceState == null`). Cold process
+     * launches already promote buffered suggestions via [preloadActiveUserCache] from
+     * `BaseApplication.onCreate()`; subsequent warm launches (e.g. exiting via Back and reopening)
+     * clear [promotedSessions] so the buffered carousel is promoted for the new launch.
+     */
+    fun onFreshActivityLaunch(): Boolean {
+        if (hasCompletedInitialLaunch.compareAndSet(false, true)) {
+            return false
+        }
+        promotedSessions.clear()
+        return true
+    }
+
+    /** Updates the active cache key when switching server or user so preloads stay scoped. */
+    fun setActiveKey(serverId: String, userId: UUID?) {
+        activeCacheKey = userId?.let { cacheKey(serverId, it) }
+    }
 
     /**
      * Preloads the active user's cached Home snapshot into memory during app startup and promotes
@@ -219,6 +243,7 @@ class HomeCacheStore(
 
                 val snapshot =
                     HomeCacheSnapshot(
+                        cacheVersion = CURRENT_CACHE_VERSION,
                         serverId = server.id,
                         serverName = server.name,
                         userId = userId.toString(),
@@ -320,7 +345,13 @@ class HomeCacheStore(
         val file = snapshotFile(serverId, userId)
         if (!file.exists() || file.length() == 0L) return null
         return try {
-            json.decodeFromString<HomeCacheSnapshot>(file.readText())
+            val snapshot = json.decodeFromString<HomeCacheSnapshot>(file.readText())
+            if (snapshot.cacheVersion != CURRENT_CACHE_VERSION) {
+                runCatching { file.delete() }
+                null
+            } else {
+                snapshot
+            }
         } catch (e: Exception) {
             Timber.w(e, "Failed to decode home cache snapshot %s", file.name)
             runCatching { file.delete() }

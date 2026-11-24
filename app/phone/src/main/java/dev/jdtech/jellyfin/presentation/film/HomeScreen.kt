@@ -236,8 +236,10 @@ private fun HomeScreenLayout(
     if (showServerSelectionBottomSheet) {
         ServerSelectionBottomSheet(
             currentServerId = state.server?.id ?: "",
-            onUpdate = {
-                onAction(HomeAction.OnRetryClick)
+            onUpdate = { isServerChange ->
+                if (!isServerChange) {
+                    onAction(HomeAction.OnRetryClick)
+                }
                 scope
                     .launch { showServerSelectionSheetState.hide() }
                     .invokeOnCompletion {

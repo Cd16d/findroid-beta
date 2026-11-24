@@ -67,21 +67,23 @@ constructor(
     private val uiTextContinueWatching = UiText.StringResource(FilmR.string.continue_watching)
     private val uiTextNextUp = UiText.StringResource(FilmR.string.next_up)
 
+    private data class HomeSessionKey(val serverId: String, val userId: UUID)
+
     private val isOfflineMode = appPreferences.getValue(appPreferences.offlineMode)
     private val initialSnapshot =
         if (!isOfflineMode) homeCacheStore.getPreloadedSnapshot() else null
 
     private val _state =
         MutableStateFlow(
-            cachedHomeState?.copy(isLoading = false)
-                ?: initialSnapshot?.toHomeState(isLoading = false)
-                ?: HomeState(isLoading = true),
+            initialSnapshot?.toHomeState(isLoading = false) ?: HomeState(isLoading = true),
         )
     val state = _state.asStateFlow()
 
-    private var activeUserId: UUID? =
-        cachedUserId
-            ?: initialSnapshot?.userId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+    private var activeSession: HomeSessionKey? = initialSnapshot?.let { snapshot ->
+        runCatching { UUID.fromString(snapshot.userId) }
+            .getOrNull()
+            ?.let { uid -> HomeSessionKey(snapshot.serverId, uid) }
+    }
     private var loadDataJob: Job? = null
     private var bufferRefillJob: Job? = null
     private var avatarSyncJob: Job? = null
@@ -112,49 +114,54 @@ constructor(
                 }
                 .distinctUntilChanged()
                 .collect { (serverId, newUserId) ->
-                    if (newUserId != null) {
-                        if (activeUserId != null && activeUserId != newUserId) {
+                    if (serverId != null && newUserId != null) {
+                        val targetSession = HomeSessionKey(serverId, newUserId)
+                        if (activeSession != null && activeSession != targetSession) {
                             Timber.i(
-                                "Active user changed from %s to %s, reloading home screen",
-                                activeUserId,
-                                newUserId,
+                                "Active session changed from %s to %s, reloading home screen",
+                                activeSession,
+                                targetSession,
                             )
                             loadDataJob?.cancel()
-                            bufferRefillJob?.cancel()
-                            avatarSyncJob?.cancel()
-                            activeUserId = newUserId
-                            cachedHomeState = null
-                            cachedUserId = newUserId
-
-                            val cachedForUser =
-                                if (!isOfflineMode && serverId != null) {
-                                    homeCacheStore.loadSnapshot(serverId, newUserId)
-                                } else {
-                                    null
-                                }
-                            if (cachedForUser != null) {
-                                _state.value = cachedForUser.toHomeState(isLoading = false)
-                                loadData(forceRefreshSuggestions = false)
-                            } else {
-                                _state.update {
-                                    HomeState(
-                                        isLoading = true,
-                                        hideEpisodeSpoilers = it.hideEpisodeSpoilers,
-                                        showLogos = it.showLogos,
-                                    )
-                                }
-                                loadData(forceRefreshSuggestions = true)
-                            }
-                        } else {
-                            activeUserId = newUserId
+                            val hasCache = switchToSession(targetSession)
+                            loadData(forceLoadingIndicator = !hasCache)
+                        } else if (activeSession == null) {
+                            activeSession = targetSession
                         }
                     }
                 }
         }
     }
 
-    fun loadData(forceRefreshSuggestions: Boolean = false) {
-        Timber.i("Loading data (forceRefresh=%s)", forceRefreshSuggestions)
+    private suspend fun switchToSession(target: HomeSessionKey): Boolean {
+        bufferRefillJob?.cancel()
+        avatarSyncJob?.cancel()
+        activeSession = target
+        homeCacheStore.setActiveKey(target.serverId, target.userId)
+
+        val cachedForSession =
+            if (!isOfflineMode) {
+                homeCacheStore.loadSnapshot(target.serverId, target.userId)
+            } else {
+                null
+            }
+        return if (cachedForSession != null) {
+            _state.value = cachedForSession.toHomeState(isLoading = false)
+            true
+        } else {
+            _state.update {
+                HomeState(
+                    isLoading = true,
+                    hideEpisodeSpoilers = it.hideEpisodeSpoilers,
+                    showLogos = it.showLogos,
+                )
+            }
+            false
+        }
+    }
+
+    fun loadData(forceLoadingIndicator: Boolean = false) {
+        Timber.i("Loading data (forceLoading=%s)", forceLoadingIndicator)
         loadDataJob?.cancel()
         loadDataJob =
             viewModelScope.launch(Dispatchers.Default) {
@@ -167,25 +174,33 @@ constructor(
                 val server = serverId?.let { database.getServer(it) }
                 val user = serverId?.let { database.getServerCurrentUser(it) }
                 val targetUserId = user?.id
-                if (targetUserId != null) {
-                    activeUserId = targetUserId
+                val targetSession =
+                    if (serverId != null && targetUserId != null) {
+                        HomeSessionKey(serverId, targetUserId)
+                    } else {
+                        null
+                    }
+
+                var effectiveForceLoading = forceLoadingIndicator
+                if (targetSession != null && activeSession != targetSession) {
+                    val hasCache = switchToSession(targetSession)
+                    effectiveForceLoading = !hasCache
                 }
 
                 // SWR Phase 1: Immediately emit persisted disk cache if state has no sections yet
                 if (
-                    !forceRefreshSuggestions &&
+                    !effectiveForceLoading &&
                         !isOfflineMode &&
                         !_state.value.hasContent() &&
-                        serverId != null &&
-                        targetUserId != null
+                        targetSession != null
                 ) {
-                    homeCacheStore.loadSnapshot(serverId, targetUserId)?.let { snapshot ->
-                        _state.value = snapshot.toHomeState(isLoading = false)
-                    }
+                    homeCacheStore
+                        .loadSnapshot(targetSession.serverId, targetSession.userId)
+                        ?.let { snapshot -> _state.value = snapshot.toHomeState(isLoading = false) }
                 }
 
                 val hasVisibleContent = _state.value.hasContent()
-                val showLoadingIndicator = forceRefreshSuggestions || !hasVisibleContent
+                val showLoadingIndicator = effectiveForceLoading || !hasVisibleContent
 
                 _state.update {
                     it.copy(
@@ -258,11 +273,11 @@ constructor(
                         val nextUp = nextUpDeferred.await()
                         val views = viewsDeferred.await()
 
-                        if (targetUserId != null && activeUserId != targetUserId) {
+                        if (targetSession != null && activeSession != targetSession) {
                             Timber.w(
-                                "Discarding stale home screen data for user %s (current active is %s)",
-                                targetUserId,
-                                activeUserId,
+                                "Discarding stale home screen data for session %s (current active is %s)",
+                                targetSession,
+                                activeSession,
                             )
                             return@coroutineScope
                         }
@@ -293,8 +308,6 @@ constructor(
                                 error = null,
                             )
                         }
-                        cachedHomeState = _state.value
-                        cachedUserId = activeUserId
 
                         if (!isOfflineMode && server != null && user != null) {
                             homeCacheStore.saveSnapshot(
@@ -343,12 +356,13 @@ constructor(
     }
 
     private fun launchBackgroundBufferRefill(serverId: String, userId: UUID) {
+        val targetSession = HomeSessionKey(serverId, userId)
         bufferRefillJob?.cancel()
         bufferRefillJob =
             viewModelScope.launch(Dispatchers.IO) {
                 runCatching {
                     val items = repository.getSuggestions(forceRefresh = true)
-                    if (items.isNotEmpty() && activeUserId == userId) {
+                    if (items.isNotEmpty() && activeSession == targetSession) {
                         homeCacheStore.saveBufferedSuggestions(serverId, userId, items)
                     }
                 }
@@ -360,6 +374,7 @@ constructor(
     }
 
     private fun launchBackgroundAvatarSync(serverId: String, user: User, baseUrl: String) {
+        val targetSession = HomeSessionKey(serverId, user.id)
         avatarSyncJob?.cancel()
         avatarSyncJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -372,7 +387,7 @@ constructor(
                         userName = updatedUser.name,
                         primaryImageTag = updatedUser.primaryImageTag,
                     )
-                    if (activeUserId == updatedUser.id) {
+                    if (activeSession == targetSession) {
                         val syncedModel =
                             userAvatarStore.getLocalAvatarFile(
                                 updatedUser.id,
@@ -391,7 +406,6 @@ constructor(
                                 )
                             }
                         }
-                        cachedHomeState = _state.value
                     }
                 }
                     .onFailure { e ->
@@ -572,23 +586,12 @@ constructor(
         when (action) {
             is HomeAction.OnRetryClick,
             is HomeAction.Refresh -> {
-                cachedHomeState = null
                 _state.update { it.copy(isLoading = true, error = null) }
-                loadData(forceRefreshSuggestions = true)
+                loadData(forceLoadingIndicator = true)
             }
             else -> Unit
         }
     }
 
     suspend fun getShow(showId: UUID): FindroidShow = repository.getShow(showId)
-
-    companion object {
-        private var cachedHomeState: HomeState? = null
-        private var cachedUserId: UUID? = null
-
-        fun clearCache() {
-            cachedHomeState = null
-            cachedUserId = null
-        }
-    }
 }

@@ -5,6 +5,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -22,12 +23,14 @@ object SetupDataModule {
         serverDatabase: ServerDatabaseDao,
         appPreferences: AppPreferences,
         userAvatarStore: UserAvatarStore,
+        homeCacheStore: HomeCacheStore,
     ): SetupRepository {
         return SetupRepositoryImpl(
             jellyfinApi = jellyfinApi,
             database = serverDatabase,
             appPreferences = appPreferences,
             userAvatarStore = userAvatarStore,
+            homeCacheStore = homeCacheStore,
         )
     }
 }

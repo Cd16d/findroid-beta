@@ -37,7 +37,7 @@ import dev.jdtech.jellyfin.utils.ObserveAsEvents
 @Composable
 fun ServerSelectionBottomSheet(
     currentServerId: String,
-    onUpdate: () -> Unit,
+    onUpdate: (isServerChange: Boolean) -> Unit,
     onManage: () -> Unit,
     onDismissRequest: () -> Unit,
     sheetState: SheetState,
@@ -49,8 +49,8 @@ fun ServerSelectionBottomSheet(
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            is ServersEvent.ServerChanged -> onUpdate()
-            is ServersEvent.AddressChanged -> onUpdate()
+            is ServersEvent.ServerChanged -> onUpdate(true)
+            is ServersEvent.AddressChanged -> onUpdate(false)
         }
     }
 

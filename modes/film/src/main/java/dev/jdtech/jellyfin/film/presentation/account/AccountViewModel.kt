@@ -5,9 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
-import dev.jdtech.jellyfin.film.presentation.home.HomeViewModel
 import dev.jdtech.jellyfin.models.getProfileImageModel
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
@@ -33,6 +33,7 @@ constructor(
     private val appPreferences: AppPreferences,
     private val downloader: Downloader,
     private val userAvatarStore: UserAvatarStore,
+    private val homeCacheStore: HomeCacheStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AccountState())
@@ -88,7 +89,9 @@ constructor(
 
     private fun switchUser(userId: UUID) {
         viewModelScope.launch {
-            HomeViewModel.clearCache()
+            appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
+                homeCacheStore.setActiveKey(serverId, userId)
+            }
             repository.setCurrentUser(userId)
             val baseUrl = repository.getBaseUrl()
             val imageTag = repository.refreshUser(userId)

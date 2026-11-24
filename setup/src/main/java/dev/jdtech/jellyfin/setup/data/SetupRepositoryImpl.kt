@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.setup.data
 
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
@@ -34,6 +35,7 @@ class SetupRepositoryImpl(
     private val database: ServerDatabaseDao,
     private val appPreferences: AppPreferences,
     private val userAvatarStore: UserAvatarStore,
+    private val homeCacheStore: HomeCacheStore,
 ) : SetupRepository {
     override fun discoverServers(): Flow<ServerDiscoveryInfo> {
         return jellyfinApi.jellyfin.discovery.discoverLocalServers()
@@ -75,6 +77,7 @@ class SetupRepositoryImpl(
             api.update(baseUrl = serverAddress.address, accessToken = user?.accessToken)
             userId = user?.id
         }
+        homeCacheStore.setActiveKey(serverId, user?.id)
     }
 
     override suspend fun addServer(address: String): Server {
@@ -258,6 +261,7 @@ class SetupRepositoryImpl(
             api.update(accessToken = authenticationResult.accessToken)
             userId = authenticationResult.user?.id
         }
+        homeCacheStore.setActiveKey(authenticationResult.serverId!!, user.id)
 
         runCatching {
             userAvatarStore.ensureUserAvatar(
@@ -310,6 +314,7 @@ class SetupRepositoryImpl(
             api.update(accessToken = user.accessToken)
             this.userId = user.id
         }
+        homeCacheStore.setActiveKey(server.id, user.id)
     }
 
     override suspend fun setCurrentAddress(addressId: UUID) {

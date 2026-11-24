@@ -68,6 +68,7 @@ class JellyfinRepositoryImpl(
 ) : JellyfinRepository {
     private var cachedSuggestions: List<FindroidItem>? = null
     private var cachedSuggestionsUserId: UUID? = null
+    private var cachedSuggestionsBaseUrl: String? = null
 
     override suspend fun getAdditionalParts(itemId: UUID): List<FindroidPart> =
         withContext(Dispatchers.IO) {
@@ -790,8 +791,12 @@ class JellyfinRepositoryImpl(
 
     override suspend fun getSuggestions(forceRefresh: Boolean): List<FindroidItem> {
         val currentUserId = jellyfinApi.userId
+        val currentBaseUrl = jellyfinApi.api.baseUrl
         if (
-            !forceRefresh && cachedSuggestions != null && cachedSuggestionsUserId == currentUserId
+            !forceRefresh &&
+                cachedSuggestions != null &&
+                cachedSuggestionsUserId == currentUserId &&
+                cachedSuggestionsBaseUrl == currentBaseUrl
         ) {
             return cachedSuggestions!!
         }
@@ -812,6 +817,7 @@ class JellyfinRepositoryImpl(
             if (suggestions.isNotEmpty()) {
                 cachedSuggestions = suggestions
                 cachedSuggestionsUserId = currentUserId
+                cachedSuggestionsBaseUrl = currentBaseUrl
             }
             suggestions
         }
@@ -1300,6 +1306,7 @@ class JellyfinRepositoryImpl(
 
         cachedSuggestions = null
         cachedSuggestionsUserId = null
+        cachedSuggestionsBaseUrl = null
 
         server.currentUserId = user.id
         database.updateServer(server)
