@@ -9,6 +9,7 @@ import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.getProfileImageModel
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.Downloader
@@ -34,6 +35,7 @@ constructor(
     private val downloader: Downloader,
     private val userAvatarStore: UserAvatarStore,
     private val homeCacheStore: HomeCacheStore,
+    private val serverConnectionManager: ServerConnectionManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AccountState())
@@ -48,7 +50,7 @@ constructor(
             appPreferences.getValue(appPreferences.currentServer)?.let { serverId ->
                 loadUser(serverId)
                 val baseUrl = repository.getBaseUrl()
-                if (!appPreferences.getValue(appPreferences.offlineMode) && baseUrl.isNotBlank()) {
+                if (!serverConnectionManager.state.value.isOffline && baseUrl.isNotBlank()) {
                     userAvatarStore.syncAllUsersForServer(serverId, baseUrl)
                     loadUser(serverId)
                 }

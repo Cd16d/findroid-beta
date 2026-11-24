@@ -22,6 +22,7 @@ import dev.jdtech.jellyfin.models.toFindroidEpisode
 import dev.jdtech.jellyfin.models.toFindroidMovie
 import dev.jdtech.jellyfin.models.toFindroidShow
 import dev.jdtech.jellyfin.models.totalDiskSize
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.utils.StorageUtils
@@ -53,6 +54,7 @@ constructor(
     private val appPreferences: AppPreferences,
     @ApplicationContext private val context: Context,
     @param:ApplicationScope private val appScope: CoroutineScope,
+    private val serverConnectionManager: ServerConnectionManager? = null,
 ) : ViewModel() {
 
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -105,7 +107,7 @@ constructor(
             is DownloadsAction.UndoDelete -> undoDelete(action.id)
             is DownloadsAction.CommitPendingDeletions -> commitAllPendingDeletions()
             is DownloadsAction.GoOnline -> {
-                appPreferences.setValue(appPreferences.offlineMode, false)
+                viewModelScope.launch { serverConnectionManager?.probeNow() }
             }
             is DownloadsAction.ToggleSelection -> toggleSelection(action.id)
             is DownloadsAction.SelectAll -> selectAll()
