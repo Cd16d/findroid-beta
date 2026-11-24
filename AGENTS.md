@@ -31,7 +31,7 @@ Findroid is organized as a modular Android project:
    - Adhere to the code formatting configured for the project (`ktfmt` with Kotlin standard style).
    - Ensure coroutines, Flow, and Hilt dependency injection patterns are followed correctly.
    - **Mandatory Compose Previews**: Always provide `@Preview` functions whenever creating or refactoring UI components, sheets, cards, dialogs, or screens to ensure visual testability, design fidelity, and rapid inspection in Android Studio.
-5. DO NOT EDIT THE APP'S DATABASE SCHEMA UNLESS ABSOLUTELY NECESSARY (`ServerDatabase.kt` in `:data`). If a schema change is required, you must properly configure Room migrations or auto-migrations.
+5. Modify the app's Room database schema (`ServerDatabase.kt` in `:data`) thoughtfully when a feature genuinely benefits from relational persistence and single-source-of-truth integrity (rather than duplicating entity metadata into SharedPreferences/JSON). Whenever updating the schema, always configure proper Room migrations or auto-migrations (`@ColumnInfo(defaultValue = ...)` + `AutoMigration` or explicit `Migration`) and verify exported schema JSON files.
 
 ## AI-only guidelines
 
