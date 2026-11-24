@@ -156,7 +156,8 @@ fun CastNavigationHost(
     }
 
     val connectionState by castSessionViewModel.connectionState.collectAsStateWithLifecycle()
-    val isCastReady by castSessionViewModel.sessionManager.isCastReady.collectAsStateWithLifecycle()
+    val isCastAvailable by
+        castSessionViewModel.sessionManager.isCastAvailable.collectAsStateWithLifecycle()
     val connectedDevice by
         castSessionViewModel.sessionManager.connectedDevice.collectAsStateWithLifecycle()
 
@@ -170,11 +171,7 @@ fun CastNavigationHost(
 
     val isCastSupportedRoute = isCastSupportedRoute(currentRoute)
 
-    val showCastButton =
-        isCastReady &&
-            isCastSupportedRoute &&
-            !isOfflineMode &&
-            castSessionViewModel.sessionManager.isSupported
+    val showCastButton = isCastAvailable && isCastSupportedRoute && !isOfflineMode
 
     val showCastPlayerPhone by
         remember(

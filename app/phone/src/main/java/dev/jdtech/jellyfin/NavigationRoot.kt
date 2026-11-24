@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -223,7 +222,6 @@ fun NavigationRoot(
  */
 private class AppliedSetupMode(var setupComplete: Boolean)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainNavigation(
     navigationState: NavigationState,

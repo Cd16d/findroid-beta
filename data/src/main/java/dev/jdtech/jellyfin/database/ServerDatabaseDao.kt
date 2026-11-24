@@ -94,6 +94,9 @@ interface ServerDatabaseDao {
     )
     suspend fun getServerCurrentAddress(serverId: String): ServerAddress?
 
+    @Query("SELECT * FROM serverAddresses WHERE serverId = :serverId")
+    fun observeServerAddresses(serverId: String): Flow<List<ServerAddress>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertMovie(movie: FindroidMovieDto)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

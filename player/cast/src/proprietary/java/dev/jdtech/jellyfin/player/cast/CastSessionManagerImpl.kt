@@ -1,6 +1,7 @@
 package dev.jdtech.jellyfin.player.cast
 
 import android.content.Context
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.mediarouter.media.MediaControlIntent
 import androidx.mediarouter.media.MediaRouteSelector
@@ -15,17 +16,27 @@ import com.google.android.gms.cast.framework.CastStateListener
 import com.google.android.gms.cast.framework.SessionManagerListener
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.jdtech.jellyfin.api.JellyfinApi
+import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.models.Server
+import dev.jdtech.jellyfin.models.ServerAddress
 import dev.jdtech.jellyfin.player.cast.models.CastConnectionState
 import dev.jdtech.jellyfin.player.cast.models.Device
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class ChromeCastDevice(val route: MediaRouter.RouteInfo) :
@@ -51,6 +62,7 @@ class ChromeCastDevice(val route: MediaRouter.RouteInfo) :
         "ChromeCastDevice(id=$id, name=$name, enabled=$enabled, supportsH265=$supportsH265)"
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class CastSessionManagerImpl
 @Inject
@@ -58,20 +70,28 @@ constructor(
     @param:ApplicationContext private val context: Context,
     private val jellyfinApi: JellyfinApi,
     private val appPreferences: AppPreferences,
+    private val database: ServerDatabaseDao,
 ) : CastSessionManager {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var _castContext: CastContext? = null
     private val castContext: CastContext?
         get() = _castContext
 
+    @Volatile private var cachedHttpsBaseUrl: String? = null
+
     private val _isCastReady = MutableStateFlow(false)
     override val isCastReady: StateFlow<Boolean> = _isCastReady.asStateFlow()
+
+    private val _isCastAvailable = MutableStateFlow(false)
+    override val isCastAvailable: StateFlow<Boolean> = _isCastAvailable.asStateFlow()
 
     override val isSupported: Boolean
         get() =
             castContext != null &&
                 appPreferences.getValue(appPreferences.castEnabled) &&
-                (jellyfinApi.api.baseUrl?.startsWith("https://", ignoreCase = true) ?: false)
+                resolveCastBaseUrl() != null
 
     private val _connectionState = MutableStateFlow(CastConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<CastConnectionState> = _connectionState.asStateFlow()
@@ -96,6 +116,72 @@ constructor(
 
     private var isInitialized = false
     private val isInitInProgress = AtomicBoolean(false)
+
+    init {
+        scope.launch {
+            var lastCastEnabled: Boolean? = null
+            combine(
+                    _isCastReady,
+                    appPreferences.observe(appPreferences.castEnabled),
+                    appPreferences.observe(appPreferences.currentServer).flatMapLatest { serverId ->
+                        if (serverId == null) {
+                            flowOf(null)
+                        } else {
+                            combine(
+                                database.observeServer(serverId),
+                                database.observeServerAddresses(serverId),
+                            ) { server, addresses ->
+                                resolveHttpsAddress(server, addresses)
+                            }
+                        }
+                    },
+                ) { isReady, castEnabled, httpsUrl ->
+                    Triple(isReady, castEnabled, httpsUrl)
+                }
+                .collect { (isReady, castEnabled, httpsUrl) ->
+                    cachedHttpsBaseUrl = httpsUrl
+                    _isCastAvailable.value = isReady && castEnabled && httpsUrl != null
+                    if (
+                        lastCastEnabled != null && lastCastEnabled != castEnabled && isInitialized
+                    ) {
+                        ContextCompat.getMainExecutor(context).execute { updateDiscovery() }
+                    }
+                    lastCastEnabled = castEnabled
+                }
+        }
+    }
+
+    private fun resolveHttpsAddress(
+        server: Server?,
+        addresses: List<ServerAddress>,
+    ): String? {
+        val activeAddress =
+            addresses.firstOrNull { it.id == server?.currentServerAddressId }?.address
+        if (
+            !activeAddress.isNullOrBlank() &&
+                activeAddress.startsWith("https://", ignoreCase = true)
+        ) {
+            return activeAddress
+        }
+        val currentApiUrl = jellyfinApi.api.baseUrl
+        if (
+            !currentApiUrl.isNullOrBlank() &&
+                currentApiUrl.startsWith("https://", ignoreCase = true)
+        ) {
+            return currentApiUrl
+        }
+        return addresses
+            .firstOrNull { it.address.startsWith("https://", ignoreCase = true) }
+            ?.address
+    }
+
+    override fun resolveCastBaseUrl(): String? {
+        val current = jellyfinApi.api.baseUrl
+        if (!current.isNullOrBlank() && current.startsWith("https://", ignoreCase = true)) {
+            return current
+        }
+        return cachedHttpsBaseUrl
+    }
 
     private val routeCallback =
         object : MediaRouter.Callback() {
@@ -215,49 +301,58 @@ constructor(
 
     override fun init() {
         if (isInitialized || !isInitInProgress.compareAndSet(false, true)) return
-        try {
-            CastContext.getSharedInstance(context, Dispatchers.IO.asExecutor())
-                .addOnSuccessListener(ContextCompat.getMainExecutor(context)) { castCtx ->
-                    if (!isInitInProgress.get()) return@addOnSuccessListener
-                    try {
-                        _castContext = castCtx
-                        castCtx.addCastStateListener(castStateListener)
-                        castCtx.sessionManager.addSessionManagerListener(
-                            sessionManagerListener,
-                            CastSession::class.java,
-                        )
-                        isInitialized = true
+        val startInit = {
+            if (isInitInProgress.get()) {
+                try {
+                    CastContext.getSharedInstance(context, Dispatchers.IO.asExecutor())
+                        .addOnSuccessListener(ContextCompat.getMainExecutor(context)) { castCtx ->
+                            if (!isInitInProgress.get()) return@addOnSuccessListener
+                            try {
+                                _castContext = castCtx
+                                castCtx.addCastStateListener(castStateListener)
+                                castCtx.sessionManager.addSessionManagerListener(
+                                    sessionManagerListener,
+                                    CastSession::class.java,
+                                )
+                                isInitialized = true
 
-                        val currentSession = castCtx.sessionManager.currentCastSession
-                        if (currentSession != null && currentSession.isConnected) {
-                            _connectionState.value = CastConnectionState.CONNECTED
-                            updateConnectedDevice()
-                        } else {
-                            _connectionState.value =
-                                when (castCtx.castState) {
-                                    CastState.CONNECTED -> CastConnectionState.CONNECTED
-                                    CastState.CONNECTING -> CastConnectionState.CONNECTING
-                                    else -> CastConnectionState.DISCONNECTED
+                                val currentSession = castCtx.sessionManager.currentCastSession
+                                if (currentSession != null && currentSession.isConnected) {
+                                    _connectionState.value = CastConnectionState.CONNECTED
+                                    updateConnectedDevice()
+                                } else {
+                                    _connectionState.value =
+                                        when (castCtx.castState) {
+                                            CastState.CONNECTED -> CastConnectionState.CONNECTED
+                                            CastState.CONNECTING -> CastConnectionState.CONNECTING
+                                            else -> CastConnectionState.DISCONNECTED
+                                        }
+                                    if (_connectionState.value == CastConnectionState.CONNECTED) {
+                                        updateConnectedDevice()
+                                    }
                                 }
-                            if (_connectionState.value == CastConnectionState.CONNECTED) {
-                                updateConnectedDevice()
+
+                                updateDiscovery()
+                                _isCastReady.value = true
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to attach Cast listeners")
+                                isInitInProgress.set(false)
                             }
                         }
-
-                        updateDiscovery()
-                        _isCastReady.value = true
-                    } catch (e: Exception) {
-                        Timber.e(e, "Failed to attach Cast listeners")
-                        isInitInProgress.set(false)
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Timber.e(e, "Failed to initialize CastContext asynchronously")
+                        .addOnFailureListener { e ->
+                            Timber.e(e, "Failed to initialize CastContext asynchronously")
+                            isInitInProgress.set(false)
+                        }
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to initialize CastSessionManager")
                     isInitInProgress.set(false)
                 }
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to initialize CastSessionManager")
-            isInitInProgress.set(false)
+            }
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            startInit()
+        } else {
+            ContextCompat.getMainExecutor(context).execute(startInit)
         }
     }
 

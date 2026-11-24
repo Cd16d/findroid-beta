@@ -772,7 +772,11 @@ constructor(
 
     private suspend fun buildMediaInfo(item: PlayerItem): BuildMediaResult? =
         withContext(ioDispatcher) {
-            val baseUrl = jellyfinApi.api.baseUrl?.removeSuffix("/").orEmpty()
+            val apiBaseUrl = jellyfinApi.api.baseUrl?.removeSuffix("/").orEmpty()
+            val baseUrl =
+                sessionManager.resolveCastBaseUrl()?.removeSuffix("/").orEmpty().ifEmpty {
+                    apiBaseUrl
+                }
             if (baseUrl.isEmpty()) {
                 Timber.e("Base URL is empty, cannot build MediaInfo")
                 return@withContext null
@@ -798,22 +802,37 @@ constructor(
                     item.parentIndexNumber?.let { putInt(MediaMetadata.KEY_SEASON_NUMBER, it) }
 
                     item.images.showPrimary?.uri?.let {
-                        addImage(WebImage(it.toCastOptimizeImageUri()))
+                        addImage(
+                            WebImage(
+                                it.withCastBaseUrl(apiBaseUrl, baseUrl).toCastOptimizeImageUri(),
+                            ),
+                        )
                     }
                     item.images.showBackdrop?.uri?.let {
-                        addImage(WebImage(it.toCastOptimizeImageUri(isBackdrop = true)))
+                        addImage(
+                            WebImage(
+                                it.withCastBaseUrl(apiBaseUrl, baseUrl)
+                                    .toCastOptimizeImageUri(isBackdrop = true),
+                            ),
+                        )
                     }
 
                     item.images.primary?.uri?.let {
-                        addImage(WebImage(it.toCastOptimizeImageUri(item.mediaType)))
+                        addImage(
+                            WebImage(
+                                it.withCastBaseUrl(apiBaseUrl, baseUrl)
+                                    .toCastOptimizeImageUri(item.mediaType),
+                            ),
+                        )
                     }
                     item.images.backdrop?.uri?.let {
                         addImage(
                             WebImage(
-                                it.toCastOptimizeImageUri(
-                                    item.mediaType,
-                                    isBackdrop = true,
-                                ),
+                                it.withCastBaseUrl(apiBaseUrl, baseUrl)
+                                    .toCastOptimizeImageUri(
+                                        item.mediaType,
+                                        isBackdrop = true,
+                                    ),
                             ),
                         )
                     }
@@ -862,7 +881,7 @@ constructor(
                 }
             }
 
-            val (castTracks, subtitles, audio) = getTracks(mediaSource)
+            val (castTracks, subtitles, audio) = getTracks(mediaSource, apiBaseUrl, baseUrl)
 
             if (castTracks.isNotEmpty()) {
                 mediaInfoBuilder.setMediaTracks(castTracks)
@@ -876,11 +895,22 @@ constructor(
             )
         }
 
+    private fun Uri.withCastBaseUrl(apiBaseUrl: String, castBaseUrl: String): Uri {
+        if (apiBaseUrl.isEmpty() || apiBaseUrl.equals(castBaseUrl, ignoreCase = true)) return this
+        val raw = toString()
+        return if (raw.startsWith(apiBaseUrl, ignoreCase = true)) {
+            Uri.parse(castBaseUrl + raw.substring(apiBaseUrl.length))
+        } else {
+            this
+        }
+    }
+
     private fun getTracks(
         mediaSource: MediaSourceInfo,
+        apiBaseUrl: String = jellyfinApi.api.baseUrl?.removeSuffix("/").orEmpty(),
+        castBaseUrl: String =
+            sessionManager.resolveCastBaseUrl()?.removeSuffix("/").orEmpty().ifEmpty { apiBaseUrl },
     ): Triple<List<MediaTrack>, List<Track>, List<Track>> {
-        val baseUrl = jellyfinApi.api.baseUrl?.removeSuffix("/").orEmpty()
-
         val castTracks = mutableListOf<MediaTrack>()
         val subtitles = mutableListOf<Track>()
         val audio = mutableListOf<Track>()
@@ -900,11 +930,19 @@ constructor(
                         if (
                             deliveryUrl.startsWith("http://") || deliveryUrl.startsWith("https://")
                         ) {
-                            deliveryUrl
+                            if (
+                                apiBaseUrl.isNotEmpty() &&
+                                    !apiBaseUrl.equals(castBaseUrl, ignoreCase = true) &&
+                                    deliveryUrl.startsWith(apiBaseUrl, ignoreCase = true)
+                            ) {
+                                castBaseUrl + deliveryUrl.substring(apiBaseUrl.length)
+                            } else {
+                                deliveryUrl
+                            }
                         } else {
                             val path =
                                 if (deliveryUrl.startsWith("/")) deliveryUrl else "/$deliveryUrl"
-                            "$baseUrl$path"
+                            "$castBaseUrl$path"
                         }
 
                     val builder =

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class CastSessionManagerImpl @Inject constructor() : CastSessionManager {
     override val isSupported = false
     override val isCastReady: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+    override val isCastAvailable: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
     private val _connectionState = MutableStateFlow(CastConnectionState.DISCONNECTED)
     override val connectionState: StateFlow<CastConnectionState> = _connectionState.asStateFlow()
@@ -25,6 +26,8 @@ class CastSessionManagerImpl @Inject constructor() : CastSessionManager {
     override fun init() {}
 
     override fun updateDiscovery(flags: Int) {}
+
+    override fun resolveCastBaseUrl(): String? = null
 
     override fun connect(device: Device) {}
 

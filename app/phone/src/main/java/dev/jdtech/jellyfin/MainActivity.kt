@@ -25,6 +25,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -39,6 +40,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        if (savedInstanceState == null && homeCacheStore.onFreshActivityLaunch()) {
+            lifecycleScope.launch { homeCacheStore.preloadActiveUserCache() }
+        }
 
         enableEdgeToEdge()
 
@@ -112,8 +117,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
-            castInitStarted = true
-            castSessionManager.get().init()
+            val manager = castSessionManager.get()
+            withContext(Dispatchers.Main) {
+                castInitStarted = true
+                manager.init()
+            }
         }
 
         setContent {
