@@ -653,20 +653,20 @@ private fun SettingsServerNetworkLayout(
                                     Row(
                                         modifier =
                                             Modifier.fillMaxWidth()
-                                                .clickable {
+                                                .then(
                                                     if (!state.autoSwitchEnabled) {
-                                                        onAction(
-                                                            SettingsServerNetworkAction
-                                                                .SelectManualEndpoint(address.id),
-                                                        )
-                                                    } else {
-                                                        dialogMode =
-                                                            NetworkEndpointDialogMode.EditExternal(
-                                                                address = address,
-                                                                index = currentIndex,
+                                                        Modifier.clickable {
+                                                            onAction(
+                                                                SettingsServerNetworkAction
+                                                                    .SelectManualEndpoint(
+                                                                        address.id,
+                                                                    ),
                                                             )
-                                                    }
-                                                }
+                                                        }
+                                                    } else {
+                                                        Modifier
+                                                    },
+                                                )
                                                 .padding(
                                                     start = MaterialTheme.spacings.medium,
                                                     end =
@@ -931,7 +931,6 @@ private fun SettingsServerNetworkLayout(
             title = title,
             hint = hint,
             initialUrl = initialValue,
-            canClear = mode == NetworkEndpointDialogMode.EditLocal && state.localAddress != null,
             canMoveUp = mode is NetworkEndpointDialogMode.EditExternal && mode.index > 0,
             canMoveDown =
                 mode is NetworkEndpointDialogMode.EditExternal &&
@@ -958,10 +957,6 @@ private fun SettingsServerNetworkLayout(
                     )
                     dialogMode = null
                 }
-            },
-            onClear = {
-                onAction(SettingsServerNetworkAction.ClearLocalEndpoint)
-                dialogMode = null
             },
             onSave = { url ->
                 when (mode) {
@@ -1071,13 +1066,11 @@ private fun EndpointEditDialog(
     title: String,
     hint: String,
     initialUrl: String,
-    canClear: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onTestUrl: suspend (String) -> Boolean,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
-    onClear: () -> Unit,
     onSave: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1124,7 +1117,7 @@ private fun EndpointEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                if (canMoveUp || canMoveDown || canClear) {
+                if (canMoveUp || canMoveDown) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
@@ -1137,14 +1130,6 @@ private fun EndpointEditDialog(
                         if (canMoveDown) {
                             TextButton(onClick = onMoveDown) {
                                 Text(text = stringResource(SetupR.string.move_down))
-                            }
-                        }
-                        if (canClear) {
-                            TextButton(onClick = onClear) {
-                                Text(
-                                    text = stringResource(SetupR.string.clear_local_endpoint),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
                             }
                         }
                     }
