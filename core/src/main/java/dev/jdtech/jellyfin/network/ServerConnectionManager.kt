@@ -15,30 +15,36 @@ import dev.jdtech.jellyfin.di.ApplicationScope
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.NetworkConnectivity
 import dev.jdtech.jellyfin.work.SyncWorker
+import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CancellationException
+import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import org.json.JSONObject
 import timber.log.Timber
 
@@ -81,6 +87,9 @@ constructor(
     private val started = AtomicBoolean(false)
     private val probeMutex = Mutex()
     private val configChangedTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 4)
+    private val graceLock = Any()
+    private var offlineGraceJob: Job? = null
+    private var pendingOfflineServerId: String? = null
 
     @Volatile private var lastFailureProbeElapsedMs: Long = 0L
 
@@ -105,13 +114,14 @@ constructor(
                     configChangedTrigger,
                 )
                 .debounce(PROBE_DEBOUNCE_MS)
-                .collect { runProbe(showChecking = false) }
+                .collectLatest { runProbe(showChecking = false, allowOfflineGrace = true) }
         }
     }
 
     /** Immediately probes candidate endpoints for the active server and returns online status. */
     suspend fun probeNow(): Boolean {
-        runProbe(showChecking = true)
+        cancelOfflineGrace()
+        runProbe(showChecking = true, allowOfflineGrace = false)
         return !_state.value.isOffline
     }
 
@@ -120,6 +130,7 @@ constructor(
      * a fresh endpoint probe.
      */
     fun onActiveServerChanged(serverId: String) {
+        cancelOfflineGrace()
         if (_state.value.activeServerId != serverId) {
             _state.value =
                 ServerConnectionState(
@@ -148,7 +159,7 @@ constructor(
         val now = SystemClock.elapsedRealtime()
         if (now - lastFailureProbeElapsedMs < FAILURE_PROBE_COOLDOWN_MS) return
         lastFailureProbeElapsedMs = now
-        appScope.launch { runProbe(showChecking = false) }
+        appScope.launch { runProbe(showChecking = false, allowOfflineGrace = true) }
     }
 
     /** Probes [url] via `GET /System/Info/Public` and verifies [expectedServerId] when provided. */
@@ -167,42 +178,60 @@ constructor(
                 .build()
 
         return withTimeoutOrNull(PROBE_CALL_TIMEOUT_MS + 300L) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val request =
-                        Request.Builder()
-                            .url(probeUrl)
-                            .header("Accept", "application/json")
-                            .get()
-                            .build()
-                    probeClient.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) return@withContext false
-                        if (expectedServerId == null) return@withContext true
+            suspendCancellableCoroutine { continuation ->
+                val request =
+                    Request.Builder()
+                        .url(probeUrl)
+                        .header("Accept", "application/json")
+                        .get()
+                        .build()
+                val call = probeClient.newCall(request)
+                continuation.invokeOnCancellation { call.cancel() }
+                call.enqueue(
+                    object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            Timber.d(e, "Endpoint probe failed for %s", normalized)
+                            if (continuation.isActive) {
+                                continuation.resume(false)
+                            }
+                        }
 
-                        val body = response.body.string()
-                        val reportedId = JSONObject(body).optString("Id", "")
-                        if (reportedId.isBlank()) return@withContext false
-                        reportedId
-                            .replace("-", "")
-                            .equals(
-                                expectedServerId.replace("-", ""),
-                                ignoreCase = true,
-                            )
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.d(e, "Endpoint probe failed for %s", normalized)
-                    false
-                }
+                        override fun onResponse(call: Call, response: Response) {
+                            val matched = response.use { res ->
+                                if (!res.isSuccessful) {
+                                    false
+                                } else if (expectedServerId == null) {
+                                    true
+                                } else {
+                                    val body = res.body.string()
+                                    val reportedId = runCatching {
+                                        JSONObject(body).optString("Id", "")
+                                    }
+                                        .getOrDefault("")
+                                    reportedId.isNotBlank() &&
+                                        reportedId
+                                            .replace("-", "")
+                                            .equals(
+                                                expectedServerId.replace("-", ""),
+                                                ignoreCase = true,
+                                            )
+                                }
+                            }
+                            if (continuation.isActive) {
+                                continuation.resume(matched)
+                            }
+                        }
+                    },
+                )
             }
         } ?: false
     }
 
-    private suspend fun runProbe(showChecking: Boolean) {
+    private suspend fun runProbe(showChecking: Boolean, allowOfflineGrace: Boolean) {
         probeMutex.withLock {
             val serverId = appPreferences.getValue(appPreferences.currentServer)
             if (serverId == null) {
+                cancelOfflineGrace()
                 _state.value = ServerConnectionState(isOffline = false, isChecking = false)
                 return
             }
@@ -212,6 +241,7 @@ constructor(
             }
                 .getOrNull()
             if (serverWithAddresses == null) {
+                cancelOfflineGrace()
                 _state.value =
                     ServerConnectionState(
                         isOffline = false,
@@ -226,7 +256,7 @@ constructor(
             }
 
             if (!networkConnectivity.isOnline()) {
-                transitionToOffline(serverId)
+                handleProbeFailure(serverId, allowOfflineGrace)
                 return
             }
 
@@ -245,7 +275,40 @@ constructor(
                 }
             }
 
-            transitionToOffline(server.id)
+            handleProbeFailure(server.id, allowOfflineGrace)
+        }
+    }
+
+    private fun handleProbeFailure(serverId: String, allowOfflineGrace: Boolean) {
+        // Keep the current online state briefly across transport handoffs (e.g. Wi-Fi -> Cellular)
+        // so transient break-before-make drops do not flash Offline Mode before cellular connects.
+        if (allowOfflineGrace && !_state.value.isOffline) {
+            scheduleOfflineGrace(serverId)
+            return
+        }
+        cancelOfflineGrace()
+        transitionToOffline(serverId)
+    }
+
+    private fun scheduleOfflineGrace(serverId: String) {
+        synchronized(graceLock) {
+            if (offlineGraceJob?.isActive == true && pendingOfflineServerId == serverId) {
+                return
+            }
+            offlineGraceJob?.cancel()
+            pendingOfflineServerId = serverId
+            offlineGraceJob = appScope.launch {
+                delay(OFFLINE_GRACE_PERIOD_MS)
+                runProbe(showChecking = false, allowOfflineGrace = false)
+            }
+        }
+    }
+
+    private fun cancelOfflineGrace() {
+        synchronized(graceLock) {
+            offlineGraceJob?.cancel()
+            offlineGraceJob = null
+            pendingOfflineServerId = null
         }
     }
 
@@ -254,6 +317,7 @@ constructor(
         previousAddressId: UUID?,
         winner: dev.jdtech.jellyfin.models.ServerAddress,
     ) {
+        cancelOfflineGrace()
         val wasOffline = _state.value.isOffline
         if (jellyfinApi.api.baseUrl != winner.address) {
             Timber.i(
@@ -314,5 +378,6 @@ constructor(
         private const val PROBE_CALL_TIMEOUT_MS = 3_000L
         private const val PROBE_DEBOUNCE_MS = 300L
         private const val FAILURE_PROBE_COOLDOWN_MS = 5_000L
+        private const val OFFLINE_GRACE_PERIOD_MS = 3_000L
     }
 }

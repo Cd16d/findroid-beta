@@ -94,6 +94,7 @@ class NetworkConnectivityImpl @Inject constructor(private val application: Appli
     private fun NetworkCapabilities.toSignature(): NetworkSignature =
         NetworkSignature(
             hasInternet = hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+            hasValidated = hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
             hasWifi = hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
             hasEthernet = hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
             hasVpn = hasTransport(NetworkCapabilities.TRANSPORT_VPN),
@@ -102,6 +103,7 @@ class NetworkConnectivityImpl @Inject constructor(private val application: Appli
 
     private data class NetworkSignature(
         val hasInternet: Boolean,
+        val hasValidated: Boolean,
         val hasWifi: Boolean,
         val hasEthernet: Boolean,
         val hasVpn: Boolean,
