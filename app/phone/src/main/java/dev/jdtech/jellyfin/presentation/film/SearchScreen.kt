@@ -445,20 +445,22 @@ private fun SearchScreenLayout(
                         focusRequester = focusRequester,
                         modifier = Modifier.weight(1f, fill = false).widthIn(max = 640.dp),
                     )
-                    Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
-                    Surface(
-                        onClick = onSurpriseMe,
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.size(56.dp),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(CoreR.drawable.ic_dices),
-                                contentDescription = stringResource(CoreR.string.surprise_me),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(24.dp),
-                            )
+                    if (!state.isOffline) {
+                        Spacer(modifier = Modifier.width(MaterialTheme.spacings.small))
+                        Surface(
+                            onClick = onSurpriseMe,
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(56.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(CoreR.drawable.ic_dices),
+                                    contentDescription = stringResource(CoreR.string.surprise_me),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -472,7 +474,7 @@ private fun SearchScreenLayout(
                         queryTextFieldValue = TextFieldValue("")
                         onAction(SearchAction.Search(""))
                     },
-                    showIntegratedSurpriseButton = true,
+                    showIntegratedSurpriseButton = !state.isOffline,
                     onSurpriseClick = onSurpriseMe,
                     focusRequester = focusRequester,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = paddingStart),
@@ -481,14 +483,46 @@ private fun SearchScreenLayout(
 
             Spacer(modifier = Modifier.height(MaterialTheme.spacings.small))
 
-            FilterChipsRow(
-                state = state,
-                isWideScreen = isWideScreen,
-                onOpenFilterCategory = { category ->
-                    onAction(SearchAction.OpenFilterBottomSheet(category))
-                },
-                contentPadding = itemsPadding,
-            )
+            if (state.isOffline) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier =
+                        Modifier.align(Alignment.CenterHorizontally)
+                            .padding(horizontal = paddingStart),
+                ) {
+                    Row(
+                        modifier =
+                            Modifier.padding(
+                                horizontal = MaterialTheme.spacings.medium,
+                                vertical = MaterialTheme.spacings.small,
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.small),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(CoreR.drawable.ic_server_off),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = stringResource(CoreR.string.offline_search_downloads_only),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                FilterChipsRow(
+                    state = state,
+                    isWideScreen = isWideScreen,
+                    onOpenFilterCategory = { category ->
+                        onAction(SearchAction.OpenFilterBottomSheet(category))
+                    },
+                    contentPadding = itemsPadding,
+                )
+            }
         }
 
         // Filter Bottom Sheet

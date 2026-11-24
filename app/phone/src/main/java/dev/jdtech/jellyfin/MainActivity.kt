@@ -14,12 +14,14 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.color.DynamicColors
 import dagger.Lazy
 import dagger.hilt.android.AndroidEntryPoint
 import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.player.cast.CastSessionManager
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
+import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.viewmodels.MainViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -35,11 +37,19 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var homeCacheStore: HomeCacheStore
 
+    @Inject lateinit var appPreferences: AppPreferences
+
     @Volatile private var castInitStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // installSplashScreen() resets the activity theme to Theme.Findroid; re-apply dynamic
+        // colors so themed vector drawables keep Material You colors.
+        if (appPreferences.getValue(appPreferences.dynamicColors)) {
+            DynamicColors.applyToActivityIfAvailable(this)
+        }
 
         if (savedInstanceState == null && homeCacheStore.onFreshActivityLaunch()) {
             lifecycleScope.launch { homeCacheStore.preloadActiveUserCache() }

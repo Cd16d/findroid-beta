@@ -9,6 +9,8 @@ import dev.jdtech.jellyfin.api.JellyfinApi
 import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.network.ServerConnectionManager
+import dev.jdtech.jellyfin.repository.DelegatingJellyfinRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.repository.JellyfinRepositoryImpl
 import dev.jdtech.jellyfin.repository.JellyfinRepositoryOfflineImpl
@@ -49,17 +51,18 @@ object RepositoryModule {
         )
     }
 
+    @Singleton
     @Provides
     fun provideJellyfinRepository(
         jellyfinRepositoryImpl: JellyfinRepositoryImpl,
         jellyfinRepositoryOfflineImpl: JellyfinRepositoryOfflineImpl,
-        appPreferences: AppPreferences,
+        serverConnectionManager: ServerConnectionManager,
     ): JellyfinRepository {
-        println("Creating new JellyfinRepository")
-        return when (appPreferences.getValue(appPreferences.offlineMode)) {
-            true -> jellyfinRepositoryOfflineImpl
-            false -> jellyfinRepositoryImpl
-        }
+        return DelegatingJellyfinRepository(
+            online = jellyfinRepositoryImpl,
+            offline = jellyfinRepositoryOfflineImpl,
+            connectionManager = serverConnectionManager,
+        )
     }
 
     @Singleton

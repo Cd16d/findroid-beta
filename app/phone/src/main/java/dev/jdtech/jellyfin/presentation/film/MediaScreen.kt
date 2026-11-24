@@ -20,12 +20,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass
 import dev.jdtech.jellyfin.LocalCastPlayerHeight
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.core.presentation.dummy.dummyCollections
 import dev.jdtech.jellyfin.film.presentation.media.MediaAction
 import dev.jdtech.jellyfin.film.presentation.media.MediaState
@@ -36,6 +38,7 @@ import dev.jdtech.jellyfin.presentation.film.components.Direction
 import dev.jdtech.jellyfin.presentation.film.components.ErrorCard
 import dev.jdtech.jellyfin.presentation.film.components.FavoritesCard
 import dev.jdtech.jellyfin.presentation.film.components.ItemCard
+import dev.jdtech.jellyfin.presentation.film.components.OfflinePlaceholder
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
@@ -44,6 +47,7 @@ import dev.jdtech.jellyfin.presentation.utils.rememberSafePadding
 fun MediaScreen(
     onItemClick: (FindroidItem) -> Unit,
     onFavoritesClick: () -> Unit,
+    onGoToDownloads: () -> Unit = {},
     viewModel: MediaViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -52,6 +56,7 @@ fun MediaScreen(
 
     MediaScreenLayout(
         state = state,
+        onGoToDownloads = onGoToDownloads,
         onAction = { action ->
             when (action) {
                 is MediaAction.OnItemClick -> onItemClick(action.item)
@@ -66,6 +71,7 @@ fun MediaScreen(
 @Composable
 private fun MediaScreenLayout(
     state: MediaState,
+    onGoToDownloads: () -> Unit = {},
     onAction: (MediaAction) -> Unit,
 ) {
     val safePadding = rememberSafePadding(handleStartInsets = false, handleBottomInsets = false)
@@ -100,48 +106,68 @@ private fun MediaScreenLayout(
         }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = minColumnSize),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding =
-                PaddingValues(
-                    start = paddingStart,
-                    top = contentPaddingTop,
-                    end = paddingEnd,
-                    bottom = paddingBottom,
-                ),
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                FavoritesCard(onClick = { onAction(MediaAction.OnFavoritesClick) })
-            }
-            items(state.libraries.distinctBy { it.id }, key = { it.id }) { library ->
-                ItemCard(
-                    item = library,
-                    direction = Direction.HORIZONTAL,
-                    onClick = { onAction(MediaAction.OnItemClick(library)) },
-                    modifier = Modifier.animateItem(),
-                )
-            }
-        }
-        if (state.error != null) {
-            ErrorCard(
-                onShowStacktrace = { showErrorDialog = true },
+        if (state.isOffline) {
+            OfflinePlaceholder(
+                title = stringResource(CoreR.string.offline_title),
+                subtitle = stringResource(CoreR.string.offline_library_subtitle),
+                buttonText = stringResource(CoreR.string.try_again),
+                isChecking = state.isCheckingConnection,
                 onRetryClick = { onAction(MediaAction.OnRetryClick) },
+                secondaryButtonText = stringResource(CoreR.string.go_to_downloads),
+                onSecondaryClick = onGoToDownloads,
                 modifier =
-                    Modifier.fillMaxWidth()
+                    Modifier.fillMaxSize()
                         .padding(
                             start = paddingStart,
-                            top = safePadding.top + MaterialTheme.spacings.small,
+                            top = safePadding.top,
                             end = paddingEnd,
+                            bottom = paddingBottom,
                         ),
             )
-            if (showErrorDialog) {
-                ErrorDialog(
-                    exception = state.error!!,
-                    onDismissRequest = { showErrorDialog = false },
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = minColumnSize),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding =
+                    PaddingValues(
+                        start = paddingStart,
+                        top = contentPaddingTop,
+                        end = paddingEnd,
+                        bottom = paddingBottom,
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.default),
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    FavoritesCard(onClick = { onAction(MediaAction.OnFavoritesClick) })
+                }
+                items(state.libraries.distinctBy { it.id }, key = { it.id }) { library ->
+                    ItemCard(
+                        item = library,
+                        direction = Direction.HORIZONTAL,
+                        onClick = { onAction(MediaAction.OnItemClick(library)) },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+            }
+            if (state.error != null) {
+                ErrorCard(
+                    onShowStacktrace = { showErrorDialog = true },
+                    onRetryClick = { onAction(MediaAction.OnRetryClick) },
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .padding(
+                                start = paddingStart,
+                                top = safePadding.top + MaterialTheme.spacings.small,
+                                end = paddingEnd,
+                            ),
                 )
+                if (showErrorDialog) {
+                    ErrorDialog(
+                        exception = state.error!!,
+                        onDismissRequest = { showErrorDialog = false },
+                    )
+                }
             }
         }
     }
@@ -154,6 +180,17 @@ private fun MediaScreenLayoutPreview() {
         MediaScreenLayout(
             state =
                 MediaState(libraries = dummyCollections, error = Exception("Failed to load data")),
+            onAction = {},
+        )
+    }
+}
+
+@PreviewScreenSizes
+@Composable
+private fun MediaScreenLayoutOfflinePreview() {
+    FindroidTheme(darkTheme = true) {
+        MediaScreenLayout(
+            state = MediaState(isOffline = true),
             onAction = {},
         )
     }

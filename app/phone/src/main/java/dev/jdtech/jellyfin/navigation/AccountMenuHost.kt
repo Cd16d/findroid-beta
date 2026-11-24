@@ -14,7 +14,7 @@ import dev.jdtech.jellyfin.AboutRoute
 import dev.jdtech.jellyfin.LoginRoute
 import dev.jdtech.jellyfin.Navigator
 import dev.jdtech.jellyfin.SettingsRoute
-import dev.jdtech.jellyfin.UsersRoute
+import dev.jdtech.jellyfin.SettingsUsersRoute
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.account.AccountMenuWrapper
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
@@ -47,7 +47,7 @@ fun AccountMenuHost(
             onCloseMenu()
         },
         onManageAccounts = {
-            navigator.navigate(UsersRoute)
+            navigator.navigate(SettingsUsersRoute())
             onCloseMenu()
         },
         onSwitchUser = {

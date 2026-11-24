@@ -11,6 +11,7 @@ import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.cache.toCachedHomeItem
 import dev.jdtech.jellyfin.cache.toFindroidItem
+import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.film.R as FilmR
 import dev.jdtech.jellyfin.models.CollectionType
@@ -22,9 +23,11 @@ import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.models.User
 import dev.jdtech.jellyfin.models.View
 import dev.jdtech.jellyfin.models.getProfileImageModel
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.utils.toView
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -59,25 +62,32 @@ constructor(
     val database: ServerDatabaseDao,
     private val homeCacheStore: HomeCacheStore,
     private val userAvatarStore: UserAvatarStore,
+    private val serverConnectionManager: ServerConnectionManager,
 ) : ViewModel() {
     private val uuidSuggestions = UUID.fromString("31e47044-9b79-4bb0-99d0-0e477ed65420")
     private val uuidContinueWatching = UUID.fromString("44845958-8326-4e83-beb4-c4f42e9eeb95")
     private val uuidNextUp = UUID.fromString("18bfced5-f237-4d42-aa72-d9d7fed19279")
+    private val uuidOfflineDownloads = UUID.fromString("92f0467e-724a-40b4-8a42-9c81f6e33f2e")
 
     private val uiTextContinueWatching = UiText.StringResource(FilmR.string.continue_watching)
     private val uiTextNextUp = UiText.StringResource(FilmR.string.next_up)
+    private val uiTextDownloads = UiText.StringResource(CoreR.string.title_download)
 
     private data class HomeSessionKey(val serverId: String, val userId: UUID)
 
-    private val isOfflineMode = appPreferences.getValue(appPreferences.offlineMode)
+    private val initialOffline = serverConnectionManager.state.value.isOffline
     private val initialSnapshot =
-        if (!isOfflineMode) homeCacheStore.getPreloadedSnapshot() else null
+        if (!initialOffline) homeCacheStore.getPreloadedSnapshot() else null
 
     private val _state =
         MutableStateFlow(
-            initialSnapshot?.toHomeState(isLoading = false) ?: HomeState(isLoading = true),
+            initialSnapshot?.toHomeState(isLoading = false)
+                ?: HomeState(isLoading = !initialOffline, isOffline = initialOffline),
         )
     val state = _state.asStateFlow()
+
+    private var lastObservedOffline: Boolean = initialOffline
+    private var lastObservedUrl: String? = serverConnectionManager.state.value.activeAddressUrl
 
     private var activeSession: HomeSessionKey? = initialSnapshot?.let { snapshot ->
         runCatching { UUID.fromString(snapshot.userId) }
@@ -131,6 +141,29 @@ constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            serverConnectionManager.state.collect { connState ->
+                _state.update {
+                    it.copy(
+                        isOffline = connState.isOffline,
+                        isCheckingConnection = connState.isChecking,
+                    )
+                }
+                val offlineChanged = lastObservedOffline != connState.isOffline
+                val urlChanged =
+                    !connState.isOffline &&
+                        connState.activeAddressUrl != null &&
+                        lastObservedUrl != null &&
+                        lastObservedUrl != connState.activeAddressUrl
+                lastObservedOffline = connState.isOffline
+                if (connState.activeAddressUrl != null) {
+                    lastObservedUrl = connState.activeAddressUrl
+                }
+                if (offlineChanged || urlChanged) {
+                    loadData(forceLoadingIndicator = false)
+                }
+            }
+        }
     }
 
     private suspend fun switchToSession(target: HomeSessionKey): Boolean {
@@ -139,8 +172,9 @@ constructor(
         activeSession = target
         homeCacheStore.setActiveKey(target.serverId, target.userId)
 
+        val offline = serverConnectionManager.state.value.isOffline
         val cachedForSession =
-            if (!isOfflineMode) {
+            if (!offline) {
                 homeCacheStore.loadSnapshot(target.serverId, target.userId)
             } else {
                 null
@@ -151,7 +185,8 @@ constructor(
         } else {
             _state.update {
                 HomeState(
-                    isLoading = true,
+                    isLoading = !offline,
+                    isOffline = offline,
                     hideEpisodeSpoilers = it.hideEpisodeSpoilers,
                     showLogos = it.showLogos,
                 )
@@ -165,6 +200,7 @@ constructor(
         loadDataJob?.cancel()
         loadDataJob =
             viewModelScope.launch(Dispatchers.Default) {
+                val offline = serverConnectionManager.state.value.isOffline
                 val hideEpisodeSpoilers =
                     appPreferences.getValue(appPreferences.hideEpisodeSpoilers)
                 val showLogos = appPreferences.getValue(appPreferences.tvShowLogos)
@@ -190,7 +226,7 @@ constructor(
                 // SWR Phase 1: Immediately emit persisted disk cache if state has no sections yet
                 if (
                     !effectiveForceLoading &&
-                        !isOfflineMode &&
+                        !offline &&
                         !_state.value.hasContent() &&
                         targetSession != null
                 ) {
@@ -200,12 +236,13 @@ constructor(
                 }
 
                 val hasVisibleContent = _state.value.hasContent()
-                val showLoadingIndicator = effectiveForceLoading || !hasVisibleContent
+                val showLoadingIndicator = !offline && (effectiveForceLoading || !hasVisibleContent)
 
                 _state.update {
                     it.copy(
                         isLoading = showLoadingIndicator,
-                        error = if (showLoadingIndicator) null else it.error,
+                        isOffline = offline,
+                        error = if (showLoadingIndicator || offline) null else it.error,
                         hideEpisodeSpoilers = hideEpisodeSpoilers,
                         showLogos = showLogos,
                     )
@@ -223,13 +260,58 @@ constructor(
                             userImageUrl = immediateAvatar,
                         )
                     }
-                    if (!isOfflineMode && baseUrl.isNotBlank()) {
+                    if (!offline && baseUrl.isNotBlank()) {
                         launchBackgroundAvatarSync(
                             serverId = serverId,
                             user = user,
                             baseUrl = baseUrl,
                         )
                     }
+                }
+
+                if (offline) {
+                    try {
+                        coroutineScope {
+                            val resumeDeferred = async { fetchResumeItems() }
+                            val nextUpDeferred = async { fetchNextUpItems() }
+                            val downloadsDeferred = async { repository.getDownloads() }
+
+                            val resume = resumeDeferred.await()
+                            val nextUp = nextUpDeferred.await()
+                            val downloads = downloadsDeferred.await()
+                            val offlineDownloads =
+                                if (downloads.isNotEmpty()) {
+                                    HomeItem.Section(
+                                        HomeSection(
+                                            uuidOfflineDownloads,
+                                            uiTextDownloads,
+                                            downloads,
+                                        ),
+                                    )
+                                } else {
+                                    null
+                                }
+
+                            _state.update { current ->
+                                current.copy(
+                                    suggestionsSection = null,
+                                    resumeSection = resume,
+                                    nextUpSection = nextUp,
+                                    offlineDownloadsSection = offlineDownloads,
+                                    views = emptyList(),
+                                    isLoading = false,
+                                    isOffline = true,
+                                    error = null,
+                                )
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to load offline home items")
+                        _state.update { it.copy(isLoading = false, isOffline = true, error = null) }
+                    }
+                    return@launch
                 }
 
                 try {
@@ -242,7 +324,7 @@ constructor(
                     var needsForegroundSuggestionsFetch = false
                     var needsBackgroundBufferRefill = false
 
-                    if (suggestionsEnabled && !isOfflineMode) {
+                    if (suggestionsEnabled) {
                         if (!hasCurrentSuggestions) {
                             // First launch ever (empty cache): fetch current carousel and populate
                             // the next-session buffer in the background.
@@ -284,7 +366,7 @@ constructor(
 
                         val finalSuggestions: HomeItem.Suggestions? =
                             when {
-                                !suggestionsEnabled || isOfflineMode -> null
+                                !suggestionsEnabled -> null
                                 needsForegroundSuggestionsFetch -> fetchedSuggestions
                                 else -> _state.value.suggestionsSection
                             }
@@ -303,13 +385,15 @@ constructor(
                                 nextUpSection =
                                     if (current.nextUpSection == nextUp) current.nextUpSection
                                     else nextUp,
+                                offlineDownloadsSection = null,
                                 views = if (current.views == views) current.views else views,
                                 isLoading = false,
+                                isOffline = false,
                                 error = null,
                             )
                         }
 
-                        if (!isOfflineMode && server != null && user != null) {
+                        if (server != null && user != null) {
                             homeCacheStore.saveSnapshot(
                                 server = server,
                                 userId = user.id,
@@ -342,6 +426,9 @@ constructor(
                     Timber.d("Home data loading cancelled")
                     throw e
                 } catch (e: Exception) {
+                    if (isConnectivityException(e)) {
+                        serverConnectionManager.onNetworkRequestFailure()
+                    }
                     if (showLoadingIndicator) {
                         Timber.e(e, "Failed to load home data")
                         _state.update { it.copy(error = e, isLoading = false) }
@@ -353,6 +440,17 @@ constructor(
                     }
                 }
             }
+    }
+
+    private fun isConnectivityException(error: Throwable): Boolean {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is IOException || current is java.util.concurrent.TimeoutException) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
     }
 
     private fun launchBackgroundBufferRefill(serverId: String, userId: UUID) {
@@ -584,10 +682,23 @@ constructor(
 
     fun onAction(action: HomeAction) {
         when (action) {
+            is HomeAction.OnOfflineClick -> {
+                viewModelScope.launch {
+                    serverConnectionManager.probeNow()
+                    loadData(forceLoadingIndicator = false)
+                }
+            }
             is HomeAction.OnRetryClick,
             is HomeAction.Refresh -> {
-                _state.update { it.copy(isLoading = true, error = null) }
-                loadData(forceLoadingIndicator = true)
+                viewModelScope.launch {
+                    if (serverConnectionManager.state.value.isOffline) {
+                        serverConnectionManager.probeNow()
+                        loadData(forceLoadingIndicator = false)
+                    } else {
+                        _state.update { it.copy(isLoading = true, error = null) }
+                        loadData(forceLoadingIndicator = true)
+                    }
+                }
             }
             else -> Unit
         }

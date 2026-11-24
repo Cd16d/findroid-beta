@@ -10,9 +10,12 @@ data class HomeState(
     val suggestionsSection: HomeItem.Suggestions? = null,
     val resumeSection: HomeItem.Section? = null,
     val nextUpSection: HomeItem.Section? = null,
+    val offlineDownloadsSection: HomeItem.Section? = null,
     val views: List<HomeItem.ViewItem> = emptyList(),
     val showLogos: Boolean = false,
     val hideEpisodeSpoilers: Boolean = false,
     val isLoading: Boolean = true,
+    val isOffline: Boolean = false,
+    val isCheckingConnection: Boolean = false,
     val error: Exception? = null,
 )

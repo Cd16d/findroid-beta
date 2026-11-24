@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Primary -->
-    <color name="primary_light">#0060ac</color>
-    <color name="primary_container_light">#d3e4ff</color>
-    <color name="on_primary_container_light">#001c3a</color>
+    <color name="primary_light">#3A608F</color>
+    <color name="primary_container_light">#D3E3FF</color>
+    <color name="on_primary_container_light">#001C39</color>
 
-    <color name="primary_dark">#a1c9ff</color>
-    <color name="on_primary_dark">#00315e</color>
-    <color name="primary_container_dark">#004884</color>
-    <color name="on_primary_container_dark">#d3e4ff</color>
+    <color name="primary_dark">#A4C9FE</color>
+    <color name="on_primary_dark">#00315C</color>
+    <color name="primary_container_dark">#1F4876</color>
+    <color name="on_primary_container_dark">#D3E3FF</color>
 
     <!-- Secondary -->
-    <color name="secondary_light">#545f70</color>
+    <color name="secondary_light">#545F70</color>
     <color name="secondary_container_light">#d8e3f8</color>
     <color name="on_secondary_container_light">#111c2b</color>
 
@@ -19,6 +19,20 @@
     <color name="on_secondary_dark">#263141</color>
     <color name="secondary_container_dark">#3c4758</color>
     <color name="on_secondary_container_dark">#d8e3f8</color>
+
+    <!-- Tertiary -->
+    <color name="tertiary_light">#6D5677</color>
+    <color name="tertiary_container_light">#F5D9FF</color>
+    <color name="on_tertiary_container_light">#261430</color>
+
+    <color name="tertiary_dark">#D9BDE3</color>
+    <color name="on_tertiary_dark">#3C2947</color>
+    <color name="tertiary_container_dark">#543F5E</color>
+    <color name="on_tertiary_container_dark">#F5D9FF</color>
+
+    <!-- On Surface -->
+    <color name="on_surface_light">#191C20</color>
+    <color name="on_surface_dark">#E1E2E8</color>
 
 
     <color name="blue_300">#67b0ed</color>

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ import dev.jdtech.jellyfin.presentation.theme.spacings
 
 private enum class HeaderActionMode {
     ERROR,
+    OFFLINE,
     LOADING,
     PULLING,
 }
@@ -66,12 +68,18 @@ fun HomeHeader(
     modifier: Modifier = Modifier,
     userName: String = "",
     pullProgress: Float = 0f,
+    isOffline: Boolean = false,
+    isCheckingConnection: Boolean = false,
+    onOfflineClick: () -> Unit = onRetryClick,
 ) {
-    val isPulling = pullProgress > 0.02f && !isLoading && !isError
+    val effectiveLoading = isLoading || isCheckingConnection
+    val effectiveError = isError && !isOffline
+    val isPulling = pullProgress > 0.02f && !effectiveLoading && !effectiveError && !isOffline
     val currentMode =
         when {
-            isError -> HeaderActionMode.ERROR
-            isLoading -> HeaderActionMode.LOADING
+            effectiveLoading -> HeaderActionMode.LOADING
+            isOffline -> HeaderActionMode.OFFLINE
+            effectiveError -> HeaderActionMode.ERROR
             isPulling -> HeaderActionMode.PULLING
             else -> null
         }
@@ -132,7 +140,7 @@ fun HomeHeader(
         Spacer(Modifier.width(MaterialTheme.spacings.medium))
 
         Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium)) {
-            AnimatedVisibility(visible = isError, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(visible = effectiveError, enter = fadeIn(), exit = fadeOut()) {
                 Surface(
                     onClick = onErrorClick,
                     modifier = Modifier.fillMaxHeight().aspectRatio(1f),
@@ -157,33 +165,58 @@ fun HomeHeader(
                     fadeOut(animationSpec = tween(durationMillis = 260)) +
                         scaleOut(targetScale = 0f, animationSpec = tween(durationMillis = 260)),
             ) {
+                val isOfflinePill = displayedMode == HeaderActionMode.OFFLINE
                 Surface(
-                    onClick = onRetryClick,
+                    onClick = { if (isOfflinePill) onOfflineClick() else onRetryClick() },
                     modifier =
-                        Modifier.fillMaxHeight().aspectRatio(1f).graphicsLayer {
-                            scaleX = actionScale
-                            scaleY = actionScale
-                        },
-                    enabled = isError,
+                        Modifier.fillMaxHeight()
+                            .graphicsLayer {
+                                scaleX = actionScale
+                                scaleY = actionScale
+                            }
+                            .animateContentSize()
+                            .then(if (isOfflinePill) Modifier else Modifier.aspectRatio(1f)),
+                    enabled = effectiveError || isOfflinePill,
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
-                    Box {
+                    Box(contentAlignment = Alignment.Center) {
                         when (displayedMode) {
                             HeaderActionMode.ERROR -> {
                                 Icon(
                                     painter = painterResource(CoreR.drawable.ic_rotate_ccw),
                                     contentDescription = null,
-                                    modifier = Modifier.align(Alignment.Center),
                                 )
                             }
-                            HeaderActionMode.LOADING -> {
-                                Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
-                                    CircularProgressIndicator()
+                            HeaderActionMode.OFFLINE -> {
+                                Row(
+                                    modifier =
+                                        Modifier.padding(
+                                            horizontal = MaterialTheme.spacings.medium,
+                                        ),
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(MaterialTheme.spacings.small),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(CoreR.drawable.ic_server_off),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = stringResource(CoreR.string.offline),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                    )
                                 }
                             }
+                            HeaderActionMode.LOADING -> {
+                                Box(modifier = Modifier.size(32.dp)) { CircularProgressIndicator() }
+                            }
                             HeaderActionMode.PULLING -> {
-                                Box(modifier = Modifier.size(32.dp).align(Alignment.Center)) {
+                                Box(modifier = Modifier.size(32.dp)) {
                                     CircularProgressIndicator(
                                         progress = { displayedPullProgress.coerceIn(0f, 1f) },
                                     )
@@ -270,6 +303,45 @@ private fun HomeHeaderErrorPreview() {
             userImageUrl = null,
             isLoading = false,
             isError = true,
+            onServerClick = {},
+            onErrorClick = {},
+            onRetryClick = {},
+            onUserClick = {},
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun HomeHeaderOfflinePreview() {
+    FindroidTheme(darkTheme = true) {
+        HomeHeader(
+            serverName = dummyServer.name,
+            userName = "Bob",
+            userImageUrl = null,
+            isLoading = false,
+            isError = false,
+            isOffline = true,
+            onServerClick = {},
+            onErrorClick = {},
+            onRetryClick = {},
+            onUserClick = {},
+        )
+    }
+}
+
+@Composable
+@Preview(showBackground = true)
+private fun HomeHeaderOfflineCheckingPreview() {
+    FindroidTheme(darkTheme = true) {
+        HomeHeader(
+            serverName = dummyServer.name,
+            userName = "Bob",
+            userImageUrl = null,
+            isLoading = false,
+            isError = false,
+            isOffline = true,
+            isCheckingConnection = true,
             onServerClick = {},
             onErrorClick = {},
             onRetryClick = {},

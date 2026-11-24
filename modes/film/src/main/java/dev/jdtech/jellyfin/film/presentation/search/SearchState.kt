@@ -28,6 +28,7 @@ enum class FilterCategory {
 data class SearchState(
     val query: String = "",
     val hideEpisodeSpoilers: Boolean = false,
+    val isOffline: Boolean = false,
     val isMetadataLoading: Boolean = true,
     // Available filter values loaded from server
     val availableContentTypes: List<BaseItemKind> = emptyList(),
@@ -122,6 +123,7 @@ data class SearchState(
 data class SearchQueryParams(
     val query: String,
     val isSearchStarted: Boolean,
+    val isOffline: Boolean,
     val selectedContentTypes: Set<BaseItemKind>,
     val selectedVideoQualities: Set<VideoQuality>,
     val selectedItemFilters: Set<ItemFilter>,
@@ -153,6 +155,7 @@ val SearchState.queryParams: SearchQueryParams
         SearchQueryParams(
             query = query,
             isSearchStarted = isSearchStarted,
+            isOffline = isOffline,
             selectedContentTypes = selectedContentTypes,
             selectedVideoQualities = selectedVideoQualities,
             selectedItemFilters = selectedItemFilters,

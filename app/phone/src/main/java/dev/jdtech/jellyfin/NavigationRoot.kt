@@ -1,6 +1,5 @@
 package dev.jdtech.jellyfin
 
-import android.app.Activity
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.tween
@@ -84,13 +83,14 @@ import dev.jdtech.jellyfin.presentation.settings.DeviceScreen
 import dev.jdtech.jellyfin.presentation.settings.DownloadPresetsScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsFileEditScreen
 import dev.jdtech.jellyfin.presentation.settings.SettingsScreen
+import dev.jdtech.jellyfin.presentation.settings.SettingsServerNetworkScreen
+import dev.jdtech.jellyfin.presentation.settings.SettingsServersScreen
+import dev.jdtech.jellyfin.presentation.settings.SettingsUsersScreen
 import dev.jdtech.jellyfin.presentation.settings.SmartDownloadsScreen
 import dev.jdtech.jellyfin.presentation.setup.permission.PermissionScreen
 import dev.jdtech.jellyfin.presentation.utils.LocalOfflineMode
-import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionAction
 import dev.jdtech.jellyfin.setup.presentation.permission.PermissionViewModel
-import dev.jdtech.jellyfin.utils.restart
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -234,11 +234,7 @@ private fun MainNavigation(
     val context = LocalContext.current
     val searchViewModel: SearchViewModel = hiltViewModel(context as ViewModelStoreOwner)
 
-    val navigationItems =
-        when (isOfflineMode) {
-            false -> listOf(homeTab, mediaTab, searchTab, downloadsTab)
-            true -> listOf(homeTab, downloadsTab)
-        }
+    val navigationItems = listOf(homeTab, mediaTab, searchTab, downloadsTab)
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     val isExpandedScreen =
         windowAdaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(
@@ -463,7 +459,7 @@ private fun EntryProviderScope<NavKey>.mainEntries(
                     )
                 },
             onUserClick = dropUnlessResumed { onUserClick() },
-            onManageServers = dropUnlessResumed { navigator.navigate(ServersRoute) },
+            onManageServers = dropUnlessResumed { navigator.navigate(SettingsServersRoute) },
             onItemClick = resumedAction { item -> navigateToItem(navigator, item) },
         )
     }
@@ -471,13 +467,13 @@ private fun EntryProviderScope<NavKey>.mainEntries(
         MediaScreen(
             onItemClick = resumedAction { item -> navigateToItem(navigator, item) },
             onFavoritesClick = dropUnlessResumed { navigator.navigate(FavoritesRoute) },
+            onGoToDownloads = dropUnlessResumed { navigator.navigate(DownloadsRoute) },
         )
     }
     entry<SearchRoute> {
         SearchScreen(onItemClick = resumedAction { item -> navigateToItem(navigator, item) })
     }
     entry<DownloadsRoute> {
-        val context = LocalContext.current
         DownloadsScreen(
             onMovieClick =
                 resumedAction { movie ->
@@ -497,17 +493,7 @@ private fun EntryProviderScope<NavKey>.mainEntries(
                     navigator.navigate(SettingsRoute(indexes = listOf(CoreR.string.title_download)))
                 },
             onExploreLibraryClick = dropUnlessResumed { navigator.navigate(MediaRoute) },
-            onGoOnlineClick =
-                dropUnlessResumed {
-                    val appPreferences = AppPreferences(context)
-                    appPreferences.setValue(
-                        appPreferences.offlineMode,
-                        false,
-                    )
-                    try {
-                        (context as Activity).restart()
-                    } catch (_: Exception) {}
-                },
+            onGoOnlineClick = {},
         )
     }
     entry<ShowDownloadsRoute> { key ->
@@ -636,12 +622,41 @@ private fun EntryProviderScope<NavKey>.mainEntries(
                 resumedAction { filePath ->
                     navigator.navigate(SettingsFileEditRoute(filePath = filePath))
                 },
-            navigateToServers = dropUnlessResumed { navigator.navigate(ServersRoute) },
-            navigateToUsers = dropUnlessResumed { navigator.navigate(UsersRoute) },
+            navigateToServers = dropUnlessResumed { navigator.navigate(SettingsServersRoute) },
+            navigateToUsers = dropUnlessResumed { navigator.navigate(SettingsUsersRoute()) },
             navigateToAbout = dropUnlessResumed { navigator.navigate(AboutRoute) },
             navigateToDevice = dropUnlessResumed { navigator.navigate(DeviceRoute) },
             navigateToDownloadPresets =
                 dropUnlessResumed { navigator.navigate(DownloadPresetsRoute) },
+            navigateBack = dropUnlessResumed { navigator.goBack() },
+        )
+    }
+    entry<SettingsServersRoute> {
+        SettingsServersScreen(
+            navigateToServerNetwork =
+                resumedAction { serverId ->
+                    navigator.navigate(SettingsServerNetworkRoute(serverId))
+                },
+            navigateToServerUsers =
+                resumedAction { serverId -> navigator.navigate(SettingsUsersRoute(serverId)) },
+            onAddServerClick = dropUnlessResumed { navigator.navigate(AddServerRoute) },
+            onServerActivated = dropUnlessResumed { navigator.navigateHome() },
+            navigateBack = dropUnlessResumed { navigator.goBack() },
+        )
+    }
+    entry<SettingsServerNetworkRoute> { key ->
+        SettingsServerNetworkScreen(
+            serverId = key.serverId,
+            navigateBack = dropUnlessResumed { navigator.goBack() },
+        )
+    }
+    entry<SettingsUsersRoute> { key ->
+        SettingsUsersScreen(
+            serverId = key.serverId,
+            navigateToHome = dropUnlessResumed { navigator.navigateHome() },
+            onAddUserClick = dropUnlessResumed { navigator.navigate(LoginRoute()) },
+            onPublicUserClick =
+                resumedAction { username -> navigator.navigate(LoginRoute(username = username)) },
             navigateBack = dropUnlessResumed { navigator.goBack() },
         )
     }
@@ -702,6 +717,9 @@ private fun isExcludedFromNavigation(route: NavKey?): Boolean =
         // Settings screens
         is SettingsRoute,
         is SettingsFileEditRoute,
+        is SettingsServersRoute,
+        is SettingsServerNetworkRoute,
+        is SettingsUsersRoute,
         is AboutRoute,
         is DeviceRoute,
         is SmartDownloadsRoute,

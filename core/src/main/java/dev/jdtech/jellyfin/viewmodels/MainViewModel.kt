@@ -7,6 +7,7 @@ import dev.jdtech.jellyfin.database.ServerDatabaseDao
 import dev.jdtech.jellyfin.models.Server
 import dev.jdtech.jellyfin.models.User
 import dev.jdtech.jellyfin.models.VolumeKeyEvent
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -26,8 +28,11 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class MainViewModel
 @Inject
-constructor(private val appPreferences: AppPreferences, private val database: ServerDatabaseDao) :
-    ViewModel() {
+constructor(
+    private val appPreferences: AppPreferences,
+    private val database: ServerDatabaseDao,
+    private val serverConnectionManager: ServerConnectionManager,
+) : ViewModel() {
     private val _state = MutableStateFlow(MainState())
     val state = _state.asStateFlow()
 
@@ -117,7 +122,7 @@ constructor(private val appPreferences: AppPreferences, private val database: Se
             combine(
                     setupFlags,
                     appPreferences.observe(appPreferences.dynamicColors),
-                    appPreferences.observe(appPreferences.offlineMode),
+                    serverConnectionManager.state.map { it.isOffline }.distinctUntilChanged(),
                 ) { flags, dynamicColors, offlineMode ->
                     MainState(
                         isLoading = false,

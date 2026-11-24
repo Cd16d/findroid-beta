@@ -14,6 +14,7 @@ import coil3.request.CachePolicy
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import javax.inject.Inject
 import kotlin.time.ExperimentalTime
@@ -27,6 +28,8 @@ class BaseApplication :
 
     @Inject lateinit var okHttpClient: OkHttpClient
 
+    @Inject lateinit var serverConnectionManager: ServerConnectionManager
+
     private var activeActivityCount = 0
 
     companion object {
@@ -37,6 +40,7 @@ class BaseApplication :
     override fun onCreate() {
         super.onCreate()
         registerActivityLifecycleCallbacks(this)
+        serverConnectionManager.startMonitoring()
     }
 
     override fun onActivityStarted(activity: Activity) {

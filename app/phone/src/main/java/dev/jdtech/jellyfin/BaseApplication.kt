@@ -25,6 +25,7 @@ import dagger.hilt.android.HiltAndroidApp
 import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.di.ApplicationScope
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.settings.domain.Constants
 import dev.jdtech.jellyfin.utils.NetworkPrewarmer
@@ -54,6 +55,8 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
 
     @Inject lateinit var userAvatarStore: UserAvatarStore
 
+    @Inject lateinit var serverConnectionManager: ServerConnectionManager
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -78,6 +81,8 @@ class BaseApplication : Application(), Configuration.Provider, SingletonImageLoa
         if (appPreferences.getValue(appPreferences.dynamicColors)) {
             DynamicColors.applyToActivitiesIfAvailable(this)
         }
+
+        serverConnectionManager.startMonitoring()
 
         // Pre-warm cache, avatars, DNS/TLS sockets, and background WorkManager outside main thread
         applicationScope.launch {

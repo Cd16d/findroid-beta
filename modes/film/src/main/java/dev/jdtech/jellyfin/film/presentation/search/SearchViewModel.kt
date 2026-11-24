@@ -12,6 +12,7 @@ import dev.jdtech.jellyfin.models.FindroidItem
 import dev.jdtech.jellyfin.models.FindroidMovie
 import dev.jdtech.jellyfin.models.FindroidSeason
 import dev.jdtech.jellyfin.models.FindroidShow
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.repository.JellyfinRepository
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import javax.inject.Inject
@@ -46,9 +47,13 @@ class SearchViewModel
 constructor(
     private val repository: JellyfinRepository,
     private val appPreferences: AppPreferences,
+    private val serverConnectionManager: ServerConnectionManager,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(SearchState())
+    private val _state =
+        MutableStateFlow(SearchState(isOffline = serverConnectionManager.state.value.isOffline))
     val state: StateFlow<SearchState> = _state.asStateFlow()
+
+    private var lastObservedOffline: Boolean = serverConnectionManager.state.value.isOffline
 
     private val _focusRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val focusRequests: SharedFlow<Unit> = _focusRequests.asSharedFlow()
@@ -130,6 +135,16 @@ constructor(
         viewModelScope.launch {
             appPreferences.observe(appPreferences.hideEpisodeSpoilers).collect { hideSpoilers ->
                 _state.update { it.copy(hideEpisodeSpoilers = hideSpoilers) }
+            }
+        }
+        viewModelScope.launch {
+            serverConnectionManager.state.collect { connState ->
+                _state.update { it.copy(isOffline = connState.isOffline) }
+                val recovered = lastObservedOffline && !connState.isOffline
+                lastObservedOffline = connState.isOffline
+                if (recovered) {
+                    loadServerMetadata()
+                }
             }
         }
         loadServerMetadata()

@@ -324,4 +324,10 @@
     <string name="season_range_pair">Seasons %1$d &amp; %2$d</string>
     <string name="season_range_multiple">Seasons %1$s</string>
     <string name="specials">Specials</string>
+    <string name="offline_title">You\'re offline</string>
+    <string name="offline_home_empty_subtitle">No downloaded media is available on this device. Connect to your server or download movies and episodes to watch offline.</string>
+    <string name="offline_library_subtitle">Connect to your server to browse your libraries.</string>
+    <string name="offline_search_downloads_only">Offline · Searching downloads only</string>
+    <string name="try_again">Try again</string>
+    <string name="go_to_downloads">Go to Downloads</string>
 </resources>

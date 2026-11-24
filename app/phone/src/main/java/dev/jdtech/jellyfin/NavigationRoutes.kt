@@ -61,3 +61,9 @@ data class CollectionRoute(val collectionId: String, val collectionName: String)
 @Serializable data object SmartDownloadsRoute : NavKey
 
 @Serializable data object DownloadPresetsRoute : NavKey
+
+@Serializable data object SettingsServersRoute : NavKey
+
+@Serializable data class SettingsServerNetworkRoute(val serverId: String) : NavKey
+
+@Serializable data class SettingsUsersRoute(val serverId: String? = null) : NavKey
