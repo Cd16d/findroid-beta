@@ -1,12 +1,14 @@
 package dev.jdtech.jellyfin.presentation.film.components
 
 import android.content.res.Configuration
+import android.view.ContextThemeWrapper
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -25,10 +27,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -36,8 +41,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.window.core.layout.WindowSizeClass
+import com.google.android.material.color.DynamicColors
 import dev.jdtech.jellyfin.core.R as CoreR
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
+import dev.jdtech.jellyfin.presentation.theme.LocalDynamicColors
 import dev.jdtech.jellyfin.presentation.theme.spacings
 
 @Composable
@@ -105,12 +112,9 @@ fun PlaceholderScreenContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                Image(
-                    painter = painterResource(image),
-                    contentDescription = null,
+                ThemedPlaceholderImage(
+                    image = image,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.Center,
                 )
                 if (hasText || (buttonText != null && onButtonClick != null)) {
                     Column(
@@ -186,12 +190,9 @@ fun PlaceholderScreenContent(
                 if (hasText) {
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.large))
                 }
-                Image(
-                    painter = painterResource(image),
-                    contentDescription = null,
+                ThemedPlaceholderImage(
+                    image = image,
                     modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.Center,
                 )
                 if (buttonText != null && onButtonClick != null) {
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.large))
@@ -239,6 +240,30 @@ fun PlaceholderScreenContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ThemedPlaceholderImage(
+    @DrawableRes image: Int,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val isDynamicColors = LocalDynamicColors.current
+    val isDarkTheme = isSystemInDarkTheme()
+    val themedContext =
+        remember(context, isDynamicColors, isDarkTheme) {
+            val base = ContextThemeWrapper(context, CoreR.style.Theme_Findroid)
+            if (isDynamicColors) DynamicColors.wrapContextIfAvailable(base) else base
+        }
+    CompositionLocalProvider(LocalContext provides themedContext) {
+        Image(
+            painter = painterResource(image),
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.Center,
+        )
     }
 }
 
