@@ -1,11 +1,17 @@
 package dev.jdtech.jellyfin.utils
 
-import dev.jdtech.jellyfin.settings.domain.AppPreferences
+import kotlinx.coroutines.flow.Flow
 
 /** Reports whether the device currently has network connectivity. */
 interface NetworkConnectivity {
-    /** True when there is an active network capable of reaching the internet. */
+    /** True when there is an active network capable of reaching the internet or local LAN/VPN. */
     fun isOnline(): Boolean
+
+    /** True when the active network transport is Wi-Fi, Ethernet, or VPN. */
+    fun canReachLocalNetwork(): Boolean
+
+    /** Emits whenever the default network is gained, lost, or changes transport capabilities. */
+    fun observeNetworkChanges(): Flow<Unit>
 
     /**
      * True when the active network is metered (i.e. lacks
@@ -20,15 +26,4 @@ interface NetworkConnectivity {
      * minSdk. Returns false when network capabilities cannot be determined.
      */
     fun isRoaming(): Boolean
-}
-
-/**
- * The effective offline mode: the user's manual offlineMode preference OR the absence of network
- * connectivity.
- */
-fun isOfflineModeActive(
-    appPreferences: AppPreferences,
-    networkConnectivity: NetworkConnectivity,
-): Boolean {
-    return appPreferences.getValue(appPreferences.offlineMode) || !networkConnectivity.isOnline()
 }

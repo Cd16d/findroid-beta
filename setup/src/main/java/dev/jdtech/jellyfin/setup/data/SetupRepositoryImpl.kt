@@ -13,6 +13,7 @@ import dev.jdtech.jellyfin.models.ServerAddress
 import dev.jdtech.jellyfin.models.ServerWithAddresses
 import dev.jdtech.jellyfin.models.UiText
 import dev.jdtech.jellyfin.models.User
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.setup.R as SetupR
 import dev.jdtech.jellyfin.setup.domain.SetupRepository
@@ -36,6 +37,7 @@ class SetupRepositoryImpl(
     private val appPreferences: AppPreferences,
     private val userAvatarStore: UserAvatarStore,
     private val homeCacheStore: HomeCacheStore,
+    private val serverConnectionManager: ServerConnectionManager,
 ) : SetupRepository {
     override fun discoverServers(): Flow<ServerDiscoveryInfo> {
         return jellyfinApi.jellyfin.discovery.discoverLocalServers()
@@ -53,6 +55,7 @@ class SetupRepositoryImpl(
 
     override suspend fun deleteServer(serverId: String) {
         database.deleteServer(serverId)
+        serverConnectionManager.notifyConfigChanged(serverId)
     }
 
     override suspend fun getIsQuickConnectEnabled(): Boolean =
@@ -78,6 +81,7 @@ class SetupRepositoryImpl(
             userId = user?.id
         }
         homeCacheStore.setActiveKey(serverId, user?.id)
+        serverConnectionManager.onActiveServerChanged(serverId)
     }
 
     override suspend fun addServer(address: String): Server {
@@ -326,6 +330,7 @@ class SetupRepositoryImpl(
         server.currentServerAddressId = address.id
         database.updateServer(server)
         jellyfinApi.apply { api.update(baseUrl = address.address) }
+        serverConnectionManager.notifyConfigChanged(server.id)
     }
 
     override fun getBaseUrl(): String = jellyfinApi.api.baseUrl.orEmpty()

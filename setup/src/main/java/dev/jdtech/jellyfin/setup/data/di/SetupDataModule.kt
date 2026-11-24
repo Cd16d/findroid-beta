@@ -8,6 +8,7 @@ import dev.jdtech.jellyfin.api.JellyfinApi
 import dev.jdtech.jellyfin.cache.HomeCacheStore
 import dev.jdtech.jellyfin.cache.UserAvatarStore
 import dev.jdtech.jellyfin.database.ServerDatabaseDao
+import dev.jdtech.jellyfin.network.ServerConnectionManager
 import dev.jdtech.jellyfin.settings.domain.AppPreferences
 import dev.jdtech.jellyfin.setup.data.SetupRepositoryImpl
 import dev.jdtech.jellyfin.setup.domain.SetupRepository
@@ -24,6 +25,7 @@ object SetupDataModule {
         appPreferences: AppPreferences,
         userAvatarStore: UserAvatarStore,
         homeCacheStore: HomeCacheStore,
+        serverConnectionManager: ServerConnectionManager,
     ): SetupRepository {
         return SetupRepositoryImpl(
             jellyfinApi = jellyfinApi,
@@ -31,6 +33,7 @@ object SetupDataModule {
             appPreferences = appPreferences,
             userAvatarStore = userAvatarStore,
             homeCacheStore = homeCacheStore,
+            serverConnectionManager = serverConnectionManager,
         )
     }
 }
