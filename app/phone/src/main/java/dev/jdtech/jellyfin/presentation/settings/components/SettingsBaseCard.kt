@@ -19,6 +19,7 @@ import dev.jdtech.jellyfin.settings.presentation.models.PreferenceAppLanguage
  * @param preference Preference model determining enabled state.
  * @param onClick Callback invoked when card surface is tapped.
  * @param modifier Optional modifier applied to surface layout. Defaults to [Modifier].
+ * @param contentColor Base content color applied inside the card surface.
  * @param content Preference item content inside card surface.
  */
 @Composable
@@ -26,17 +27,16 @@ fun SettingsBaseCard(
     preference: Preference,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentColor: Color = contentColorFor(MaterialTheme.colorScheme.surface),
     content: @Composable () -> Unit,
 ) {
-    val contentColor =
-        contentColorFor(MaterialTheme.colorScheme.surface)
-            .copy(alpha = if (preference.enabled) 1.0f else 0.38f)
+    val resolvedContentColor = contentColor.copy(alpha = if (preference.enabled) 1.0f else 0.38f)
     Surface(
         onClick = onClick,
         modifier = modifier,
         enabled = preference.enabled,
         color = Color.Transparent,
-        contentColor = contentColor,
+        contentColor = resolvedContentColor,
     ) {
         content()
     }

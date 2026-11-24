@@ -8,25 +8,36 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import dev.jdtech.jellyfin.core.R as CoreR
+import dev.jdtech.jellyfin.core.presentation.theme.CentralShapes
 import dev.jdtech.jellyfin.presentation.theme.FindroidTheme
 import dev.jdtech.jellyfin.presentation.theme.spacings
 import dev.jdtech.jellyfin.settings.R as SettingsR
 import dev.jdtech.jellyfin.settings.presentation.models.PreferenceCategory
 
 @Composable
-fun SettingsCategoryCard(preference: PreferenceCategory, modifier: Modifier = Modifier) {
+fun SettingsCategoryCard(
+    preference: PreferenceCategory,
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+) {
     SettingsBaseCard(
         preference = preference,
         onClick = { preference.onClick(preference) },
         modifier = modifier,
+        contentColor =
+            if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+            else contentColorFor(MaterialTheme.colorScheme.surface),
     ) {
         Row(
             modifier = Modifier.padding(MaterialTheme.spacings.medium),
@@ -44,6 +55,7 @@ fun SettingsCategoryCard(preference: PreferenceCategory, modifier: Modifier = Mo
                 Text(
                     text = stringResource(preference.nameStringResource),
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else null,
                 )
                 preference.descriptionStringRes?.let {
                     Spacer(modifier = Modifier.height(MaterialTheme.spacings.extraSmall))
@@ -93,5 +105,25 @@ private fun SettingsCategoryCardIconPreview() {
                     iconDrawableId = CoreR.drawable.ic_play,
                 ),
         )
+    }
+}
+
+@Preview
+@Composable
+private fun SettingsCategoryCardSelectedPreview() {
+    FindroidTheme(darkTheme = true) {
+        Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = CentralShapes.GroupSingle,
+        ) {
+            SettingsCategoryCard(
+                preference =
+                    PreferenceCategory(
+                        nameStringResource = SettingsR.string.settings_category_player,
+                        iconDrawableId = CoreR.drawable.ic_play,
+                    ),
+                isSelected = true,
+            )
+        }
     }
 }

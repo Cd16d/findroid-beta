@@ -63,13 +63,16 @@ fun SettingsScreen(
     navigateToDevice: () -> Unit = {},
     navigateToDownloadPresets: () -> Unit = {},
     navigateBack: () -> Unit,
+    showBack: Boolean = true,
+    selectedCategoryId: Int? = null,
+    isSidebar: Boolean = false,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
 
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(true) { viewModel.loadPreferences(indexes, DeviceType.PHONE) }
+    LaunchedEffect(indexes) { viewModel.loadPreferences(indexes, DeviceType.PHONE) }
 
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
@@ -124,6 +127,9 @@ fun SettingsScreen(
     SettingsScreenLayout(
         title = indexes.last(),
         state = state,
+        showBack = showBack,
+        selectedCategoryId = selectedCategoryId,
+        isSidebar = isSidebar,
         onAction = { action ->
             when (action) {
                 is SettingsAction.OnBackClick -> navigateBack()
@@ -138,12 +144,23 @@ fun SettingsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsScreenLayout(
+internal fun SettingsScreenLayout(
     @StringRes title: Int,
     state: SettingsState,
     onAction: (SettingsAction) -> Unit,
+    showBack: Boolean = true,
+    selectedCategoryId: Int? = null,
+    isSidebar: Boolean = false,
 ) {
-    val contentPadding = PaddingValues(all = MaterialTheme.spacings.default)
+    val contentPadding =
+        if (isSidebar) {
+            PaddingValues(
+                horizontal = MaterialTheme.spacings.medium,
+                vertical = MaterialTheme.spacings.small,
+            )
+        } else {
+            PaddingValues(all = MaterialTheme.spacings.default)
+        }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -156,11 +173,13 @@ private fun SettingsScreenLayout(
             TopAppBar(
                 title = { Text(stringResource(title)) },
                 navigationIcon = {
-                    IconButton(onClick = { onAction(SettingsAction.OnBackClick) }) {
-                        Icon(
-                            painter = painterResource(CoreR.drawable.ic_arrow_left),
-                            contentDescription = null,
-                        )
+                    if (showBack) {
+                        IconButton(onClick = { onAction(SettingsAction.OnBackClick) }) {
+                            Icon(
+                                painter = painterResource(CoreR.drawable.ic_arrow_left),
+                                contentDescription = null,
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -170,7 +189,10 @@ private fun SettingsScreenLayout(
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = contentPadding + innerPadding,
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacings.medium),
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    if (isSidebar) MaterialTheme.spacings.small else MaterialTheme.spacings.medium,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             items(state.preferenceGroups) { group ->
@@ -178,6 +200,7 @@ private fun SettingsScreenLayout(
                     group = group,
                     onAction = onAction,
                     modifier = Modifier.widthIn(max = 640.dp),
+                    selectedCategoryId = selectedCategoryId,
                 )
             }
         }
@@ -219,6 +242,77 @@ private fun SettingsScreenLayoutPreview() {
                         ),
                 ),
             onAction = {},
+        )
+    }
+}
+
+@PreviewScreenSizes
+@Composable
+private fun SettingsScreenSidebarPreview() {
+    FindroidTheme(darkTheme = true) {
+        SettingsScreenLayout(
+            title = CoreR.string.title_settings,
+            state =
+                SettingsState(
+                    preferenceGroups =
+                        listOf(
+                            PreferenceGroup(
+                                nameStringResource = null,
+                                preferences =
+                                    listOf(
+                                        PreferenceCategory(
+                                            nameStringResource =
+                                                SettingsR.string.settings_category_servers,
+                                            iconDrawableId = SettingsR.drawable.ic_server,
+                                        ),
+                                    ),
+                            ),
+                            PreferenceGroup(
+                                nameStringResource = null,
+                                preferences =
+                                    listOf(
+                                        PreferenceCategory(
+                                            nameStringResource =
+                                                SettingsR.string.settings_category_interface,
+                                            iconDrawableId = SettingsR.drawable.ic_palette,
+                                        ),
+                                    ),
+                            ),
+                        ),
+                ),
+            onAction = {},
+            showBack = true,
+            selectedCategoryId = SettingsR.string.settings_category_interface,
+            isSidebar = true,
+        )
+    }
+}
+
+@PreviewScreenSizes
+@Composable
+private fun SettingsScreenDetailRootPreview() {
+    FindroidTheme(darkTheme = true) {
+        SettingsScreenLayout(
+            title = SettingsR.string.settings_category_interface,
+            state =
+                SettingsState(
+                    preferenceGroups =
+                        listOf(
+                            PreferenceGroup(
+                                nameStringResource = null,
+                                preferences =
+                                    listOf(
+                                        PreferenceCategory(
+                                            nameStringResource =
+                                                SettingsR.string.settings_category_appearance,
+                                            iconDrawableId = SettingsR.drawable.ic_palette,
+                                        ),
+                                    ),
+                            ),
+                        ),
+                ),
+            onAction = {},
+            showBack = false,
         )
     }
 }
